@@ -1,6 +1,8 @@
 import type { EnhancedRequest } from '@stacksjs/bun-router'
 import { response, route } from '@stacksjs/router'
 import { eventNamesFor, eventsFor } from '../app/Events/query'
+import { cached } from '../app/Reports/cache'
+import { runQuery } from '../app/Reports/engine'
 import { accessFor, canAdminister, isOwner, projectsFor } from '../app/Support/access'
 import {
   acceptInvite,
@@ -182,6 +184,52 @@ route.get('/{id}/event-names', async (request: EnhancedRequest) => {
     return notFound()
 
   return response.json({ names: await eventNamesFor(id) })
+})
+
+/**
+ * Run a block query and return series.
+ *
+ * The one endpoint every chart goes through: the viewer, the builder's live
+ * preview, a share page and a scheduled render all ask this same question, so
+ * they cannot disagree about what a block means.
+ *
+ * A POST because the question is a document, not a path. Encoding filters,
+ * steps and a dimension into a query string would be lossy and unreadable, and
+ * it is not a bookmarkable resource: the report is.
+ */
+route.post('/{id}/query', async (request: EnhancedRequest) => {
+  const user = currentUser(request)
+  if (!user)
+    return unauthenticated()
+
+  const id = Number(request.param('id'))
+  if (!(await accessFor(user, id)))
+    return notFound()
+
+  const project = (await projectsFor(user)).find(row => Number(row.id) === id)
+
+  // Always the project's zone, never the reader's: "yesterday" has to mean the
+  // same day for everyone looking at the same report.
+  const timezone = String(project?.timezone ?? 'UTC')
+  const query = request.input('query') as never
+  const range = String(request.input('range') ?? 'last_30_days')
+
+  try {
+    // Through the cache: opening a report runs every block at once, and two
+    // people opening the same one in the same minute should not both pay for
+    // it. Five seconds of staleness is invisible to a reader and absorbs the
+    // burst; a minute of it means someone sends a test event and does not see
+    // it arrive.
+    const result = await cached({ projectId: id, query, timezone, range }, () =>
+      runQuery({ projectId: id, query, timezone, range }))
+
+    return response.json(result)
+  }
+  catch (error) {
+    // A rejected query is the caller describing something we cannot answer,
+    // and the message names which part, so the builder can point at the field.
+    return response.json({ message: (error as Error).message }, 422)
+  }
 })
 
 route.post('/{id}/rotate-key', async (request: EnhancedRequest) => {
