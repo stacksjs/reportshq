@@ -1,0 +1,86 @@
+{
+  // Type checks the framework itself - everything under `storage/framework/`.
+  // Application code is checked separately, by the project's root
+  // `tsconfig.json` (which extends `tsconfig.app.json`).
+  //
+  // Run it with: bun run typecheck
+  //
+  // Extends the BASE, not `core/tsconfig.json`, and carries its own path map.
+  // An installed app has no `core/` directory: `extends` pointed at a file that
+  // was not there, TypeScript reported one TS5083 and then silently dropped
+  // every option the base sets — `skipLibCheck` included — so `bun run
+  // typecheck` in an app turned into a full type-check of node_modules and
+  // reported 265 errors, none of them in the app's own code. Paths that do not
+  // resolve are harmless: TypeScript falls back to node resolution, which is
+  // how an app finds `@stacksjs/*` in node_modules.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "declaration": false,
+    "declarationMap": false,
+    "rootDir": "../..",
+    "tsBuildInfoFile": "./.cache/typescript/framework.tsbuildinfo",
+    "paths": {
+      "@stacksjs/actions/*": ["./core/actions/src/*"],
+      "@stacksjs/browser/*": ["./core/browser/src/*"],
+      "@stacksjs/composables/*": ["./core/composables/src/*"],
+      "@stacksjs/desktop-build": ["./core/desktop/src"],
+      "@stacksjs/orm/routes": ["./core/orm/src/routes.ts"],
+      "@stacksjs/*": ["./core/*/src"],
+      "stacks/*": ["./core/*/src"],
+      "buddy": ["./core/buddy/src/index.ts"],
+      "buddy/*": ["./core/buddy/src/*"],
+      "Actions/*": ["../../app/Actions/*"],
+      "Commands/*": ["../../app/Commands/*"],
+      "Jobs/*": ["../../app/Jobs/*"],
+      "Middleware/*": ["../../app/Middleware/*"],
+      "Models/*": ["../../app/Models/*"],
+      "Notifications/*": ["../../app/Notifications/*"],
+      "~/*": ["../../*"],
+      "@/*": ["../../resources/*"],
+      "ts-pantry": ["../../node_modules/ts-pantry"],
+      "*": ["../../pantry/*"]
+    }
+  },
+  "include": [
+    "./**/*.ts",
+    "./**/*.d.ts"
+  ],
+  "exclude": [
+    "./**/cdk.out/**",
+    "./**/dist/**",
+    "./**/fixtures/**",
+    "./**/out/**",
+    "./**/tests/**",
+    "./**/*.test.ts",
+    "./**/*.spec.ts",
+    "./**/build.ts",
+    "./auto-imports/**",
+    "./core/deploy/**",
+    // `@stacksjs/defaults` copies `defaults/app` and `defaults/resources` into
+    // `core/defaults/` at build time. Those copies are generated duplicates that
+    // resolve their imports from the wrong directory, so checking them reports
+    // hundreds of phantom errors about code that is already checked where it
+    // actually lives.
+    "./core/defaults/app/**",
+    "./core/defaults/resources/**",
+    "./core/models/**",
+    "./core/requests/**",
+    // The source of the two directories above. Checked as part of the app,
+    // where the `Models/`, `Actions/` and auto-import globals do resolve.
+    "./defaults/**",
+    "./frontend-dist/**",
+    "./libs/entries/**",
+    // Runtime state, not source: stx's build cache and the CLI's scratch
+    // directory. Both are gitignored and can be deleted at any time.
+    "./stx/**",
+    "./runtime/**",
+    "./.cache/**",
+    "./server/app/**",
+    "./server/config/**",
+    "./server/core/**",
+    "./server/docs/**",
+    "./server/routes/**",
+    "./server/storage/**",
+    "./views/**"
+  ]
+}

@@ -1,0 +1,91 @@
+import { Action } from '@stacksjs/actions'
+import { Auth, authCookie, createTwoFactorChallenge, getTwoFactorState } from '@stacksjs/auth'
+import { User } from '@stacksjs/orm'
+import { response } from '@stacksjs/router'
+import { schema } from '@stacksjs/validation'
+import { PASSWORD_MAX_LENGTH, PASSWORD_PRESENCE_MESSAGE } from '../../password-policy'
+
+export default new Action({
+  name: 'LoginAction',
+  description: 'Login to the application',
+  method: 'POST',
+
+  validations: {
+    email: {
+      rule: schema.string().email(),
+      message: 'Email must be a valid email address.',
+    },
+    // Presence only, NOT the creation policy. Enforcing a minimum length on
+    // sign-in locks out every account created under a shorter one: the user is
+    // told their own password is too short, with a 422 raised before the
+    // credentials are ever checked. The policy belongs on the paths that SET a
+    // password (#2226).
+    password: {
+      rule: schema.string().min(1).max(PASSWORD_MAX_LENGTH),
+      message: PASSWORD_PRESENCE_MESSAGE,
+    },
+  },
+
+  async handle(request: RequestInstance) {
+    const email = request.get('email')
+    const password = request.get('password')
+
+    // Verify credentials WITHOUT minting tokens yet — if the account
+    // has TOTP 2FA enabled, no token pack should exist until the code
+    // is also verified (VerifyTwoFactorLoginAction mints the real
+    // pack via Auth.loginUsingId, same as the non-2FA path below).
+    const isValid = await Auth.attempt({ email, password })
+    if (!isValid)
+      return response.unauthorized('Incorrect email or password')
+
+    const authedUser = await User.where('email', '=', email).first()
+    if (!authedUser)
+      return response.unauthorized('Incorrect email or password')
+
+    const { enabled: twoFactorEnabled } = await getTwoFactorState(authedUser.id as number)
+    if (twoFactorEnabled) {
+      const challengeToken = await createTwoFactorChallenge(authedUser.id as number)
+      return response.json({
+        requires_two_factor: true,
+        challenge_token: challengeToken,
+      })
+    }
+
+    const result = await Auth.loginUsingId(authedUser.id as number)
+    if (!result)
+      return response.unauthorized('Incorrect email or password')
+
+    const user = result.user
+
+    // OAuth2-compatible payload. Clients should:
+    //   - Send `Authorization: Bearer <access_token>` for API calls.
+    //   - Cache the access token for at most `expires_in` seconds.
+    //   - Exchange `refresh_token` at /auth/refresh when the access
+    //     token nears expiry. The refresh token is single-use; the
+    //     refresh response returns a new pair (rotation).
+    // The legacy `token` field is kept for backward compatibility
+    // with clients that haven't been updated yet — it shadows
+    // `access_token` and will be removed in a future major.
+    //
+    // The same token also goes out as an httpOnly cookie, matching
+    // SocialCallbackAction. Without it, how a browser ends up signed in
+    // depended on which way it signed in: OAuth left a cookie, email+password
+    // left only JSON, and a server-rendered page cannot read JSON — it posts a
+    // form, follows a redirect, and comes back carrying nothing but cookies.
+    // So the first authenticated document render had no way to identify the
+    // user (#2306). The body is unchanged, so an API client that ignores the
+    // cookie behaves exactly as before.
+    return response.json({
+      access_token: result.token,
+      refresh_token: result.refreshToken,
+      token_type: 'Bearer',
+      expires_in: result.expiresIn,
+      token: result.token,
+      user: {
+        id: user?.id,
+        email: user?.email,
+        name: user?.name,
+      },
+    }, { headers: { 'Set-Cookie': authCookie(result.token) } })
+  },
+})
