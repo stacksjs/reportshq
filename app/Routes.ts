@@ -13,6 +13,13 @@ export default {
   // proxy forwards.
   'api': 'api',
 
+  // The public write endpoint, at the document root and deliberately not
+  // behind `auth`: it authenticates with a project's ingest key, which ships
+  // inside the customer's application and can only append events. Declared
+  // with an empty prefix so the documented URL is `/ingest` rather than
+  // `/ingest/ingest`.
+  'ingest': { path: 'ingest', prefix: '' },
+
   // Project tenancy: creation, membership, invites, ingest key rotation.
   // Behind `auth` at the registry level rather than per route, so a route added
   // to that file later cannot be published unauthenticated by omission. Every

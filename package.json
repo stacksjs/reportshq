@@ -79,7 +79,8 @@
     "bun-query-builder": "^0.2.30",
     "pickier": "^0.1.51",
     "stacks": "^0.70.371",
-    "ts-pantry": "^0.11.21"
+    "ts-pantry": "^0.11.21",
+    "ts-rate-limiter": "^0.4.5"
   },
   "workspaces": [
     "storage/framework",
@@ -99,6 +100,7 @@
   },
   "overrides": {
     "pickier": "^0.1.51",
-    "bun-query-builder": "^0.2.30"
+    "bun-query-builder": "^0.2.30",
+    "@stacksjs/bun-router": "^0.0.27"
   }
 }

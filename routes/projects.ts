@@ -1,5 +1,6 @@
 import type { EnhancedRequest } from '@stacksjs/bun-router'
 import { response, route } from '@stacksjs/router'
+import { eventNamesFor, eventsFor } from '../app/Events/query'
 import { accessFor, canAdminister, isOwner, projectsFor } from '../app/Support/access'
 import {
   acceptInvite,
@@ -126,6 +127,61 @@ route.get('/{id}', async (request: EnhancedRequest) => {
     body.ingest_key = project.ingest_key
 
   return response.json({ project: body })
+})
+
+/**
+ * The raw event stream, for confirming an integration works.
+ *
+ * Any member may read it: someone who can see a project's reports can already
+ * see the numbers these events produce, so withholding the rows they came from
+ * would obscure debugging without protecting anything.
+ */
+route.get('/{id}/events', async (request: EnhancedRequest) => {
+  const user = currentUser(request)
+  if (!user)
+    return unauthenticated()
+
+  const id = Number(request.param('id'))
+  if (!(await accessFor(user, id)))
+    return notFound()
+
+  // `query` is a record, and a repeated parameter arrives as an array. Take
+  // the first occurrence rather than stringifying the array into a filter that
+  // matches nothing.
+  const param = (name: string): string | undefined => {
+    const value = request.query[name]
+    const first = Array.isArray(value) ? value[0] : value
+    return first === undefined || first === '' ? undefined : String(first)
+  }
+
+  const page = await eventsFor(id, {
+    name: param('name'),
+    from: param('from'),
+    to: param('to'),
+    userKey: param('user_key'),
+    before: param('before') ? Number(param('before')) : undefined,
+    limit: param('limit') ? Number(param('limit')) : undefined,
+  })
+
+  return response.json({
+    events: page.events,
+    // Named `next_cursor` rather than `next_page`: it is an opaque value to
+    // pass back as `before`, not a number to increment.
+    next_cursor: page.nextCursor,
+  })
+})
+
+/** The names seen in this project, most frequent first. Drives the filter UI. */
+route.get('/{id}/event-names', async (request: EnhancedRequest) => {
+  const user = currentUser(request)
+  if (!user)
+    return unauthenticated()
+
+  const id = Number(request.param('id'))
+  if (!(await accessFor(user, id)))
+    return notFound()
+
+  return response.json({ names: await eventNamesFor(id) })
 })
 
 route.post('/{id}/rotate-key', async (request: EnhancedRequest) => {

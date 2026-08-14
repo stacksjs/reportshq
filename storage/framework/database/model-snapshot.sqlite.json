@@ -473,10 +473,130 @@
             "type": "index"
           }
         ]
+      },
+      {
+        "table": "events",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "isPrimaryKey": true,
+            "isUnique": false,
+            "isNullable": false,
+            "hasDefault": false
+          },
+          {
+            "name": "project_id",
+            "type": "bigint",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": false,
+            "hasDefault": false,
+            "references": {
+              "table": "projects",
+              "column": "id"
+            }
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": false,
+            "hasDefault": false,
+            "maxLength": 120
+          },
+          {
+            "name": "occurred_at",
+            "type": "string",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": false,
+            "hasDefault": false
+          },
+          {
+            "name": "received_at",
+            "type": "string",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": true,
+            "hasDefault": false
+          },
+          {
+            "name": "properties",
+            "type": "string",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": true,
+            "hasDefault": false
+          },
+          {
+            "name": "value",
+            "type": "integer",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": true,
+            "hasDefault": false
+          },
+          {
+            "name": "currency",
+            "type": "string",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": true,
+            "hasDefault": false,
+            "maxLength": 3
+          },
+          {
+            "name": "user_key",
+            "type": "string",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": true,
+            "hasDefault": false,
+            "maxLength": 120
+          },
+          {
+            "name": "session_key",
+            "type": "string",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": true,
+            "hasDefault": false,
+            "maxLength": 120
+          }
+        ],
+        "indexes": [
+          {
+            "name": "events_project_name_time_index",
+            "columns": [
+              "project_id",
+              "name",
+              "occurred_at"
+            ],
+            "type": "index"
+          },
+          {
+            "name": "events_project_time_index",
+            "columns": [
+              "project_id",
+              "occurred_at"
+            ],
+            "type": "index"
+          },
+          {
+            "name": "events_project_user_index",
+            "columns": [
+              "project_id",
+              "user_key"
+            ],
+            "type": "index"
+          }
+        ]
       }
     ]
   },
-  "hash": "e2e8c91dcecaa03690a384ac5d203a6efa6ef0efc38feef8c6c6e62ada3a33cb",
+  "hash": "4617a7e7f5eede47a8d87fc8b4254592bb686feac7e2fe85b7aa20f64fcb0fd7",
   "dialect": "sqlite",
-  "updatedAt": "2026-08-14T22:03:43.998Z"
+  "updatedAt": "2026-08-14T22:33:34.684Z"
 }
