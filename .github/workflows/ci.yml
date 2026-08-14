@@ -112,3 +112,10 @@ jobs:
 
       - name: Test Suite
         run: bun run test
+
+      # The design system has no types and no tests of its own: a renamed custom
+      # property resolves to the property's initial value rather than erroring,
+      # and a documented contrast ratio can drift from the colour it describes
+      # without anything failing. This asserts both.
+      - name: Design tokens
+        run: bun scripts/verify-tokens.ts

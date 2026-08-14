@@ -1,0 +1,244 @@
+/* ReportsHQ design tokens - the single source for every surface.
+ *
+ * Linked once from config/ui.ts `app.head.link`, so every page gets it without
+ * repeating it. It is deliberately NOT in config/crosswind.ts `preflights`,
+ * which is where the styling guide says tokens belong: on the stx serve path
+ * `preflights` is spread into the generator config and then never emitted, so a
+ * token placed there reaches no page at all. Verified in loghq the hard way;
+ * inherited here rather than rediscovered.
+ *
+ * These names are the contract config/crosswind.ts maps its semantic utilities
+ * onto - `bg-canvas`, `bg-panel`, `border-line`, `text-ink`, `text-muted`,
+ * `text-subtle`, `text-accent`. Renaming one here silently breaks the matching
+ * utility everywhere, because an undefined var() resolves to the property's
+ * initial value rather than erroring.
+ *
+ * Both the media query and the [data-theme] attribute are covered, and the
+ * pairing is deliberate: the attribute is what the pre-paint boot script and
+ * useColorMode write, and it has to beat the OS preference so an explicit
+ * choice survives a reload.
+ *
+ * Every contrast ratio in the comments below was computed from these exact hex
+ * values against these exact surfaces, not estimated. WCAG AA wants 4.5:1 for
+ * body text and 3:1 for large text; nothing here ships below 4.5:1.
+ */
+
+:root {
+  /* The one declaration that reaches the parts of the page we do not draw.
+   * Native UI - select popups, scrollbars, date pickers, form control
+   * backgrounds, the caret - is painted by the browser from `color-scheme`,
+   * not from custom properties. It is declared on all four blocks below and
+   * never once on :root as `light dark`, because that means "either is fine,
+   * follow the OS", which is wrong the moment someone picks a theme. */
+  color-scheme: light;
+
+  /* Canvas is a warm off-white, panels are true white. The warmth is doing
+   * real work: it separates the page from the chart surfaces sitting on it,
+   * and it keeps a cool cobalt accent from reading as default framework blue.
+   * loghq's canvas is cool (#fbfbfd) with a rose accent; this is the opposite
+   * pairing on purpose, so the two products are not mistaken for each other. */
+  --bg: #fcfbf9;
+  --panel: #ffffff;
+  --border: rgba(20, 22, 28, 0.10);
+
+  /* 17.49:1 on --bg, 18.08:1 on --panel. */
+  --text: #14161c;
+  /* 7.92:1 on --bg, 8.19:1 on --panel. Body copy and secondary labels. */
+  --text-2: #4a4f5c;
+  /* 4.72:1 on --bg, 4.88:1 on --panel. The smallest step that still clears AA
+   * on the worse of the two surfaces, so "subtle" reads subtle without
+   * failing. Anything lighter is decoration pretending to be text. */
+  --text-3: #6b7180;
+
+  /* Cobalt. Chosen for what it does NOT mean: green, amber and red all carry
+   * semantic load in a reporting product (positive, warning, negative), and an
+   * accent that collides with a delta colour makes every number ambiguous.
+   * Blue is the only family left that is unmistakably "brand" rather than
+   * "reading". 6.33:1 on --bg, 6.54:1 on --panel, so it is legible as link
+   * text and not only as a fill. */
+  --accent: #3a4fd0;
+  --accent-soft: rgba(58, 79, 208, 0.08);
+  /* Ink for text sitting ON a saturated fill. It cannot be a hardcoded #fff:
+   * in dark mode the fills get lighter, not darker, and white on the dark
+   * accent measures 2.35:1. White on this light accent is 6.54:1; the dark
+   * counterpart below is 8.34:1 on its own fill. One class, right in both. */
+  --accent-ink: #ffffff;
+
+  /* Deltas and status. `--pos` and `--neg` are deliberately NOT the accent:
+   * a number that moved is data, a button is chrome, and they must not share a
+   * colour. Both are also always paired with a direction glyph in the UI,
+   * because red/green alone fails for the ~8% of men with a colour vision
+   * deficiency, and a reports product cannot make its headline numbers
+   * unreadable for them.
+   * pos 4.85:1 on --bg, neg 6.08:1, warn 4.86:1. */
+  --pos: #15803d;
+  --neg: #be123c;
+  --warn: #b45309;
+
+  /* Geist for text, Geist Mono for anything numeric. The mono is not
+   * decoration: every figure in a report, a table cell, an axis tick and a
+   * delta is set in it, so columns of numbers align on the digit rather than
+   * drifting with proportional widths. */
+  --sans: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Chart series. A six-colour categorical ramp, ordered by how often a series
+   * appears, and it starts at the accent so a single-series chart is brand
+   * coloured for free. Hues are spaced far enough apart to survive both
+   * greyscale printing and the common deficiencies; the ramp deliberately
+   * skips the exact --pos green and --neg red so a category can never be
+   * misread as a direction. Defined here rather than in the chart components
+   * so one palette serves every chart, the legend, and the report exports. */
+  --series-1: #3a4fd0;
+  --series-2: #0d7490;
+  --series-3: #b45309;
+  --series-4: #7c3aed;
+  --series-5: #0f766e;
+  --series-6: #a21caf;
+  /* Grid lines and axis rules sit under the data and must never compete with
+   * it. Both are alpha values so they hold up over a tinted panel. */
+  --grid: rgba(20, 22, 28, 0.08);
+  --axis: rgba(20, 22, 28, 0.28);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #0b0d12;
+    --panel: #12151d;
+    --border: rgba(148, 163, 184, 0.12);
+    /* 17.65:1 on --bg, 16.57:1 on --panel. */
+    --text: #f2f4f8;
+    /* 9.74:1 on --bg, 9.15:1 on --panel. */
+    --text-2: #b0b8c7;
+    /* 5.36:1 on --bg, 5.03:1 on --panel. */
+    --text-3: #7d8798;
+    /* 8.13:1 on --bg, 7.63:1 on --panel. */
+    --accent: #8fa2ff;
+    --accent-soft: rgba(143, 162, 255, 0.12);
+    /* 8.34:1 on the dark accent fill. */
+    --accent-ink: #060814;
+    --pos: #4ade80;
+    --neg: #fb7185;
+    --warn: #fbbf24;
+    --series-1: #8fa2ff;
+    --series-2: #22d3ee;
+    --series-3: #fbbf24;
+    --series-4: #c4b5fd;
+    --series-5: #2dd4bf;
+    --series-6: #f0abfc;
+    --grid: rgba(148, 163, 184, 0.10);
+    --axis: rgba(148, 163, 184, 0.34);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0b0d12;
+  --panel: #12151d;
+  --border: rgba(148, 163, 184, 0.12);
+  --text: #f2f4f8;
+  --text-2: #b0b8c7;
+  --text-3: #7d8798;
+  --accent: #8fa2ff;
+  --accent-soft: rgba(143, 162, 255, 0.12);
+  --accent-ink: #060814;
+  --pos: #4ade80;
+  --neg: #fb7185;
+  --warn: #fbbf24;
+  --series-1: #8fa2ff;
+  --series-2: #22d3ee;
+  --series-3: #fbbf24;
+  --series-4: #c4b5fd;
+  --series-5: #2dd4bf;
+  --series-6: #f0abfc;
+  --grid: rgba(148, 163, 184, 0.10);
+  --axis: rgba(148, 163, 184, 0.34);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #fcfbf9;
+  --panel: #ffffff;
+  --border: rgba(20, 22, 28, 0.10);
+  --text: #14161c;
+  --text-2: #4a4f5c;
+  --text-3: #6b7180;
+  --accent: #3a4fd0;
+  --accent-soft: rgba(58, 79, 208, 0.08);
+  --accent-ink: #ffffff;
+  --pos: #15803d;
+  --neg: #be123c;
+  --warn: #b45309;
+  --series-1: #3a4fd0;
+  --series-2: #0d7490;
+  --series-3: #b45309;
+  --series-4: #7c3aed;
+  --series-5: #0f766e;
+  --series-6: #a21caf;
+  --grid: rgba(20, 22, 28, 0.08);
+  --axis: rgba(20, 22, 28, 0.28);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numbers are monospaced and tabular everywhere they carry meaning. `tnum`
+ * forces equal-width digits even in the sans, which matters for the inline
+ * figures inside prose that are not wrapped in a .num. */
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Theme-toggle icon swap. No utility can express this: the selector is an
+ * attribute-state descendant on the root, and the root attribute is what the
+ * pre-paint boot script sets before first paint. Keying off the button's own
+ * state instead would leave both icons hidden until hydration, which is an
+ * empty box on every cold load. */
+.theme-btn .ic-sun,
+.theme-btn .ic-moon {
+  display: none;
+}
+
+:root[data-theme='light'] .theme-btn .ic-sun {
+  display: block;
+}
+
+:root[data-theme='dark'] .theme-btn .ic-moon {
+  display: block;
+}
+
+/* Skeleton pulse for loading states. Utilities cannot declare @keyframes, and
+ * `preflights` is never emitted on this serve path, so it lives here.
+ *
+ * Named rhq-pulse rather than pulse deliberately: Crosswind emits its own
+ * @keyframes pulse as soon as any page uses `animate-pulse`, into a sheet
+ * linked after this file, and a same-named keyframe there would silently
+ * replace this one rather than error. */
+@keyframes rhq-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+/* Charts and skeletons are the only things on the page that animate on load,
+ * and neither may move for someone who asked the OS for stillness. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

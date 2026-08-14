@@ -1,0 +1,46 @@
+<script server>
+import { defineProps, withDefaults } from 'stx'
+
+interface WordmarkProps {
+  /** Rendered size of the mark and the type beside it. */
+  size?: 'sm' | 'md' | 'lg'
+  /** Draw the mark alone, for tight spaces like a favicon slot or an avatar. */
+  markOnly?: boolean
+}
+
+const { size, markOnly } = withDefaults(
+  defineProps<WordmarkProps>(),
+  { size: 'md', markOnly: false },
+)
+
+const markSize = { sm: 'h-4 w-4', md: 'h-5 w-5', lg: 'h-7 w-7' }[size]
+const textSize = { sm: 'text-sm', md: 'text-base', lg: 'text-xl' }[size]
+</script>
+
+<template>
+  {{-- The mark is three ascending bars: the smallest honest drawing of a
+       report, and the only hand-drawn vector in the product. Everything else
+       uses Iconify. It inherits currentColor so it works on the canvas, inside
+       a filled button, and on a dark share page without a second copy. --}}
+  <span class="inline-flex gap-2 items-center select-none">
+    <svg
+      class="{{ markSize }}"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x="1.5" y="12" width="4" height="6.5" rx="1" fill="currentColor" opacity="0.45" />
+      <rect x="8" y="7.5" width="4" height="11" rx="1" fill="currentColor" opacity="0.72" />
+      <rect x="14.5" y="1.5" width="4" height="17" rx="1" fill="currentColor" />
+    </svg>
+
+    @if (!markOnly)
+      {{-- "HQ" carries the weight so the lockup has a focal point without a
+           second typeface or a colour change. --}}
+      <span class="{{ textSize }} font-semibold tracking-tight text-ink">
+        Reports<span class="font-bold">HQ</span>
+      </span>
+    @endif
+  </span>
+</template>

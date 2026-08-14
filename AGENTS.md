@@ -82,7 +82,27 @@ one.
 7. **Before finishing anything:** `./buddy lint`, `./buddy typecheck`, `./buddy test`, all green.
    For UI work, add the design pre-flight. Report honestly when something fails.
 
-## 4. Known upstream state
+## 4. Traps that have already cost time here
+
+- **stx templates take bare variable names, not Blade's `$`.** A server value is
+  read as `@foreach (surfaces as surface)` and `{{ surface.note }}`, never
+  `@foreach ($surfaces as $surface)` or `{{ $surface['note'] }}`. The `$` form
+  does not error: it renders an HTML comment,
+  `<!-- [Foreach Error [1102]]: $surfaces is not iterable -->`, so the page
+  returns 200 with the section silently empty. Check the rendered HTML, not the
+  status code.
+- **Crosswind utilities are extracted from rendered HTML**, so a class built by
+  interpolation (`bg-series-{{ swatch }}`) only emits once the loop that renders
+  it works. A broken loop therefore breaks the CSS too, which makes the first
+  symptom look like a styling bug.
+- **Design tokens do not belong in Crosswind's `preflights`.** That key is never
+  emitted on the stx serve path. They live in `public/tokens.css`, linked from
+  `config/ui.ts`.
+- **`buddy migrate:fresh` is broken on this scaffold** (stacksjs/stacks#2323): it
+  fails partway and leaves duplicate migrations behind. To reset the local
+  database, `rm database/stacks.sqlite && ./buddy migrate`.
+
+## 5. Known upstream state
 
 - `config/mobile.ts` is deliberately absent. ReportsHQ ships no native application, and the
   scaffold's copy imports `MobileConfig` from a framework version that is not published yet. See

@@ -1,0 +1,160 @@
+<script server>
+// The token reference. Every colour ReportsHQ ships, rendered through the
+// Crosswind utility that is supposed to resolve it, with its measured contrast
+// ratio beside it.
+//
+// It exists because a token can break in two silent ways: a renamed custom
+// property makes `var()` fall back to the property's initial value rather than
+// erroring, and a utility that never made it through the serve path simply
+// paints nothing. Both look like "slightly wrong colours" in a screenshot and
+// like nothing at all in a diff. Here they are visible.
+//
+// Ratios are computed, not estimated: see scripts/verify-tokens.ts, which
+// recomputes them from public/tokens.css and fails if this page has drifted.
+
+const surfaces = [
+  { name: 'canvas', token: '--bg', utility: 'bg-canvas', note: 'The page itself.' },
+  { name: 'panel', token: '--panel', utility: 'bg-panel', note: 'Cards, report blocks, tables.' },
+  { name: 'line', token: '--border', utility: 'border-line', note: 'Hairlines and dividers.' },
+]
+
+const textTokens = [
+  { name: 'ink', token: '--text', utility: 'text-ink', onBg: '17.49', onPanel: '18.08', note: 'Headings and figures.' },
+  { name: 'muted', token: '--text-2', utility: 'text-muted', onBg: '7.92', onPanel: '8.19', note: 'Body copy.' },
+  { name: 'subtle', token: '--text-3', utility: 'text-subtle', onBg: '4.72', onPanel: '4.88', note: 'Labels and axis ticks.' },
+  { name: 'accent', token: '--accent', utility: 'text-accent', onBg: '6.33', onPanel: '6.54', note: 'Links and active state.' },
+]
+
+const statusTokens = [
+  { name: 'pos', token: '--pos', utility: 'text-pos', ratio: '4.85', note: 'A number that went up. Always with an arrow.' },
+  { name: 'neg', token: '--neg', utility: 'text-neg', ratio: '6.08', note: 'A number that went down. Always with an arrow.' },
+  { name: 'warn', token: '--warn', utility: 'text-warn', ratio: '4.86', note: 'Quota warnings, stale data.' },
+]
+
+const series = [1, 2, 3, 4, 5, 6]
+</script>
+
+<template>
+  <div class="min-h-[100dvh] bg-canvas text-ink">
+    <div class="px-6 py-16 mx-auto max-w-5xl">
+      <header class="mb-16">
+        <Wordmark size="lg" />
+        <h1 class="mt-8 text-3xl font-semibold tracking-tight md:text-4xl">Design tokens</h1>
+        <p class="mt-3 max-w-[65ch] text-muted leading-relaxed">
+          Every colour the product ships, rendered through the utility that resolves it. Switch your
+          system between light and dark, or set the theme explicitly, and every swatch below has to
+          follow. Contrast ratios are measured against the surface named beside them.
+        </p>
+      </header>
+
+      <section class="mb-16">
+        <h2 class="mb-6 text-lg font-semibold">Surfaces</h2>
+        <div class="grid gap-4 sm:grid-cols-3">
+          @foreach (surfaces as surface)
+            <div class="p-5 rounded-xl border border-line bg-panel">
+              <div class="mb-4 h-16 rounded-lg border bg-canvas border-line"></div>
+              <p class="font-mono text-sm font-medium">{{ surface.utility }}</p>
+              <p class="mt-1 font-mono text-xs text-subtle">{{ surface.token }}</p>
+              <p class="mt-2 text-sm text-muted">{{ surface.note }}</p>
+            </div>
+          @endforeach
+        </div>
+      </section>
+
+      <section class="mb-16">
+        <h2 class="mb-6 text-lg font-semibold">Text</h2>
+        <div class="rounded-xl border divide-y border-line divide-line bg-panel">
+          @foreach (textTokens as entry)
+            <div class="flex flex-col gap-3 items-start p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p class="text-lg {{ entry.utility }}">
+                  Revenue is up 12 percent this week
+                </p>
+                <p class="mt-1 font-mono text-xs text-subtle">
+                  {{ entry.utility }} &middot; {{ entry.token }} &middot; {{ entry.note }}
+                </p>
+              </div>
+              <p class="font-mono text-xs whitespace-nowrap text-subtle">
+                <span class="num">{{ entry.onBg }}</span> on canvas &middot;
+                <span class="num">{{ entry.onPanel }}</span> on panel
+              </p>
+            </div>
+          @endforeach
+        </div>
+      </section>
+
+      <section class="mb-16">
+        <h2 class="mb-6 text-lg font-semibold">Deltas and status</h2>
+        <div class="grid gap-4 sm:grid-cols-3">
+          @foreach (statusTokens as entry)
+            <div class="p-5 rounded-xl border border-line bg-panel">
+              <p class="flex gap-2 items-center text-2xl font-semibold {{ entry.utility }}">
+                <i class="w-5 h-5 i-hugeicons-arrow-up-right"></i>
+                <span class="num">12.4%</span>
+              </p>
+              <p class="mt-3 font-mono text-xs text-subtle">{{ entry.utility }} &middot; {{ entry.token }}</p>
+              <p class="mt-2 text-sm text-muted">{{ entry.note }}</p>
+              <p class="mt-2 font-mono text-xs text-subtle"><span class="num">{{ entry.ratio }}</span> on canvas</p>
+            </div>
+          @endforeach
+        </div>
+      </section>
+
+      <section class="mb-16">
+        <h2 class="mb-6 text-lg font-semibold">Chart series</h2>
+        <p class="mb-6 max-w-[65ch] text-sm text-muted leading-relaxed">
+          Six categorical colours, starting at the accent so a single-series chart is brand coloured
+          without asking. The ramp skips the exact positive green and negative red, so a category can
+          never be mistaken for a direction.
+        </p>
+        <div class="p-6 rounded-xl border border-line bg-panel">
+          <div class="flex overflow-hidden gap-1 items-end h-32 rounded-lg">
+            @foreach (series as swatch)
+              <div class="flex-1 bg-series-{{ swatch }} rounded-t" style="height: {{ 100 - (swatch - 1) * 13 }}%"></div>
+            @endforeach
+          </div>
+          <div class="flex flex-wrap gap-x-6 gap-y-2 mt-6">
+            @foreach (series as swatch)
+              <span class="flex gap-2 items-center font-mono text-xs text-muted">
+                <span class="w-3 h-3 rounded-sm bg-series-{{ swatch }}"></span>
+                series-{{ swatch }}
+              </span>
+            @endforeach
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-16">
+        <h2 class="mb-6 text-lg font-semibold">Interactive</h2>
+        <div class="flex flex-wrap gap-3 items-center">
+          <button class="px-4 py-2 text-sm font-medium rounded-lg transition-transform bg-accent text-accent-ink active:scale-[0.98]">
+            Create report
+          </button>
+          <button class="px-4 py-2 text-sm font-medium rounded-lg border transition-transform border-line text-ink active:scale-[0.98]">
+            Cancel
+          </button>
+          <span class="px-3 py-1 text-xs font-medium rounded-full bg-accent-soft text-accent">Auto created</span>
+        </div>
+        <p class="mt-4 font-mono text-xs text-subtle">
+          Filled button: <span class="num">6.54</span> white on accent. One radius scale, 8px for
+          controls and 12px for panels.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="mb-6 text-lg font-semibold">Type</h2>
+        <div class="p-6 rounded-xl border border-line bg-panel">
+          <p class="text-3xl font-semibold tracking-tight">Geist, 600, tracking tight</p>
+          <p class="mt-2 text-base text-muted">Geist, 400, for body copy at a comfortable measure.</p>
+          <p class="mt-4 font-mono text-sm">
+            <span class="num">1,284,905</span> events &middot; <span class="num">99.2%</span> ingested
+          </p>
+          <p class="mt-2 text-xs text-subtle">
+            Figures are set in Geist Mono with tabular numerals, so a column of numbers aligns on the
+            digit rather than drifting.
+          </p>
+        </div>
+      </section>
+    </div>
+  </div>
+</template>
