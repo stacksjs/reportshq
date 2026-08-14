@@ -16,7 +16,29 @@ import type { BlockQuery, Filter, Grain, Measure } from './schema'
 import type { Range } from './range'
 import { db } from '@stacksjs/database'
 import { bucketsFor, defaultGrain, previousRange, resolveRange, truncate } from './range'
+import { canUseRollups, rollupSeries, rollupsCover } from './rollup'
 import { isAllowedField, validateBlockQuery } from './schema'
+
+/**
+ * Whether this query should read the pre-aggregate.
+ *
+ * Shape first, because it is a pure check and refuses most of what cannot be
+ * answered; coverage second, because it costs a query. Both have to hold: a
+ * shape the rollups support over days they have never built is the case that
+ * returns a confident zero.
+ */
+async function useRollups(
+  projectId: number,
+  query: BlockQuery,
+  grain: Grain,
+  range: Range,
+  timezone: string,
+): Promise<boolean> {
+  if (!canUseRollups(query, grain, range))
+    return false
+
+  return await rollupsCover(projectId, range, timezone)
+}
 
 export interface Point {
   /** Bucket start, ISO 8601. */
@@ -236,7 +258,18 @@ export async function runQuery(options: RunOptions): Promise<EngineResult> {
   if (query.steps && query.steps.length >= 2)
     return await runFunnel(projectId, query, range, grain, timezone)
 
-  const series = await runSeries(projectId, query, range, grain, offsetHours, timezone)
+  // The pre-aggregate when it can answer exactly, the raw table otherwise.
+  // canUseRollups is strict on purpose: a rollup that quietly answers a
+  // question it cannot answer accurately is worse than none, because it is
+  // wrong quickly and consistently, which reads as correct.
+  // Two questions, not one: can the rollups answer this shape, and do they
+  // actually cover these days. A day with no events stores no rows, so an
+  // unbuilt project would otherwise return zeros that look exactly like a
+  // quiet week.
+  const series = await useRollups(projectId, query, grain, range, timezone)
+    ? await rollupSeries(projectId, query, range, grain, timezone)
+    : await runSeries(projectId, query, range, grain, offsetHours, timezone)
+
   const total = totalOf(series, query.measure)
 
   const result: EngineResult = {
@@ -248,7 +281,9 @@ export async function runQuery(options: RunOptions): Promise<EngineResult> {
 
   if (query.compare) {
     const previous = previousRange(range, timezone)
-    const previousSeries = await runSeries(projectId, query, previous, grain, offsetHoursFor(timezone, previous.from), timezone)
+    const previousSeries = await useRollups(projectId, query, grain, previous, timezone)
+      ? await rollupSeries(projectId, query, previous, grain, timezone)
+      : await runSeries(projectId, query, previous, grain, offsetHoursFor(timezone, previous.from), timezone)
     const previousTotal = totalOf(previousSeries, query.measure)
 
     result.comparison = {

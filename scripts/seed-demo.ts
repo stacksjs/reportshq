@@ -50,6 +50,8 @@ async function clearExisting(): Promise<void> {
       await db.unsafe(`DELETE FROM report_blocks WHERE report_id = $1`, [report.id])
     }
     await db.unsafe(`DELETE FROM reports WHERE project_id = $1`, [project.id])
+    await db.unsafe(`DELETE FROM rollup_states WHERE project_id = $1`, [project.id])
+    await db.unsafe(`DELETE FROM event_rollups WHERE project_id = $1`, [project.id])
     await db.unsafe(`DELETE FROM events WHERE project_id = $1`, [project.id])
     await db.unsafe(`DELETE FROM project_members WHERE project_id = $1`, [project.id])
     await db.unsafe(`DELETE FROM project_invites WHERE project_id = $1`, [project.id])

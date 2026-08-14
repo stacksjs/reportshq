@@ -41,18 +41,48 @@ cannot be answered from a running total, so it is the one measure a daily
 rollup cannot fully pre-compute; a rollup can only narrow the range it runs
 over.
 
-## What has not been done yet
+## With rollups, same machine, same million events
 
-Rollups. A daily pre-aggregate maintained by a queued job, used automatically
-for day, week and month grains over long ranges, is what turns the table above
-into single-digit milliseconds for the common case. It is the remaining piece
-of #10 and is deliberately not claimed as done. Two things it will need:
+The daily pre-aggregate now answers the common shape. Same fixture, same ten
+runs after a warm-up.
 
-- An equivalence test asserting the rollup answer matches the raw answer for
-  every measure, because a rollup that is subtly wrong is worse than no rollup:
-  it is wrong quickly and consistently, which reads as correct.
-- Care with `count_unique`, which does not compose from daily totals. Summing
-  daily uniques double-counts anyone who appears on two days.
+| Query | p95 | median | Before |
+|---|---:|---:|---:|
+| 30-day daily line, `sum(value)` | **55ms** | 54ms | 467ms |
+| The same with a previous-period comparison | **67ms** | 65ms | 445ms |
+| 30-day daily `count`, all events | **54ms** | 53ms | - |
+| The same line forced onto the raw path | 834ms | 488ms | - |
+
+Roughly **8x**, and a report of eight blocks goes from several seconds to well
+under one. Building the rollups for a million events takes 0.9 seconds and
+produces 36 rows, because the table is one row per project, day and event name.
+
+The last row is the same query with a filter attached, which forces the raw
+path. It is there to show what the rollups are actually saving rather than to
+suggest filters are slow.
+
+## What still goes to the raw table
+
+`canUseRollups` is deliberately strict, and each refusal is a case where the
+pre-aggregate would be subtly wrong rather than merely slower:
+
+- **a dimension**, because rolling up by every property a customer might group
+  by is a row per value, which for anything high-cardinality is larger than the
+  events it summarises;
+- **any filter**, because a filtered question is a different question and there
+  is no way to pre-compute one nobody has asked;
+- **an hourly grain**, finer than the buckets that exist;
+- **`count_unique`**, always: summing daily uniques double-counts anyone who
+  appears on two days. A single-day range could be answered exactly from the
+  stored figure, and that exception was written and then deleted, because it is
+  one branch reachable for one range width whose failure returns a plausible
+  number rather than an error;
+- **a measure over a property**, since `value` is the only numeric column the
+  rollup keeps.
+
+Fifteen equivalence tests hold the two paths together: five measures across
+day, week and month grains, each comparing rollup output to raw output on the
+same data rather than to a constant.
 
 ## Reproducing
 
