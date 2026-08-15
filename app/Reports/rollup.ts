@@ -13,6 +13,7 @@ import type { BlockQuery, Grain, Measure } from './schema'
 import type { Range } from './range'
 import type { Point, Series } from './engine'
 import { db } from '@stacksjs/database'
+import { foldMeasure } from './aggregate'
 import { bucketsFor, truncate } from './range'
 
 /**
@@ -413,18 +414,7 @@ function valueFor(
 }
 
 function totalFor(measure: Measure, points: Point[]): number {
-  switch (measure) {
-    case 'avg': {
-      const meaningful = points.filter(point => point.value !== 0)
-      return meaningful.length === 0 ? 0 : meaningful.reduce((sum, point) => sum + point.value, 0) / meaningful.length
-    }
-    case 'min':
-      return Math.min(...points.map(point => point.value))
-    case 'max':
-      return Math.max(...points.map(point => point.value))
-    default:
-      return points.reduce((sum, point) => sum + point.value, 0)
-  }
+  return foldMeasure(measure, points.map(point => point.value))
 }
 
 function nextBucket(bucketStart: Date, grain: Grain, timezone: string, buckets: Date[]): Date {

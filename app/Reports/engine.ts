@@ -15,6 +15,7 @@
 import type { BlockQuery, Filter, Grain, Measure } from './schema'
 import type { Range } from './range'
 import { db } from '@stacksjs/database'
+import { foldMeasure, meanOfMeaningful } from './aggregate'
 import { bucketsFor, defaultGrain, previousRange, resolveRange, truncate } from './range'
 import { canUseRollups, rollupSeries, rollupsCover } from './rollup'
 import { DEFAULT_SERIES, isAllowedField, validateBlockQuery } from './schema'
@@ -299,20 +300,17 @@ function totalOf(series: Series[], measure: Measure): number {
   if (totals.length === 0)
     return 0
 
-  switch (measure) {
-    case 'avg': {
-      const points = series.flatMap(entry => entry.points).filter(point => point.value !== 0)
-      if (points.length === 0)
-        return 0
-      return points.reduce((sum, point) => sum + point.value, 0) / points.length
-    }
-    case 'min':
-      return Math.min(...totals)
-    case 'max':
-      return Math.max(...totals)
-    default:
-      return totals.reduce((sum, value) => sum + value, 0)
-  }
+  // An average is taken over every bucket rather than over the series totals,
+  // so a dimension with two values does not average two averages and weight a
+  // quiet series like a busy one.
+  if (measure === 'avg')
+    return meanOfMeaningful(series.flatMap(entry => entry.points).map(point => point.value))
+
+  // Everything else folds the series totals the same way a series folds its own
+  // buckets, which is what keeps a split consistent with the whole: an empty
+  // series reports 0, and folding that into a minimum would reintroduce the
+  // phantom zero the per-series calculation just removed.
+  return foldMeasure(measure, totals)
 }
 
 async function runSeries(
@@ -383,13 +381,7 @@ async function runSeries(
   // Recompute totals now that points exist.
   series = series.map(entry => ({
     ...entry,
-    total: query.measure === 'avg'
-      ? averageOf(entry.points)
-      : query.measure === 'min'
-        ? Math.min(...entry.points.map(point => point.value))
-        : query.measure === 'max'
-          ? Math.max(...entry.points.map(point => point.value))
-          : entry.points.reduce((sum, point) => sum + point.value, 0),
+    total: foldMeasure(query.measure, entry.points.map(point => point.value)),
   }))
 
   if (!query.dimension)
@@ -398,12 +390,6 @@ async function runSeries(
   return collapseToTopN(series, query.limit ?? DEFAULT_SERIES, buckets)
 }
 
-function averageOf(points: Point[]): number {
-  const meaningful = points.filter(point => point.value !== 0)
-  if (meaningful.length === 0)
-    return 0
-  return meaningful.reduce((sum, point) => sum + point.value, 0) / meaningful.length
-}
 
 /**
  * Keep the largest N series and fold the rest into one.

@@ -166,8 +166,33 @@ rebuilt: slower, and right. The column defaults to 0 and the current build is 1,
 so the invalidation applies itself on deploy rather than depending on anyone
 remembering a step.
 
-- [ ] Query engine fixture audit: hand-computed expected values for every
-      measure/grain/dimension combination on a frozen dataset
+- [x] Query engine fixture audit on a frozen dataset: every measure, every
+      grain, all eight filter operators, dimensions against the same arithmetic.
+      28 tests, expected values worked out by hand from a six-event table
+
+The dataset is frozen on fixed dates in February and March 2026, not anchored on
+today, so the week and month buckets are not a judgement call: 2026-02-02 is a
+Monday and 2026-02-09 is the next one. The engine tests next door anchor on
+today, which is why `week` and three of the eight operators had no coverage at
+all before this.
+
+**Found and fixed.** `min` took the extreme over every bucket in the range,
+including the empty ones, which are zero. So the minimum order value over any
+range with a quiet day in it was reported as **0**: a month of orders between 10
+and 50 showing a minimum of zero because a Sunday had none. `max` fails the same
+way in the rarer, worse case, where a series of refunds is negative throughout
+and the largest of those and a phantom zero is the zero. `avg`, immediately
+beside them, had always excluded empty buckets.
+
+The fix exposed a second copy. The rollup reader carried its own version of the
+same rule, so correcting the engine made the two paths disagree, and the
+equivalence tests caught it within one run. Both now call one shared fold, so
+they agree by construction rather than by two people remembering the same thing.
+
+Two expectations of mine were wrong rather than the engine: `count_unique`
+reports distinct-per-bucket summed, and `avg` is the mean of the bucket
+averages. Both are deliberate and documented, and the tests now say so at the
+point where a reader would otherwise assume a bug.
 
 ---
 
