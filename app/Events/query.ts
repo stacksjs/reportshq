@@ -186,17 +186,24 @@ export async function propertyValuesFor(projectId: number, key: string, limit = 
   if (!clean || clean.length > 80)
     return []
 
+  // json_extract with a bound path is not portable, so the key is validated
+  // above and interpolated into the accessor. Bound as a parameter it would be
+  // treated as a literal string rather than a path.
+  const accessor = getDialectDriver(resolveDialect())
+    .jsonExtract('properties', `'${clean.replace(/[^\w.-]/g, '')}'`)
+
   const rows = await db.unsafe(
-    // json_extract with a bound path is not portable, so the key is validated
-    // above and interpolated into the accessor. Bound as a parameter it would
-    // be treated as a literal string rather than a path.
+    // The accessor is repeated in HAVING rather than referred to by its alias.
+    // Postgres resolves aliases in GROUP BY and ORDER BY but not in HAVING, so
+    // the alias form runs in sqlite and raises `column does not exist` here.
+    //
     // Aliased `property_value`, not `value`: the driver returns nulls for a
     // column by that name, so the query is right in sqlite and empty here.
-    `SELECT ${getDialectDriver(resolveDialect()).jsonExtract('properties', `'${clean.replace(/[^\w.-]/g, '')}'`)} AS property_value, COUNT(*) AS n
+    `SELECT ${accessor} AS property_value, COUNT(*) AS n
        FROM events
       WHERE project_id = $1 AND properties IS NOT NULL
-      GROUP BY property_value
-      HAVING property_value IS NOT NULL
+      GROUP BY ${accessor}
+      HAVING ${accessor} IS NOT NULL
       ORDER BY n DESC
       LIMIT $2`,
     [projectId, Math.min(Math.max(limit, 1), 100)],
