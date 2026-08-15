@@ -1,0 +1,177 @@
+<script server>
+// A published report: every block, run through the engine, drawn on the server.
+//
+// The range lives in the URL rather than in a cookie or component state, so a
+// view is linkable. Someone pasting a link into a conversation is sharing what
+// they are looking at, not a page that will resolve differently for the reader.
+import { runQuery } from '../../app/Reports/engine'
+import { blocksOf, reportBySlug } from '../../app/Reports/reports'
+import { accessFor } from '../../app/Support/access'
+import { param, sessionFrom } from '../../app/Support/session'
+
+const session = await sessionFrom(cookies)
+const user = session.user
+const authPending = session.stale
+
+const projectId = Number(param(query, 'project') ?? 0)
+const slug = param(query, 'slug') ?? ''
+
+const access = user && projectId ? await accessFor(user, projectId) : null
+const allowed = access !== null
+
+const report = allowed && slug ? await reportBySlug(projectId, slug) : null
+const found = report !== null
+
+const RANGES = [
+  { key: 'last_7_days', label: '7 days' },
+  { key: 'last_14_days', label: '14 days' },
+  { key: 'last_30_days', label: '30 days' },
+  { key: 'last_90_days', label: '90 days' },
+  { key: 'this_month', label: 'This month' },
+]
+
+// A token from a closed list, never whatever arrived. An unknown value falls
+// back to the report's own default rather than erroring: a mistyped link should
+// still show the report.
+const requested = param(query, 'range')
+const activeRange = RANGES.find(entry => entry.key === requested)?.key
+  ?? String(report?.default_range ?? 'last_30_days')
+
+const timezone = String(report?.timezone ?? 'UTC')
+
+const blocks = found ? await blocksOf(Number(report!.id)) : []
+
+// Every block runs against the same range. Sequential rather than parallel on
+// purpose: the engine reads one SQLite file, and a report of eight blocks
+// issuing eight concurrent scans is slower than doing them in order.
+const rendered: Array<Record<string, unknown>> = []
+for (const block of blocks) {
+  const kind = String(block.kind)
+  const base = {
+    kind,
+    title: block.title ? String(block.title) : '',
+    body: block.body ? String(block.body) : '',
+    // 12 columns, so a block's width becomes a span the grid understands.
+    span: Math.max(1, Math.min(12, Number(block.w) || 6)),
+    height: Math.max(120, (Number(block.h) || 4) * 56),
+    result: null as unknown,
+    error: '',
+  }
+
+  if (kind === 'text') {
+    rendered.push(base)
+    continue
+  }
+
+  try {
+    base.result = await runQuery({
+      projectId,
+      timezone,
+      range: activeRange,
+      query: block.query as never,
+    })
+  }
+  catch (error) {
+    // One bad block must not take the report with it. The message lands in the
+    // block itself, where the person who can fix it is looking.
+    base.error = (error as Error).message
+  }
+
+  rendered.push(base)
+}
+
+const rangeLinks = RANGES.map(entry => ({
+  ...entry,
+  href: `/report?project=${projectId}&slug=${slug}&range=${entry.key}`,
+  active: entry.key === activeRange,
+}))
+</script>
+
+<template>
+  @include('AuthGuard')
+
+  <div class="min-h-[100dvh] bg-canvas text-ink">
+    @if (authPending)
+      <div id="auth-pending" hidden></div>
+    @endif
+
+    @include('AppNav')
+
+    <main class="px-6 py-10 mx-auto max-w-7xl">
+      @if (!found)
+        <div class="px-6 py-16 text-center rounded-xl border border-line bg-panel">
+          <h1 class="text-base font-medium">Report not found</h1>
+          <p class="mt-1 text-sm text-muted">It may have been deleted, or it may not be yours.</p>
+          <a href="/projects" class="inline-block mt-5 text-sm text-accent">Back to projects</a>
+        </div>
+      @else
+        <nav class="mb-6 text-sm text-subtle">
+          <a href="/projects" class="text-muted">Projects</a>
+          <span class="mx-2">/</span>
+          <a href="/project?id={{ projectId }}" class="text-muted">Project</a>
+          <span class="mx-2">/</span>
+          <span>{{ report.name }}</span>
+        </nav>
+
+        <div class="flex flex-wrap gap-4 justify-between items-end mb-8">
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">{{ report.name }}</h1>
+            @if (report.description)
+              <p class="mt-1 max-w-[65ch] text-sm text-muted">{{ report.description }}</p>
+            @endif
+          </div>
+
+          {{-- Plain links, so the range survives a reload, a back button and a
+               paste into a message. --}}
+          <div class="flex flex-wrap gap-1 items-center">
+            @foreach (rangeLinks as link)
+              @if (link.active)
+                <span class="px-3 py-1.5 text-sm font-medium rounded-lg bg-accent-soft text-accent">{{ link.label }}</span>
+              @else
+                <a href="{{ link.href }}" class="px-3 py-1.5 text-sm no-underline rounded-lg text-muted hover:text-ink">{{ link.label }}</a>
+              @endif
+            @endforeach
+          </div>
+        </div>
+
+        @if (rendered.length === 0)
+          <div class="px-6 py-16 text-center rounded-xl border border-line bg-panel">
+            <h2 class="text-base font-medium">This report has no blocks yet</h2>
+            <p class="mt-1 text-sm text-muted">Open it in the builder to add one.</p>
+          </div>
+        @else
+          <div class="grid grid-cols-12 gap-4">
+            @foreach (rendered as block)
+              <div class="col-span-12 md:col-span-{{ block.span }}">
+                <div class="p-5 h-full rounded-xl border border-line bg-panel" style="min-height: {{ block.height }}px">
+                  @if (block.error)
+                    <p class="text-sm font-medium text-ink">{{ block.title }}</p>
+                    <p class="mt-2 text-sm text-warn">{{ block.error }}</p>
+                  @elseif (block.kind === 'text')
+                    <TextBlock title="{{ block.title }}" body="{{ block.body }}" />
+                  @elseif (block.kind === 'big_number')
+                    <BigNumber :result="block.result" title="{{ block.title }}" />
+                  @elseif (block.kind === 'bar')
+                    <BarChart :result="block.result" title="{{ block.title }}" />
+                  @elseif (block.kind === 'donut')
+                    <DonutChart :result="block.result" title="{{ block.title }}" />
+                  @elseif (block.kind === 'table')
+                    <DataTable :result="block.result" title="{{ block.title }}" />
+                  @elseif (block.kind === 'funnel')
+                    <FunnelChart :result="block.result" title="{{ block.title }}" />
+                  @elseif (block.kind === 'heatmap')
+                    <HeatmapChart :result="block.result" title="{{ block.title }}" />
+                  @elseif (block.kind === 'area')
+                    <LineChart :result="block.result" title="{{ block.title }}" variant="area" />
+                  @else
+                    <LineChart :result="block.result" title="{{ block.title }}" />
+                  @endif
+                </div>
+              </div>
+            @endforeach
+          </div>
+        @endif
+      @endif
+    </main>
+  </div>
+</template>

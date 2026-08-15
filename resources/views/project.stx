@@ -1,0 +1,152 @@
+<script server>
+// One project: its reports, and the integration state a new project cares
+// about most.
+import { db as __db } from '@stacksjs/database'
+import { reportsFor } from '../../app/Reports/reports'
+import { accessFor, canAdminister } from '../../app/Support/access'
+import { param, sessionFrom } from '../../app/Support/session'
+
+const session = await sessionFrom(cookies)
+const user = session.user
+const authPending = session.stale
+
+const projectId = Number(param(query, 'id') ?? 0)
+
+// Permission first, before a single row about this project is read. A caller
+// who may not see it gets the same answer as one asking about a project that
+// does not exist.
+const access = user && projectId ? await accessFor(user, projectId) : null
+const allowed = access !== null
+
+const project = allowed
+  ? (await __db.unsafe(`SELECT * FROM projects WHERE id = $1`, [projectId]))?.[0] as Record<string, unknown>
+  : null
+
+const reports = allowed ? await reportsFor(projectId) : []
+const mayAdminister = allowed && user ? await canAdminister(user, projectId) : false
+
+// The write credential is shown only to someone who may administer the
+// project. A member who reads reports has no reason to hold the ability to
+// write events into them.
+const ingestKey = mayAdminister ? String(project?.ingest_key ?? '') : ''
+const receiving = !!project?.first_event_at
+
+const rows = allowed
+  ? await __db.unsafe(`SELECT COUNT(*) AS n FROM events WHERE project_id = $1`, [projectId]) as Array<{ n: number }>
+  : []
+const eventCount = Number(rows[0]?.n ?? 0)
+
+const cards = reports.map(report => ({
+  name: String(report.name),
+  slug: String(report.slug),
+  status: String(report.status),
+  origin: String(report.origin),
+  description: report.description ? String(report.description) : '',
+  href: `/report?project=${projectId}&slug=${String(report.slug)}`,
+}))
+
+const curlSnippet = ingestKey
+  ? `curl -X POST https://reportshq.org/ingest \\\n  -H "X-ReportsHQ-Key: ${ingestKey}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"events":[{"name":"commerce.order.created","value":4250,"currency":"USD"}]}'`
+  : ''
+</script>
+
+<template>
+  @include('AuthGuard')
+
+  <div class="min-h-[100dvh] bg-canvas text-ink">
+    @if (authPending)
+      <div id="auth-pending" hidden></div>
+    @endif
+
+    @include('AppNav')
+
+    <main class="px-6 py-10 mx-auto max-w-7xl">
+      @if (!allowed)
+        {{-- 404 rather than 403: telling a stranger "forbidden" confirms the
+             id exists, which is the one thing they did not know. --}}
+        <div class="px-6 py-16 text-center rounded-xl border border-line bg-panel">
+          <h1 class="text-base font-medium">Project not found</h1>
+          <p class="mt-1 text-sm text-muted">It may have been deleted, or it may not be yours.</p>
+          <a href="/projects" class="inline-block mt-5 text-sm text-accent">Back to projects</a>
+        </div>
+      @else
+        <nav class="mb-6 text-sm text-subtle">
+          <a href="/projects" class="text-muted">Projects</a>
+          <span class="mx-2">/</span>
+          <span>{{ project.name }}</span>
+        </nav>
+
+        <div class="flex flex-wrap gap-4 justify-between items-end mb-8">
+          <div>
+            <h1 class="text-2xl font-semibold tracking-tight">{{ project.name }}</h1>
+            <p class="mt-1 text-sm text-muted">
+              <span class="num">{{ eventCount }}</span> events &middot; {{ project.timezone }}
+            </p>
+          </div>
+        </div>
+
+        @if (!receiving)
+          {{-- Onboarding is the page while a project has never received
+               anything. Everything else is empty by definition. --}}
+          <section class="p-6 mb-8 rounded-xl border border-line bg-panel">
+            <h2 class="text-base font-medium">Send your first event</h2>
+            <p class="mt-1 max-w-[65ch] text-sm text-muted">
+              Reports build themselves once events arrive. Paste this into a terminal to check the
+              connection, then use one of the integration packages to send events from your app.
+            </p>
+
+            @if (ingestKey)
+              <pre class="overflow-x-auto p-4 mt-4 font-mono text-xs rounded-lg border border-line bg-canvas text-ink">{{ curlSnippet }}</pre>
+              <p class="mt-3 text-xs text-subtle">
+                This key is public by design: it ships inside your application and can only append
+                events to this project. It can never read anything.
+              </p>
+            @else
+              <p class="mt-4 text-sm text-subtle">
+                Ask an owner or admin for the ingest key.
+              </p>
+            @endif
+          </section>
+        @endif
+
+        <section>
+          <div class="flex flex-wrap gap-3 justify-between items-end mb-4">
+            <h2 class="text-lg font-semibold">Reports</h2>
+          </div>
+
+          @if (cards.length === 0)
+            <div class="px-6 py-14 text-center rounded-xl border border-line bg-panel">
+              <i class="mx-auto w-6 h-6 text-subtle i-hugeicons-chart-line-data-01"></i>
+              <h3 class="mt-3 text-base font-medium">No reports yet</h3>
+              <p class="mx-auto mt-1 max-w-sm text-sm text-muted">
+                Reports appear on their own once recognised events arrive, and you can build your
+                own at any time.
+              </p>
+            </div>
+          @else
+            <ul class="grid gap-4 list-none sm:grid-cols-2 lg:grid-cols-3">
+              @foreach (cards as card)
+                <li>
+                  <a href="{{ card.href }}" class="block p-5 h-full no-underline rounded-xl border transition-colors border-line bg-panel hover:border-accent">
+                    <div class="flex gap-3 justify-between items-start">
+                      <h3 class="text-base font-medium text-ink">{{ card.name }}</h3>
+                      @if (card.origin === 'template')
+                        <span class="px-2 py-0.5 text-xs rounded-full bg-accent-soft text-accent">auto</span>
+                      @endif
+                    </div>
+                    @if (card.description)
+                      <p class="mt-2 text-sm text-muted">{{ card.description }}</p>
+                    @endif
+                    @if (card.status === 'draft')
+                      <p class="mt-3 text-xs text-warn">Draft</p>
+                    @endif
+                  </a>
+                </li>
+              @endforeach
+            </ul>
+          @endif
+        </section>
+      @endif
+    </main>
+  </div>
+</template>

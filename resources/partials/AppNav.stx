@@ -1,0 +1,27 @@
+{{-- The app's top bar.
+
+     A partial rather than a component: stx drops props passed from one
+     component to another (stacksjs/stx#1937), and this needs the page's own
+     data. A partial is included into the page's scope, so it reads the page's
+     bindings directly and cannot lose them. --}}
+<header class="border-b border-line bg-panel">
+  <div class="flex gap-4 justify-between items-center px-6 py-3 mx-auto max-w-7xl">
+    <a href="/projects" class="flex gap-6 items-center no-underline">
+      <Wordmark />
+    </a>
+
+    <nav class="flex gap-1 items-center">
+      <a href="/projects" class="px-3 py-1.5 text-sm rounded-lg text-muted hover:text-ink">Projects</a>
+      <a href="/account" class="px-3 py-1.5 text-sm rounded-lg text-muted hover:text-ink">Account</a>
+      <button
+        type="button"
+        class="inline-flex justify-center items-center ml-1 w-8 h-8 rounded-lg border theme-btn border-line text-muted"
+        aria-label="Switch theme"
+        onclick="(function(r){var d=r.getAttribute('data-theme')==='dark';r.setAttribute('data-theme',d?'light':'dark');r.classList.toggle('dark',!d);try{localStorage.setItem('reportshq_theme',d?'light':'dark')}catch(e){}})(document.documentElement)"
+      >
+        <i class="w-4 h-4 ic-sun i-hugeicons-sun-03"></i>
+        <i class="w-4 h-4 ic-moon i-hugeicons-moon-02"></i>
+      </button>
+    </nav>
+  </div>
+</header>

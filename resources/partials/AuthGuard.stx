@@ -1,0 +1,23 @@
+{{-- Pre-paint auth bounce.
+
+     A plain script, not a client block: it has to run before anything paints
+     and before the runtime exists, or a signed-out visitor sees the app shell
+     first and then gets thrown out of it.
+
+     `#auth-pending` is rendered by the server when a cookie was presented and
+     did not authenticate. The server cannot tell "no cookie yet" from "bad
+     cookie" at render time, so it says which happened and this clears the stale
+     one. Bouncing both identically puts anyone whose token expired into a
+     redirect loop. --}}
+<script>
+(function () {
+  if (!/(^|;)\s*reportshq_token=/.test(document.cookie)) {
+    window.location.replace('/login')
+    return
+  }
+  if (document.getElementById('auth-pending')) {
+    document.cookie = 'reportshq_token=; path=/; max-age=0'
+    window.location.replace('/login')
+  }
+})()
+</script>
