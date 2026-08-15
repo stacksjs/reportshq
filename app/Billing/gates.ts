@@ -139,7 +139,7 @@ async function tierOfProject(projectId: number): Promise<Tier> {
  * and a client that treats every 403 as "sign in again" would send somebody
  * round a loop that cannot help them.
  */
-export function limitResponse(error: LimitReached): { body: Record<string, unknown>, status: number } {
+export function limitResponse(error: LimitReached): { body: Record<string, unknown>, status: 402 } {
   return {
     status: 402,
     body: {

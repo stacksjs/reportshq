@@ -15,6 +15,8 @@ import {
   settleLayout,
   updateBlocks,
 } from '../app/Reports/reports'
+import { LimitReached, limitResponse } from '../app/Billing/gates'
+import { createShare, revokeShare, rotateShare, sharesFor } from '../app/Reports/shares'
 import { accessFor } from '../app/Support/access'
 import { requestUser } from '../app/Support/session'
 
@@ -241,6 +243,79 @@ route.post('/restore', async (request: EnhancedRequest) => {
     return notFound()
 
   return response.json({ restored: await restoreReport(projectId, reportId) })
+}).skipCsrf()
+
+/**
+ * The share links on a report.
+ *
+ * Read through the report, like everything else here, so a share id from
+ * another tenant never resolves.
+ */
+route.post('/shares', async (request: EnhancedRequest) => {
+  const payload = await body(request)
+  const context = await editableReport(request, payload)
+  if (!context)
+    return notFound()
+
+  return response.json({ shares: await sharesFor(context.reportId) })
+}).skipCsrf()
+
+route.post('/shares/create', async (request: EnhancedRequest) => {
+  const payload = await body(request)
+  const context = await editableReport(request, payload)
+  if (!context)
+    return notFound()
+
+  try {
+    const share = await createShare(context.projectId, context.reportId, context.user, {
+      label: payload.label ? String(payload.label) : undefined,
+      expiresAt: payload.expires_at ? String(payload.expires_at) : undefined,
+      showBranding: payload.show_branding === false ? false : undefined,
+    })
+
+    return response.json({ share }, 201)
+  }
+  catch (error) {
+    // A plan limit answers 402 with the tier that would lift it, rather than
+    // being flattened into the same 422 as a malformed request.
+    if (error instanceof LimitReached) {
+      const { body: limitBody, status } = limitResponse(error)
+      return response.json(limitBody, status)
+    }
+
+    return response.json({ message: (error as Error).message }, 422)
+  }
+}).skipCsrf()
+
+route.post('/shares/revoke', async (request: EnhancedRequest) => {
+  const payload = await body(request)
+  const context = await editableReport(request, payload)
+  if (!context)
+    return notFound()
+
+  const shareId = Number(payload.id ?? 0)
+  if (!shareId)
+    return response.json({ message: 'Which link?' }, 422)
+
+  return response.json({ revoked: await revokeShare(context.projectId, shareId) })
+}).skipCsrf()
+
+route.post('/shares/rotate', async (request: EnhancedRequest) => {
+  const payload = await body(request)
+  const context = await editableReport(request, payload)
+  if (!context)
+    return notFound()
+
+  const shareId = Number(payload.id ?? 0)
+  if (!shareId)
+    return response.json({ message: 'Which link?' }, 422)
+
+  const token = await rotateShare(context.projectId, shareId)
+  if (!token)
+    return notFound()
+
+  // The old URL stops working immediately, which is the point of rotating.
+  return response.json({ token })
 }).skipCsrf()
 
 route.post('/create', async (request: EnhancedRequest) => {
