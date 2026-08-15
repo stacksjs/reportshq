@@ -176,6 +176,29 @@ export const tsCloud: TsCloudConfig = {
       },
     },
 
+    /**
+     * The documentation site, built at deploy time and served as static files.
+     *
+     * It is a separate bunpress build rather than something the app renders, so
+     * without this entry `/docs` is a 404 in production while working perfectly
+     * in dev. The landing page and the footer both link into it, and the
+     * post-deploy check is what caught it.
+     *
+     * `test -d` after the build is the guard against a build that quietly
+     * produces nothing: without it the deploy walks on and tars a directory
+     * that was never written, and the failure surfaces three steps later as
+     * something else. bunpress emits into a `.bunpress` subdirectory.
+     */
+    docs: {
+      root: './dist/docs/.bunpress',
+      path: '/docs',
+      domain: APP_DOMAIN,
+      deploy: 'server',
+      // The installed CLI directly, not the ./buddy wrapper: the wrapper
+      // bootstraps pantry, which the box neither has nor needs.
+      build: 'bun node_modules/@stacksjs/buddy/dist/cli.js build docs && test -d dist/docs/.bunpress',
+    },
+
     // www redirects rather than serving a second copy. One canonical origin
     // means a share link somebody pasted resolves to one place, and the
     // certificate set covers both names.
