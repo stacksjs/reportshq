@@ -28,43 +28,38 @@ const PORT_API = 3158
  *
  * Deploys are atomic: each activates a NEW release directory and the old one
  * goes away, so anything written inside it is destroyed by the next deploy.
- * Left at the framework default the database would be wiped on every push to
- * main, and the only symptom would be that all the customer data was gone.
+ * ts-cloud's shared paths keep the real directory outside the releases and
+ * symlink it into each one, so a rollback finds the same files rather than an
+ * empty directory.
  *
- * ts-cloud's shared paths are the mechanism for this: it keeps the real
- * directory outside the releases and symlinks it into each one, so it creates
- * them itself and a rollback finds the same data rather than an empty dir.
+ * The database is not here: it is Postgres on the box, reached over loopback.
+ * These are the two directories the app itself writes, generated exports and
+ * nightly dumps, both of which a release pruner would otherwise delete.
  *
- * The paths below stay release-relative because that is where the symlink
- * lands; the `target` is where the bytes actually live.
+ * The paths stay release-relative because that is where the symlink lands; the
+ * `target` is where the bytes actually live.
  */
 const STATE_DIR = '/var/lib/reportshq'
-const DB_PATH = 'database/reportshq.sqlite'
 const EXPORT_DIR = 'storage/exports'
 const BACKUP_DIR = 'storage/backups/database'
 
 /**
  * Shared paths, with an EXPLICIT absolute target.
  *
- * `main` and `api` are two sites of one project, and each site gets its own
- * `/var/www/reportshq-<site>/shared`. Listing `database` as a plain string
- * would therefore give them two separate databases that drift apart forever:
- * the API would write an event the page could not read, which looks like the
- * app losing data rather than a config mistake. Naming one absolute target
- * makes them the same file.
+ * `main` and `api` are two sites of one project, and each gets its own
+ * `/var/www/reportshq-<site>/shared`, so a plain-string entry would give them
+ * two separate directories. Naming one absolute target makes them the same.
  *
  * `seed` decides which site may create and populate the target. Exactly one
  * should, or whichever site happens to deploy first creates it and the site
- * that actually holds the data never seeds it.
+ * that actually writes there never seeds it.
+ *
+ * The database is no longer among these: it lives in Postgres on the box, not
+ * in a file inside the release tree. Its credentials come from the encrypted
+ * `.env.production`.
  */
 function sharedState(seed: boolean) {
   return [
-    // The FILE, not the `database` directory. Sharing the directory replaces
-    // the release's own `database/migrations/*.sql` with a directory holding
-    // nothing but the sqlite file, so `migrate` finds no migrations, reports
-    // "already up to date", and creates only the framework's auth tables. The
-    // site then serves perfectly until the first request touches `users`.
-    { path: DB_PATH, target: `${STATE_DIR}/reportshq.sqlite`, seed },
     { path: EXPORT_DIR, target: `${STATE_DIR}/exports`, seed },
     // Nightly dumps. A backup written inside a release is deleted by the
     // release pruner, so it would disappear at exactly the moment the release
@@ -159,8 +154,9 @@ export const tsCloud: TsCloudConfig = {
         NODE_ENV: 'production',
         PORT_API: String(PORT_API),
         API_URL: `http://127.0.0.1:${PORT_API}`,
-        DB_CONNECTION: 'sqlite',
-        DB_DATABASE_PATH: DB_PATH,
+        // Database credentials come from the encrypted .env.production, not
+        // from here: a value set in this block becomes the authoritative
+        // runtime environment and would override them.
         EXPORT_DIR,
         BACKUP_DIR,
       },
@@ -177,13 +173,10 @@ export const tsCloud: TsCloudConfig = {
         HOST: '127.0.0.1',
         APP_ENV: 'production',
         NODE_ENV: 'production',
-        // The same database and the same export directory as the site above.
-        // These two processes serve one application, and pointing them at
-        // different files would mean the API writes an event the page cannot
-        // read, which looks like the app losing data rather than a config bug.
-        DB_CONNECTION: 'sqlite',
-        DB_DATABASE_PATH: DB_PATH,
+        // Both processes read the same Postgres database, from the same
+        // encrypted .env.production. Nothing about the database is set here.
         EXPORT_DIR,
+        BACKUP_DIR,
       },
     },
 
