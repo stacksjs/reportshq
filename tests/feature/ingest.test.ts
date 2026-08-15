@@ -9,7 +9,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { db } from '@stacksjs/database'
 import { storeEvents } from '../../app/Events/ingest'
-import { checkIngestLimits, IP_LIMIT, PROJECT_LIMIT, resetIngestLimits } from '../../app/Events/limits'
+import { checkIngestLimits, IP_LIMIT, PROJECT_LIMIT, resetIngestLimits, WINDOW_MS } from '../../app/Events/limits'
 import { LIMITS, normalizeBatch, normalizeName, normalizeProperties, normalizeTimestamp } from '../../app/Events/normalize'
 import { eventNamesFor, eventsFor, MAX_PAGE } from '../../app/Events/query'
 import { projectForIngestKey } from '../../app/Support/access'
@@ -359,6 +359,96 @@ describe('rate limits', () => {
     }
 
     expect(refusals).toBeGreaterThan(0)
+    await resetIngestLimits('', address)
+  })
+})
+
+/**
+ * The same ceilings, when the requests arrive together.
+ *
+ * The tests above charge the limiter one awaited call at a time, which is the
+ * one traffic shape a real flood never has. A limiter that reads a count,
+ * decides, and writes it back is correct sequentially and wrong the moment two
+ * requests interleave between the read and the write - and the whole point of
+ * this limiter is the case where a script is pointed at the endpoint, which is
+ * to say the concurrent one.
+ *
+ * Over-admitting here is not a rounding error. The ceiling exists so one leaked
+ * key cannot bury a paying customer's data, and a limiter that lets through
+ * three times its allowance under load is not enforcing a ceiling at all.
+ */
+describe('rate limits under concurrency', () => {
+  test('a burst of simultaneous requests admits no more than the ceiling', async () => {
+    const id = `burst-${stamp}`
+    await resetIngestLimits(id, '')
+
+    // Half again as many as the allowance, all in flight at once.
+    const attempts = Math.ceil(PROJECT_LIMIT * 1.5)
+    const decisions = await Promise.all(
+      Array.from({ length: attempts }, () => checkIngestLimits(id, '')),
+    )
+
+    const admitted = decisions.filter(decision => decision.ok).length
+
+    expect(admitted).toBeLessThanOrEqual(PROJECT_LIMIT)
+    // And it must not overcorrect: refusing the whole burst would be its own
+    // outage, and a test that only checked the upper bound would pass for it.
+    expect(admitted).toBeGreaterThan(PROJECT_LIMIT / 2)
+
+    await resetIngestLimits(id, '')
+  })
+
+  test('a burst against one project leaves another project untouched', async () => {
+    const flooded = `burst-flooded-${stamp}`
+    const quiet = `burst-quiet-${stamp}`
+    await resetIngestLimits(flooded, '')
+    await resetIngestLimits(quiet, '')
+
+    await Promise.all(
+      Array.from({ length: PROJECT_LIMIT * 2 }, () => checkIngestLimits(flooded, '')),
+    )
+
+    expect((await checkIngestLimits(flooded, '')).ok).toBeFalse()
+    expect((await checkIngestLimits(quiet, '')).ok).toBeTrue()
+
+    await resetIngestLimits(flooded, '')
+    await resetIngestLimits(quiet, '')
+  })
+
+  test('a refused burst still hands back a usable Retry-After', async () => {
+    const id = `burst-retry-${stamp}`
+    await resetIngestLimits(id, '')
+
+    const decisions = await Promise.all(
+      Array.from({ length: PROJECT_LIMIT * 2 }, () => checkIngestLimits(id, '')),
+    )
+
+    const refused = decisions.filter(decision => !decision.ok)
+    expect(refused.length).toBeGreaterThan(0)
+
+    // A zero would tell a well-behaved client to retry immediately, turning a
+    // rate limit into a busy loop.
+    for (const decision of refused) {
+      expect(decision.retryAfter).toBeGreaterThan(0)
+      expect(decision.retryAfter).toBeLessThanOrEqual(Math.ceil(WINDOW_MS / 1000))
+    }
+
+    await resetIngestLimits(id, '')
+  })
+
+  test('the per-address ceiling also holds under a burst', async () => {
+    const address = `203.0.113.${stamp % 200}`
+    await resetIngestLimits('', address)
+
+    // Distinct project ids, so the project window never refuses first and the
+    // address window is the one being measured.
+    const decisions = await Promise.all(
+      Array.from({ length: Math.ceil(IP_LIMIT * 1.5) }, (_, index) =>
+        checkIngestLimits(`burst-ip-${stamp}-${index}`, address)),
+    )
+
+    expect(decisions.filter(decision => decision.ok).length).toBeLessThanOrEqual(IP_LIMIT)
+
     await resetIngestLimits('', address)
   })
 })

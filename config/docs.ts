@@ -67,6 +67,7 @@ const config: BunPressOptions = {
           items: [
             { text: 'Self-hosting', link: '/self-hosting' },
             { text: 'Deploying', link: '/deploy' },
+            { text: 'Launch checklist', link: '/launch-checklist' },
             { text: 'API', link: '/api' },
           ],
         },
