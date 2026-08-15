@@ -126,6 +126,11 @@ one.
   survived a full HTTP pass: every page returned 200 with correct markup, and
   every one of them bounced in a real browser. Load a page in the browser before
   believing a front-end change works.
+- **A report has no timezone of its own; the project does.** `report.timezone`
+  is undefined and silently reads as UTC, which bucketed every chart in the
+  viewer in the wrong zone for weeks. Read `projects.timezone`. It surfaced only
+  because a scheduled email computed the same report in the project's real zone
+  and returned a different average.
 - **Never declare a bare-local-part forward on the shared mail server.** The
   bare form is not domain-scoped, and the box hosts a dozen domains: a `support`
   key catches support@ for every tenant with no real mailbox at that address.

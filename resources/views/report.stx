@@ -5,6 +5,7 @@
 // view is linkable. Someone pasting a link into a conversation is sharing what
 // they are looking at, not a page that will resolve differently for the reader.
 import { describeCaveat, describeQuery } from '../../app/Reports/describe'
+import { db as __db } from '@stacksjs/database'
 import { runQuery } from '../../app/Reports/engine'
 import { publishedBlocks, reportBySlug } from '../../app/Reports/reports'
 import { accessFor } from '../../app/Support/access'
@@ -39,7 +40,18 @@ const requested = param(query, 'range')
 const activeRange = RANGES.find(entry => entry.key === requested)?.key
   ?? String(report?.default_range ?? 'last_30_days')
 
-const timezone = String(report?.timezone ?? 'UTC')
+// The **project's** timezone, read from the project.
+//
+// This used to be `report?.timezone`, and the reports table has no such column,
+// so it silently resolved to UTC for every report on the instance. Day buckets,
+// "last 30 days" boundaries and every comparison were computed in the wrong
+// zone, and the numbers looked plausible enough that nothing complained: a
+// scheduled email computing the same report in the project's real zone returned
+// a different average, which is how it surfaced.
+const projectRow = allowed
+  ? (await __db.unsafe(`SELECT timezone FROM projects WHERE id = $1`, [projectId]))?.[0] as { timezone?: string } | undefined
+  : undefined
+const timezone = String(projectRow?.timezone ?? 'UTC')
 
 // The published snapshot, never the draft. A teammate opening this while
 // somebody is mid-drag in the builder sees the last thing that was deliberately

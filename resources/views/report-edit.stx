@@ -8,6 +8,7 @@
 // to anyone on a slow connection, which is exactly when they are least patient.
 import { eventNamesFor, propertyKeysFor } from '../../app/Events/query'
 import { eventLabel, fieldLabel, GRAIN_LABELS, MEASURE_LABELS, OPERATOR_LABELS } from '../../app/Events/taxonomy'
+import { db as __db } from '@stacksjs/database'
 import { runQuery } from '../../app/Reports/engine'
 import { blocksOf, reportBySlug } from '../../app/Reports/reports'
 import { GRID_COLUMNS } from '../../app/Reports/schema'
@@ -26,7 +27,18 @@ const access = user && projectId ? await accessFor(user, projectId) : null
 const report = access && slug ? await reportBySlug(projectId, slug) : null
 const found = report !== null
 
-const timezone = String(report?.timezone ?? 'UTC')
+// The **project's** timezone, read from the project.
+//
+// This used to be `report?.timezone`, and the reports table has no such column,
+// so it silently resolved to UTC for every report on the instance. Day buckets,
+// "last 30 days" boundaries and every comparison were computed in the wrong
+// zone, and the numbers looked plausible enough that nothing complained: a
+// scheduled email computing the same report in the project's real zone returned
+// a different average, which is how it surfaced.
+const projectRow = access
+  ? (await __db.unsafe(`SELECT timezone FROM projects WHERE id = $1`, [projectId]))?.[0] as { timezone?: string } | undefined
+  : undefined
+const timezone = String(projectRow?.timezone ?? 'UTC')
 const blocks = found ? await blocksOf(Number(report!.id)) : []
 
 // Previews use the report's own default range. The builder is for arranging and

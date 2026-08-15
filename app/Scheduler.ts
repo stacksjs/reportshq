@@ -35,6 +35,14 @@ export default function () {
     .everyTenMinutes()
     .setTimeZone('UTC')
 
+  // Email the scheduled reports that are due. Hourly, because a schedule's
+  // finest granularity is an hour and each is compared in its own timezone;
+  // last_run_at is what keeps a re-run from sending twice.
+  schedule
+    .job('DeliverReports')
+    .hourly()
+    .setTimeZone('UTC')
+
   // Tell people about their quota while they can still act on it. Hourly: a
   // warning is useful within the hour and pointless within the minute, and it
   // reads every counter each run.
