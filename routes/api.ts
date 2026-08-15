@@ -1,5 +1,3 @@
-import { response, route } from '@stacksjs/router'
-
 /**
  * This file is the entry point for your application's API routes.
  * The routes defined here are automatically registered. Last but
@@ -7,8 +5,8 @@ import { response, route } from '@stacksjs/router'
  *
  * Every route in this file is mounted under `/api`. The prefix comes from
  * the `'api'` key in `app/Routes.ts` and lines up with the path the dev
- * proxy forwards (`/api/*`), so `route.get('/hello', ...)` below answers
- * `GET /api/hello`. Paths at the document root belong in a route file
+ * proxy forwards (`/api/*`), so `route.get('/thing', ...)` here answers
+ * `GET /api/thing`. Paths at the document root belong in a route file
  * whose registry entry sets `prefix: ''`.
  *
  * Framework routes (auth, dashboard, commerce, CMS, etc.) are loaded
@@ -18,8 +16,13 @@ import { response, route } from '@stacksjs/router'
  * @see https://docs.stacksjs.com/routing
  */
 
-// Your custom routes go here. This one answers `GET /api/hello`:
-route.get('/hello', () => response.text('hello world'))
+// This app's own API lives in routes/projects.ts, routes/reports.ts,
+// routes/ingest.ts and routes/auth.ts, each mounted with its own prefix and
+// middleware from app/Routes.ts. Nothing belongs at a bare `/api/*` path.
+//
+// `GET /api/health` is NOT defined here on purpose: the framework already
+// serves it, and its answer covers the database and the cache rather than just
+// whether the process replied. Uptime monitoring points at that one.
 
 // `/coming-soon` is served as an STX view from
 // `storage/framework/defaults/resources/views/coming-soon.stx`. The
