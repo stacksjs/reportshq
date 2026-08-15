@@ -1,0 +1,122 @@
+name: Deploy
+
+# Push to deploy.
+#
+# The release is built from a clean CI checkout rather than from a laptop, and
+# that is the point rather than a convenience: `buddy deploy` tars the WORKING
+# DIRECTORY, not the commit. A local deploy therefore ships whatever happens to
+# be checked out, including another session's half-finished work. Here the
+# release is exactly the commit that triggered it.
+on:
+  push:
+    branches:
+      - main
+  # Deploying the same commit again is the fastest way to undo a bad release,
+  # so it stays a button rather than a git operation.
+  workflow_dispatch:
+
+# Queue deploys rather than cancelling them. Two runs racing to write the same
+# systemd unit and rpx fragment on a shared box is worse than one slow deploy,
+# and the loser can leave the gateway holding a half-written fragment.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  # The same three gates CI runs. A deploy that does not wait for them is a
+  # deploy that ships a red build, and this box serves a dozen other tenants.
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pantry
+        uses: pantry-pm/pantry/packages/action@c1417d98f5613290bc3b1f96d35086b834684659 # v0.10.47 + the socket-hang-up retry fix
+        with:
+          install: 'false'
+
+      - name: Use cached node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            node-modules-
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Lint
+        run: bun buddy lint
+
+      - name: Typecheck
+        run: bun buddy typecheck
+
+      - name: Test
+        run: bun test tests/
+
+  deploy:
+    needs: [verify]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://reportshq.org
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pantry
+        uses: pantry-pm/pantry/packages/action@c1417d98f5613290bc3b1f96d35086b834684659 # v0.10.47 + the socket-hang-up retry fix
+        with:
+          install: 'false'
+
+      - name: Install Dependencies
+        run: bun install
+
+      # ts-cloud reads the PUBLIC key off disk to register it, so it is derived
+      # from the private one rather than kept as a second secret. Two secrets
+      # that have to agree eventually disagree.
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keygen -y -f ~/.ssh/id_ed25519 > ~/.ssh/id_ed25519.pub
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy
+        env:
+          # Decrypts .env.production, which is committed encrypted and carries
+          # every application secret. The private key lives only here.
+          DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
+          # Needed even though this attaches to an existing box: ts-cloud still
+          # resolves the server through the Hetzner API.
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+          # DNS reconcile for reportshq.org, whose zone is on Porkbun.
+          PORKBUN_API_KEY: ${{ secrets.PORKBUN_API_KEY }}
+          PORKBUN_SECRET_KEY: ${{ secrets.PORKBUN_SECRET_KEY }}
+          APP_ENV: production
+          APP_URL: https://reportshq.org
+          APP_DOMAIN: reportshq.org
+        run: ./buddy deploy --prod --yes
+
+      # The deploy step exiting 0 does not mean the site works: a release can
+      # ship, the unit can start, and the app can still 500 on every request.
+      # These are the pages a stranger actually lands on.
+      - name: Verify the site is serving
+        run: |
+          set -euo pipefail
+          fail=0
+          for path in / /pricing /features /compare/metabase /docs /sitemap.xml /robots.txt; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 5 --retry-all-errors "https://reportshq.org${path}" || echo 000)
+            printf '%-24s %s\n' "$path" "$code"
+            [ "$code" = "200" ] || fail=1
+          done
+
+          # The ingest endpoint must reject an unauthenticated write rather than
+          # accept it or 404. A 401 here is the healthy answer.
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST https://reportshq.org/ingest || echo 000)
+          printf '%-24s %s (expect 401)\n' "POST /ingest" "$code"
+          [ "$code" = "401" ] || fail=1
+
+          exit $fail
