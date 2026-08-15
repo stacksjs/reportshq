@@ -501,3 +501,102 @@ describe('a project only ever sees its own events', () => {
     await db.unsafe(`DELETE FROM projects WHERE id = $1`, [other.id])
   })
 })
+
+/**
+ * A month-grain query that crosses from one year into the next.
+ *
+ * The bucket label is built in SQL, by two different drivers, from a format
+ * string. A month format that omitted the year would group December 2025 and
+ * December 2026 into one bar, and the resulting chart would look entirely
+ * plausible: a single tall December, no error, no gap. Nobody spots that by
+ * reading a dashboard.
+ *
+ * The rows are inserted directly rather than through `storeEvents`, which
+ * refuses anything older than thirty days. That guard is right for a public
+ * write endpoint and unhelpful here, where the whole point is a range the
+ * calendar has to be reasoned about rather than an ingest that has to be
+ * defended.
+ */
+describe('grains across a year boundary', () => {
+  let boundaryProject: number
+
+  const december = '2025-12-15T10:00:00.000Z'
+  const january = '2026-01-15T10:00:00.000Z'
+  const februaryRange = {
+    from: new Date('2025-12-01T00:00:00.000Z'),
+    to: new Date('2026-02-01T00:00:00.000Z'),
+  }
+
+  beforeAll(async () => {
+    boundaryProject = Number((await createProject(owner, { name: `Boundary ${stamp}`, timezone: 'UTC' })).id)
+
+    const rows: Array<[string, number]> = [
+      [december, 10],
+      [december, 20],
+      [january, 30],
+    ]
+
+    for (const [occurredAt, value] of rows) {
+      await db.unsafe(
+        `INSERT INTO events (project_id, name, occurred_at, received_at, value, currency)
+         VALUES ($1, 'commerce.order.created', $2, $3, $4, 'USD')`,
+        [boundaryProject, occurredAt, occurredAt, value],
+      )
+    }
+  })
+
+  afterAll(async () => {
+    await db.unsafe(`DELETE FROM events WHERE project_id = $1`, [boundaryProject])
+    await db.unsafe(`DELETE FROM usage_counters WHERE project_id = $1`, [boundaryProject])
+    await db.unsafe(`DELETE FROM projects WHERE id = $1`, [boundaryProject])
+  })
+
+  test('December and January are two months, not one', async () => {
+    const result = await runQuery({
+      projectId: boundaryProject,
+      range: februaryRange,
+      query: { events: ['commerce.order.created'], measure: 'count', filters: [], grain: 'month' },
+    })
+
+    expect(result.total).toBe(3)
+
+    // Two points with data. A year-blind format would collapse them.
+    const withData = result.series[0]!.points.filter(point => Number(point.value) > 0)
+    expect(withData).toHaveLength(2)
+    expect(withData.map(point => Number(point.value))).toEqual([2, 1])
+  })
+
+  test('the buckets are labelled with the year they belong to', async () => {
+    const result = await runQuery({
+      projectId: boundaryProject,
+      range: februaryRange,
+      query: { events: ['commerce.order.created'], measure: 'count', filters: [], grain: 'month' },
+    })
+
+    const labels = result.series[0]!.points.map(point => new Date(point.t).toISOString().slice(0, 7))
+
+    expect(labels).toContain('2025-12')
+    expect(labels).toContain('2026-01')
+  })
+
+  test('a sum across the boundary adds both years together', async () => {
+    const result = await runQuery({
+      projectId: boundaryProject,
+      range: februaryRange,
+      query: { events: ['commerce.order.created'], measure: 'sum', field: 'value', filters: [], grain: 'month' },
+    })
+
+    // 10 + 20 in December, 30 in January.
+    expect(Number(result.total)).toBe(60)
+  })
+
+  test('a range inside one year does not reach into the other', async () => {
+    const januaryOnly = await runQuery({
+      projectId: boundaryProject,
+      range: { from: new Date('2026-01-01T00:00:00.000Z'), to: new Date('2026-02-01T00:00:00.000Z') },
+      query: { events: ['commerce.order.created'], measure: 'count', filters: [], grain: 'month' },
+    })
+
+    expect(januaryOnly.total).toBe(1)
+  })
+})

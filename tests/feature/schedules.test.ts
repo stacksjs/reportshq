@@ -450,3 +450,104 @@ describe('on-demand exports', () => {
     expect(Number(rows[0]?.n)).toBe(0)
   })
 })
+
+/**
+ * The two days a year when a local hour is not an hour.
+ *
+ * A schedule is stored as a local hour and matched against the local hour of
+ * whatever instant the scan happens to be running at. That is right on 363 days
+ * and wrong on the two where a clock moves, in opposite directions:
+ *
+ *   - springing forward, one local hour never occurs, so an exact match finds
+ *     nothing and the report is silently skipped
+ *   - falling back, one local hour occurs twice, so a naive "has it been long
+ *     enough" check sends the report a second time
+ *
+ * Neither raises anything. The only evidence is a customer noticing a missing
+ * morning email, or two identical ones, once a year.
+ *
+ * These simulate the hourly scan across a whole day and count deliveries, which
+ * is the property that actually matters: exactly one, whatever the clock did.
+ */
+describe('schedules across a daylight-saving change', () => {
+  /** Run the scan every hour of a UTC day, counting how often a schedule fires. */
+  function scanDay(schedule: Parameters<typeof isDue>[0], year: number, month: number, day: number): number {
+    let fired = 0
+
+    for (let hour = 0; hour < 24; hour++) {
+      const at = new Date(Date.UTC(year, month, day, hour, 0, 0))
+      if (isDue(schedule, at))
+        fired++
+    }
+
+    return fired
+  }
+
+  test('a 02:00 schedule still runs on the day 02:00 does not exist', () => {
+    // New York goes 01:59:59 to 03:00:00 on 2026-03-08. No instant that day has
+    // a local hour of 2, so an exact match fires zero times and the report is
+    // skipped without a word.
+    const schedule = { cadence: 'daily', hour: 2, timezone: 'America/New_York', lastRunAt: null }
+
+    expect(scanDay(schedule, 2026, 2, 8)).toBe(1)
+  })
+
+  test('it runs at the first hour that does exist, not at some other time', () => {
+    const schedule = { cadence: 'daily', hour: 2, timezone: 'America/New_York', lastRunAt: null }
+
+    const firing = Array.from({ length: 24 }, (_, hour) => new Date(Date.UTC(2026, 2, 8, hour, 0, 0)))
+      .filter(at => isDue(schedule, at))
+
+    expect(firing).toHaveLength(1)
+    expect(localParts('America/New_York', firing[0]!).hour).toBe(3)
+  })
+
+  test('the same schedule fires once on an ordinary day', () => {
+    // The guard on the guard: a fix that made the schedule fire twice on all
+    // the other days of the year would be worse than the bug.
+    const schedule = { cadence: 'daily', hour: 2, timezone: 'America/New_York', lastRunAt: null }
+
+    expect(scanDay(schedule, 2026, 2, 15)).toBe(1)
+  })
+
+  test('an unaffected hour is untouched by the change', () => {
+    const schedule = { cadence: 'daily', hour: 9, timezone: 'America/New_York', lastRunAt: null }
+
+    expect(scanDay(schedule, 2026, 2, 8)).toBe(1)
+  })
+
+  test('the hour after an ordinary hour is not treated as a stand-in for it', () => {
+    // 10:00 exists, so a scan at 11:00 is late rather than a substitute, and
+    // must not fire. Otherwise every schedule would fire in a two-hour band.
+    const schedule = { cadence: 'daily', hour: 10, timezone: 'America/New_York', lastRunAt: null }
+    const at = new Date(Date.UTC(2026, 2, 15, 15, 0, 0))
+
+    expect(localParts('America/New_York', at).hour).toBe(11)
+    expect(isDue(schedule, at)).toBeFalse()
+  })
+
+  test('the repeated hour in autumn still delivers once', () => {
+    // New York falls back on 2026-11-01: 01:00 to 01:59 happens twice. A daily
+    // schedule at that hour matches on both passes, and only the record of the
+    // first run stops the second delivery.
+    const first = new Date(Date.UTC(2026, 10, 1, 5, 0, 0))
+    const second = new Date(Date.UTC(2026, 10, 1, 6, 0, 0))
+
+    expect(localParts('America/New_York', first).hour).toBe(1)
+    expect(localParts('America/New_York', second).hour).toBe(1)
+
+    const schedule = { cadence: 'daily', hour: 1, timezone: 'America/New_York', lastRunAt: null }
+    expect(isDue(schedule, first)).toBeTrue()
+
+    const afterRunning = { ...schedule, lastRunAt: first.toISOString() }
+    expect(isDue(afterRunning, second)).toBeFalse()
+  })
+
+  test('a southern-hemisphere spring-forward is handled the same way', () => {
+    // Santiago springs forward on 2026-09-06, and the missing hour is a
+    // different one. Nothing here should be specific to a northern timezone.
+    const schedule = { cadence: 'daily', hour: 0, timezone: 'America/Santiago', lastRunAt: null }
+
+    expect(scanDay(schedule, 2026, 8, 6)).toBe(1)
+  })
+})

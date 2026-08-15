@@ -65,6 +65,30 @@ export function localParts(timezone: string, at: Date): { year: number, month: n
 }
 
 /**
+ * Was the configured hour skipped entirely by a spring-forward?
+ *
+ * On the day a clock jumps forward, one local hour does not happen: in New York
+ * on 2026-03-08 the time goes 01:59:59 to 03:00:00, and no instant that day has
+ * a local hour of 2. A schedule set to 02:00 therefore matched nothing, and its
+ * daily report was silently skipped once a year - no error, no retry, just a
+ * missing email that arrives again the next morning as though nothing happened.
+ *
+ * The rule is narrow on purpose. Only the hour immediately after the configured
+ * one can stand in for it, and only when the configured hour genuinely did not
+ * occur. A blanket "run if we are past the hour" would also fire a newly created
+ * 02:00 schedule at four in the afternoon, which is a worse surprise than the
+ * problem it fixes.
+ */
+function skippedBySpringForward(timezone: string, hour: number, at: Date, localHour: number): boolean {
+  if (localHour !== (hour + 1) % 24)
+    return false
+
+  // If the configured hour did happen, a scan during it was the right moment
+  // and this one is simply late.
+  return localParts(timezone, new Date(at.getTime() - 3_600_000)).hour !== hour
+}
+
+/**
  * Whether a schedule should run now.
  *
  * Two conditions, both necessary. The local hour has to match, and the schedule
@@ -82,8 +106,10 @@ export function isDue(schedule: {
 }, at: Date = new Date()): boolean {
   const local = localParts(schedule.timezone, at)
 
-  if (local.hour !== Number(schedule.hour))
+  if (local.hour !== Number(schedule.hour)
+    && !skippedBySpringForward(schedule.timezone, Number(schedule.hour), at, local.hour)) {
     return false
+  }
 
   // The day the schedule asked for, defaulting to Monday and the first of the
   // month. Both are columns on the model, so a weekly report can land on the

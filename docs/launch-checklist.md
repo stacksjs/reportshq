@@ -110,11 +110,36 @@ Postgres. Production runs Postgres, which means the property-value dropdown in t
 report filter bar was failing there and only there. Nothing caught it because that
 function had no Postgres coverage until the isolation suite exercised it.
 
+- [x] Timezone and DST edges, both directions and both hemispheres: 11 tests
+
+**Found and fixed.** A schedule is stored as a local hour and matched against the
+local hour of whatever instant the scan is running at. On the day a clock springs
+forward, one local hour does not happen: New York goes 01:59:59 to 03:00:00 on
+2026-03-08, and no instant that day has a local hour of 2. A daily report set to
+02:00 matched nothing and was **silently skipped once a year**. No error, no
+retry, no log line. The only evidence would have been a customer noticing a
+missing morning email.
+
+Fixed narrowly: the hour immediately after may stand in for the configured one,
+but only when the configured hour genuinely did not occur. A blanket "run if we
+are past the hour" would also fire a newly created 02:00 schedule at four in the
+afternoon, which is a worse surprise than the problem it solves. The autumn
+direction, where an hour happens twice, was already correct: the record of the
+first run stops the second delivery.
+
+Verified by mutation: three of the eleven tests fail against the unfixed
+scheduler, including the southern-hemisphere case.
+
+- [x] Month-grain across a year boundary, on both dialects: 4 tests
+
+The bucket label is built in SQL by two different drivers from a format string.
+A month format that dropped the year would fold December 2025 and December 2026
+into one bar, and the chart would look entirely plausible: one tall December, no
+error, no gap. It does not, and now that is asserted rather than assumed.
+
 - [ ] Query engine fixture audit: hand-computed expected values for every
       measure/grain/dimension combination on a frozen dataset
 - [ ] Rollup-vs-raw equivalence at production scale factor
-- [ ] Timezone and DST edges: a schedule at 02:30 on a DST-change day, a
-      month-grain query across a year boundary
 
 ---
 
