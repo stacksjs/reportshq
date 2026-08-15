@@ -63,7 +63,7 @@ export async function createProject(user: { id: number }, input: CreateProjectIn
 
   await db.unsafe(
     `INSERT INTO projects (name, slug, ingest_key, owner_id, timezone, auto_reports_enabled, created_at)
-     VALUES ($1, $2, $3, $4, $5, 1, CURRENT_TIMESTAMP)`,
+     VALUES ($1, $2, $3, $4, $5, TRUE, CURRENT_TIMESTAMP)`,
     [name, slugify(name), key, Number(user.id), input.timezone ?? 'UTC'],
   )
 
@@ -277,7 +277,7 @@ export async function setAutoReports(user: { id: number }, projectId: number, en
 
   await db.unsafe(
     `UPDATE projects SET auto_reports_enabled = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND deleted_at IS NULL`,
-    [enabled ? 1 : 0, projectId],
+    [enabled, projectId],
   )
 }
 

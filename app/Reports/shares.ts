@@ -67,7 +67,7 @@ export async function createShare(
   await db.unsafe(
     `INSERT INTO report_shares (report_id, token, label, expires_at, show_branding, view_count, created_by_id, created_at)
      VALUES ($1, $2, $3, $4, $5, 0, $6, CURRENT_TIMESTAMP)`,
-    [reportId, token, input.label ?? null, input.expiresAt ?? null, unbranded ? 0 : 1, Number(user.id)],
+    [reportId, token, input.label ?? null, input.expiresAt ?? null, !unbranded, Number(user.id)],
   )
 
   const created = (await db.unsafe(`SELECT * FROM report_shares WHERE token = $1`, [token]))?.[0]

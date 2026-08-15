@@ -381,7 +381,7 @@ route.post('/schedules/create', async (request: EnhancedRequest) => {
 
   await db.unsafe(
     `INSERT INTO report_schedules (report_id, cadence, hour, day_of_week, day_of_month, timezone, recipients, format, is_active, created_by_id, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1, $9, CURRENT_TIMESTAMP)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, TRUE, $9, CURRENT_TIMESTAMP)`,
     [
       context.reportId,
       cadence,
@@ -413,7 +413,7 @@ route.post('/schedules/toggle', async (request: EnhancedRequest) => {
   // Scoped by report as well as by id, so a schedule from another tenant is
   // not reachable by guessing a number.
   await db.unsafe(
-    `UPDATE report_schedules SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END, updated_at = CURRENT_TIMESTAMP
+    `UPDATE report_schedules SET is_active = NOT is_active, updated_at = CURRENT_TIMESTAMP
       WHERE id = $1 AND report_id = $2`,
     [scheduleId, context.reportId],
   )

@@ -75,24 +75,40 @@ git commit -am "chore(env): rotate SOME_KEY" && git push
 `env:set` encrypts in place. The plaintext never enters git, and the next deploy
 picks it up.
 
+## The database
+
+**Postgres**, on the box, reached over loopback. It runs as
+`postgresql-pantry.service` and is shared with the other tenants, each of which
+owns one role and one database. `reportshq` owns `reportshq` and nothing else,
+and the server does not listen on a public interface.
+
+Credentials are in the encrypted `.env.production` with everything else.
+Nothing about the database is set in `config/cloud.ts`, deliberately: a value in
+a site's `env` block becomes the authoritative runtime environment and would
+override the encrypted file rather than defer to it.
+
+```bash
+# on the box
+su - postgres -c "psql -d reportshq"
+```
+
 ## Persistent state
 
-`config/cloud.ts` declares shared paths with an **explicit absolute target**:
+The database is not a file, so the only shared paths are the two directories the
+app itself writes:
 
 ```
-database      → /var/lib/reportshq/database
-storage/exports → /var/lib/reportshq/exports
+storage/exports         → /var/lib/reportshq/exports
+storage/backups/database → /var/lib/reportshq/backups
 ```
 
 ts-cloud keeps the real directory outside the releases and symlinks it into each
-one, so a rollback finds the same data rather than an empty directory.
+one, so the release pruner cannot delete a generated export or a night's dump.
 
-The target is absolute because `main` and `api` are two sites of one project and
-each gets its own `shared/` directory. A plain-string entry would give them two
-separate databases drifting apart forever: the API writing an event the page
-cannot read, which reads as the app losing data rather than a config mistake.
-`seed: true` marks `main` as the one site allowed to create and populate them,
-since it is the site that runs the migration.
+The targets are absolute because `main` and `api` are two sites of one project
+and each gets its own `shared/` directory; a plain-string entry would give them
+two separate directories. `seed: true` marks `main` as the one site allowed to
+create and populate them.
 
 ## Backups
 
@@ -110,8 +126,18 @@ Both are deliberately **not** offsite. They survive a bad migration or a bad
 query; they do not survive losing the box, and saying otherwise would be worse
 than having no backup, because somebody would rely on it.
 
-To restore, stop the service, replace the sqlite file at
-`/var/lib/reportshq/reportshq.sqlite` with a dump, and start it again.
+Dumps are taken with `pg_dump` and land in `/var/lib/reportshq/backups`. To
+restore one:
+
+```bash
+# on the box, with the app stopped
+systemctl stop 'reportshq-main@*' 'reportshq-api@*'
+su - postgres -c "dropdb reportshq && createdb -O reportshq reportshq"
+su - postgres -c "psql -d reportshq -f /var/lib/reportshq/backups/<dump>.sql"
+systemctl start 'reportshq-main@*' 'reportshq-api@*'
+```
+
+`buddy db:backups` lists what is there.
 
 ## Rolling back
 

@@ -31,7 +31,7 @@ export default new Job({
     // never qualify, and scanning them is pure cost.
     const projects = await db.unsafe(
       `SELECT id, owner_id FROM projects
-        WHERE deleted_at IS NULL AND first_event_at IS NOT NULL AND auto_reports_enabled = 1`,
+        WHERE deleted_at IS NULL AND first_event_at IS NOT NULL AND auto_reports_enabled = TRUE`,
     ) as Array<{ id: number, owner_id: number }>
 
     let created = 0

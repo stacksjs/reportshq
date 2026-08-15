@@ -253,7 +253,7 @@ export async function saveRevision(
  */
 async function markDraftChanged(reportId: number): Promise<void> {
   await db.unsafe(
-    `UPDATE reports SET unpublished_changes = 1, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+    `UPDATE reports SET unpublished_changes = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
     [reportId],
   )
 }
@@ -269,7 +269,7 @@ async function markDraftChanged(reportId: number): Promise<void> {
 export async function publishReport(reportId: number, user: { id: number }): Promise<void> {
   await saveRevision(reportId, user, 'publish')
   await db.unsafe(
-    `UPDATE reports SET status = 'published', unpublished_changes = 0, published_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+    `UPDATE reports SET status = 'published', unpublished_changes = FALSE, published_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
     [reportId],
   )
 }

@@ -130,7 +130,7 @@ export async function activeSchedules(): Promise<DueSchedule[]> {
             r.name AS report_name, r.slug AS report_slug, r.project_id AS project_id
        FROM report_schedules s
        JOIN reports r ON r.id = s.report_id
-      WHERE s.is_active = 1
+      WHERE s.is_active = TRUE
         AND r.deleted_at IS NULL
         AND r.status = 'published'`,
   ) as Array<Record<string, unknown>>
