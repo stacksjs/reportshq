@@ -126,6 +126,20 @@ one.
   survived a full HTTP pass: every page returned 200 with correct markup, and
   every one of them bounced in a real browser. Load a page in the browser before
   believing a front-end change works.
+- **Mail submission is port 587 with STARTTLS, never 465.** The SMTP driver
+  opens a plain socket and negotiates, so implicit-TLS 465 hangs and fails with
+  `SMTP connection timed out after 30000ms` and nothing else. A raw TLS client
+  talks to 465 happily, which makes the driver look innocent.
+- **A mailbox declared in `config/email.ts` needs a `MAIL_PASSWORD_<LOCALPART>`
+  in the target environment or it is not created.** That is deliberate upstream
+  (a deploy must not conjure credentials nobody can retrieve) but it used to be
+  silent: provisioning reported success having created nothing. Fixed in
+  stacksjs/stacks to warn and name the variable, but check the server rather
+  than the exit code until that release lands.
+- **`buddy env:encrypt` with no argument encrypts `.env`**, the development one,
+  not `.env.production`. Pass `--env production`. An encrypted `.env` without
+  `DOTENV_PRIVATE_KEY_DEVELOPMENT` silently falls back to defaults for every
+  variable, which looks like the app losing its configuration.
 - **A new export from an app module is invisible to stx until you clear its
   build cache.** `rm -rf storage/framework/stx/cache` and restart. Until then the
   import is `undefined` and the page reports `X is not a function` **only if you
