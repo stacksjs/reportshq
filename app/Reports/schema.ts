@@ -75,7 +75,23 @@ export interface BlockLayout {
 }
 
 export const GRID_COLUMNS = 12
-export const MAX_SERIES = 20
+/**
+ * The most categories a chart will colour before folding the rest into Other.
+ *
+ * Five, because that is how many hues clear the colour-vision separation floors
+ * inside dark mode's lightness band without repeating a hue family. See the
+ * note in public/tokens.css.
+ */
+export const MAX_SERIES = 5
+
+/**
+ * What a block gets when it does not say.
+ *
+ * Four rather than five: at four, every pair in the palette is separable for
+ * full-colour vision as well as adjacent pairs, and four series plus Other is
+ * already at the edge of what a legend can carry.
+ */
+export const DEFAULT_SERIES = 4
 
 /** Measures that need a numeric field to operate on. */
 const FIELD_MEASURES: Measure[] = ['sum', 'avg', 'min', 'max']

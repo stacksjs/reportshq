@@ -252,7 +252,7 @@ async function seed(): Promise<void> {
     kind: 'table',
     title: 'Signups by source',
     layout: { x: 8, y: 2, w: 4, h: 5 },
-    query: { events: ['user.registered'], measure: 'count', dimension: 'properties.source', filters: [], limit: 10 },
+    query: { events: ['user.registered'], measure: 'count', dimension: 'properties.source', filters: [], limit: 5 },
   })
 
   await addBlock(usersId, {

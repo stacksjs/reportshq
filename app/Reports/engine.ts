@@ -17,7 +17,7 @@ import type { Range } from './range'
 import { db } from '@stacksjs/database'
 import { bucketsFor, defaultGrain, previousRange, resolveRange, truncate } from './range'
 import { canUseRollups, rollupSeries, rollupsCover } from './rollup'
-import { isAllowedField, validateBlockQuery } from './schema'
+import { DEFAULT_SERIES, isAllowedField, validateBlockQuery } from './schema'
 
 /**
  * Whether this query should read the pre-aggregate.
@@ -401,7 +401,7 @@ async function runSeries(
   if (!query.dimension)
     return series.length > 0 ? series : [{ key: 'total', points: buckets.map(t => ({ t, value: 0 })), total: 0 }]
 
-  return collapseToTopN(series, query.limit ?? 6, buckets)
+  return collapseToTopN(series, query.limit ?? DEFAULT_SERIES, buckets)
 }
 
 function averageOf(points: Point[]): number {

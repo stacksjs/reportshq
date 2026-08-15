@@ -1,0 +1,106 @@
+<script server>
+import { defineProps, withDefaults } from 'stx'
+import { compact, seriesColor } from '../../../app/Reports/charts'
+
+/**
+ * The numbers as numbers.
+ *
+ * A block in its own right, and also the accessible view of every other chart:
+ * a reader who cannot use colour, or is on a screen reader, gets the same data
+ * in a form that does not depend on either.
+ */
+/**
+ * The frame is inlined rather than shared through a ChartFrame component.
+ *
+ * stx drops every prop passed from one component to another in this version: a
+ * wrapper passing an array, a boolean and a plain string attribute delivers an
+ * empty array, false and an empty string, with nothing warning. Page to
+ * component works fine, which is why it took a missing legend to notice. A
+ * shared frame would therefore have rendered without its legend on every chart,
+ * and the legend is what makes this palette legal.
+ */
+interface DataTableProps {
+  result: any
+  title?: string
+  /** Column header for the series key. */
+  label?: string
+}
+
+const { result, title, label } = withDefaults(defineProps<DataTableProps>(), { label: 'Series' })
+
+const total = result.series.reduce((sum: number, series: any) => sum + series.total, 0)
+const rows = [...result.series]
+  .sort((a: any, b: any) => b.total - a.total)
+  .map((series: any, index: number) => ({
+    key: series.key === 'total' ? (title ?? 'Total') : series.key,
+    color: seriesColor(index, series.key),
+    value: compact(series.total),
+    share: total > 0 ? `${Math.round((series.total / total) * 100)}%` : '-',
+  }))
+
+const empty = rows.length === 0 || total === 0
+const legend: Array<{ key: string, color: string, value?: string }> = []
+const emptyMessage = 'No data in this range'
+</script>
+
+<template>
+    <figure class="flex flex-col h-full m-0">
+    @if (title)
+      <figcaption class="mb-3 text-sm font-medium text-ink">{{ title }}</figcaption>
+    @endif
+
+    @if (empty)
+      <div class="flex flex-1 flex-col gap-1 justify-center items-center py-8 text-center">
+        <i class="w-5 h-5 text-subtle i-hugeicons-chart-line-data-01"></i>
+        <p class="text-sm text-muted">{{ emptyMessage }}</p>
+        <p class="text-xs text-subtle">Events that arrive later will appear here.</p>
+      </div>
+    @else
+      <div class="flex-1 min-h-0">
+    <div class="overflow-auto h-full">
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="text-left border-b border-line">
+            <th class="py-2 pr-3 text-xs font-medium text-subtle">{{ label }}</th>
+            <th class="py-2 px-3 text-xs font-medium text-right text-subtle">Value</th>
+            <th class="py-2 pl-3 text-xs font-medium text-right text-subtle">Share</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (rows as row)
+            <tr class="border-b border-line last:border-0">
+              <td class="py-2 pr-3">
+                <span class="flex gap-2 items-center text-ink">
+                  <span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background: {{ row.color }}"></span>
+                  {{ row.key }}
+                </span>
+              </td>
+              <td class="py-2 px-3 text-right num text-ink">{{ row.value }}</td>
+              <td class="py-2 pl-3 text-right num text-muted">{{ row.share }}</td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+    </div>
+      </div>
+
+      @if (legend.length > 1)
+        {{-- Always present for two or more series: identity must never rest on
+             colour alone, and one adjacent pair in this palette sits in the
+             band where a legend is the condition of the palette being usable.
+             Text wears text tokens; the swatch carries the identity. --}}
+        <ul class="flex flex-wrap gap-x-4 gap-y-1 items-center pt-3 mt-3 list-none border-t border-line">
+          @foreach (legend as entry)
+            <li class="flex gap-2 items-center text-xs text-muted">
+              <span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background: {{ entry.color }}"></span>
+              <span>{{ entry.key }}</span>
+              @if (entry.value)
+                <span class="num text-subtle">{{ entry.value }}</span>
+              @endif
+            </li>
+          @endforeach
+        </ul>
+      @endif
+    @endif
+  </figure>
+</template>

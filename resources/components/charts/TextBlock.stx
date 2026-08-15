@@ -1,0 +1,36 @@
+<script server>
+import { defineProps } from 'stx'
+
+/**
+ * Prose on the grid.
+ *
+ * A report is read by people who were not in the room when it was built, and a
+ * sentence saying "revenue excludes refunds" prevents more misreadings than any
+ * amount of chart polish.
+ */
+/**
+ * The frame is inlined rather than shared through a ChartFrame component.
+ *
+ * stx drops every prop passed from one component to another in this version: a
+ * wrapper passing an array, a boolean and a plain string attribute delivers an
+ * empty array, false and an empty string, with nothing warning. Page to
+ * component works fine, which is why it took a missing legend to notice. A
+ * shared frame would therefore have rendered without its legend on every chart,
+ * and the legend is what makes this palette legal.
+ */
+interface TextBlockProps {
+  body?: string
+  title?: string
+}
+
+const { body, title } = defineProps<TextBlockProps>()
+</script>
+
+<template>
+  <div class="flex flex-col justify-center h-full">
+    @if (title)
+      <p class="mb-1 text-sm font-medium text-ink">{{ title }}</p>
+    @endif
+    <p class="max-w-[65ch] text-sm text-muted leading-relaxed">{{ body }}</p>
+  </div>
+</template>

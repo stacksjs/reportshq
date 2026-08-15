@@ -62,7 +62,9 @@ export default {
         'series-3': 'var(--series-3)',
         'series-4': 'var(--series-4)',
         'series-5': 'var(--series-5)',
-        'series-6': 'var(--series-6)',
+        // The folded tail. Neutral on purpose: "Other" is not an identity, and
+        // giving it a hue makes it compete with the categories it is hiding.
+        'series-other': 'var(--series-other)',
         grid: 'var(--grid)',
         axis: 'var(--axis)',
       },

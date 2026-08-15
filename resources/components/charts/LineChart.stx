@@ -1,0 +1,188 @@
+<script server>
+import { defineProps, withDefaults } from 'stx'
+import {
+  DEFAULT_BOX,
+  areaPath,
+  compact,
+  linePath,
+  longDate,
+  plotArea,
+  seriesColor,
+  shortDate,
+  ticks,
+  timeLabels,
+} from '../../../app/Reports/charts'
+
+/**
+ * A time series, as a line or a filled area.
+ *
+ * Rendered on the server as real SVG. A share page has to draw this with no
+ * JavaScript, and the app should paint a report before it hydrates; the client
+ * only adds the crosshair.
+ */
+/**
+ * The frame is inlined rather than shared through a ChartFrame component.
+ *
+ * stx drops every prop passed from one component to another in this version: a
+ * wrapper passing an array, a boolean and a plain string attribute delivers an
+ * empty array, false and an empty string, with nothing warning. Page to
+ * component works fine, which is why it took a missing legend to notice. A
+ * shared frame would therefore have rendered without its legend on every chart,
+ * and the legend is what makes this palette legal.
+ */
+interface LineChartProps {
+  result: any
+  title?: string
+  /** `area` fills under the line. One series only: stacked fills lie about totals. */
+  variant?: 'line' | 'area'
+  height?: number
+}
+
+const { result, title, variant, height } = withDefaults(
+  defineProps<LineChartProps>(),
+  { variant: 'line', height: 260 },
+)
+
+const box = { ...DEFAULT_BOX, height }
+const plot = plotArea(result, box)
+const gridlines = ticks(result, plot)
+const xLabels = timeLabels(result, plot, iso => shortDate(iso, result.grain))
+const empty = result.series.every((series: any) => series.points.every((point: any) => point.value === 0))
+
+const series = result.series.map((entry: any, index: number) => ({
+  key: entry.key,
+  color: seriesColor(index, entry.key),
+  line: linePath(entry, plot),
+  // Only a single series gets a fill. Two overlapping translucent areas read as
+  // a third colour that means nothing.
+  fill: variant === 'area' && result.series.length === 1 ? areaPath(entry, plot) : '',
+  total: compact(entry.total),
+  points: entry.points.map((point: any, i: number) => ({
+    cx: plot.x(i),
+    cy: plot.y(point.value),
+    value: compact(point.value),
+    label: longDate(point.t, result.grain),
+  })),
+}))
+
+const legend = series.map((entry: any) => ({ key: entry.key, color: entry.color, value: entry.total }))
+const emptyMessage = 'No data in this range'
+</script>
+
+<template>
+    <figure class="flex flex-col h-full m-0">
+    @if (title)
+      <figcaption class="mb-3 text-sm font-medium text-ink">{{ title }}</figcaption>
+    @endif
+
+    @if (empty)
+      <div class="flex flex-1 flex-col gap-1 justify-center items-center py-8 text-center">
+        <i class="w-5 h-5 text-subtle i-hugeicons-chart-line-data-01"></i>
+        <p class="text-sm text-muted">{{ emptyMessage }}</p>
+        <p class="text-xs text-subtle">Events that arrive later will appear here.</p>
+      </div>
+    @else
+      <div class="flex-1 min-h-0">
+    <svg
+      viewBox="0 0 {{ box.width }} {{ box.height }}"
+      class="w-full h-full chart"
+      role="img"
+      aria-label="{{ title ?? 'Time series' }}"
+      preserveAspectRatio="none"
+    >
+      {{-- Gridlines sit under the data and never compete with it. --}}
+      @foreach (gridlines as tick)
+        <line
+          x1="{{ box.left }}" x2="{{ box.width - box.right }}"
+          y1="{{ tick.y }}" y2="{{ tick.y }}"
+          stroke="var(--grid)" stroke-width="1"
+        />
+        <text
+          x="{{ box.left - 8 }}" y="{{ tick.y + 4 }}"
+          text-anchor="end"
+          class="chart-tick"
+        >{{ tick.label }}</text>
+      @endforeach
+
+      @foreach (xLabels as label)
+        <text x="{{ label.x }}" y="{{ box.height - 8 }}" text-anchor="middle" class="chart-tick">{{ label.label }}</text>
+      @endforeach
+
+      @foreach (series as entry)
+        @if (entry.fill)
+          <path d="{{ entry.fill }}" fill="{{ entry.color }}" opacity="0.12" />
+        @endif
+        {{-- 2px, round joins: thin enough to read as data, thick enough to
+             follow across a gridline. --}}
+        <path
+          d="{{ entry.line }}"
+          fill="none"
+          stroke="{{ entry.color }}"
+          stroke-width="2"
+          stroke-linejoin="round"
+          stroke-linecap="round"
+        />
+      @endforeach
+
+      {{-- Hover targets, one per point per series. Invisible until hovered, and
+           larger than the dot they reveal so they are actually hittable. --}}
+      @foreach (series as entry)
+        @foreach (entry.points as point)
+          <circle
+            cx="{{ point.cx }}" cy="{{ point.cy }}" r="9"
+            fill="transparent"
+            class="chart-hit"
+            data-label="{{ point.label }}"
+            data-series="{{ entry.key }}"
+            data-value="{{ point.value }}"
+          />
+          <circle
+            cx="{{ point.cx }}" cy="{{ point.cy }}" r="4"
+            fill="{{ entry.color }}"
+            stroke="var(--panel)"
+            stroke-width="2"
+            class="chart-dot"
+          />
+        @endforeach
+      @endforeach
+    </svg>
+      </div>
+
+      @if (legend.length > 1)
+        {{-- Always present for two or more series: identity must never rest on
+             colour alone, and one adjacent pair in this palette sits in the
+             band where a legend is the condition of the palette being usable.
+             Text wears text tokens; the swatch carries the identity. --}}
+        <ul class="flex flex-wrap gap-x-4 gap-y-1 items-center pt-3 mt-3 list-none border-t border-line">
+          @foreach (legend as entry)
+            <li class="flex gap-2 items-center text-xs text-muted">
+              <span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background: {{ entry.color }}"></span>
+              <span>{{ entry.key }}</span>
+              @if (entry.value)
+                <span class="num text-subtle">{{ entry.value }}</span>
+              @endif
+            </li>
+          @endforeach
+        </ul>
+      @endif
+    @endif
+  </figure>
+</template>
+
+<style>
+/* Dots appear on hover only: a dot per point per series is noise at 30 points,
+ * and the line is the shape being read. */
+.chart-dot {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  pointer-events: none;
+}
+
+.chart-hit:hover + .chart-dot {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-dot { transition: none; }
+}
+</style>

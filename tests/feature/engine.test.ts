@@ -17,8 +17,17 @@ const stamp = Date.now()
 let owner: { id: number }
 let projectId: number
 
-/** Midnight UTC today, so every fixture time is exact and reproducible. */
-const today = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z')
+/**
+ * Midnight UTC yesterday, so every fixture time is exact, reproducible, and in
+ * the past.
+ *
+ * Anchoring on today broke the hourly test just after UTC midnight: fixtures at
+ * "today 08:00" were then in the future, the ingest clamped them to an hour
+ * ahead as it is supposed to, and two events that should sit in different hours
+ * landed in the same one. The suite is not allowed to depend on what time it is
+ * run.
+ */
+const today = new Date(new Date(Date.now() - 86_400_000).toISOString().slice(0, 10) + 'T00:00:00.000Z')
 const at = (dayOffset: number, hour: number): string =>
   new Date(today.getTime() + dayOffset * 86_400_000 + hour * 3_600_000).toISOString()
 

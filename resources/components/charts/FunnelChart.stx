@@ -1,0 +1,107 @@
+<script server>
+import { defineProps } from 'stx'
+import { compact, seriesColor } from '../../../app/Reports/charts'
+
+/**
+ * Steps, and how many sessions survived each.
+ *
+ * Horizontal bars sharing a left edge rather than a tapering trapezoid: a
+ * trapezoid encodes the same number twice, in width and in area, and the area
+ * exaggerates every drop.
+ *
+ * Two rates per step, because they answer different questions: share of the
+ * first step is how the funnel is doing overall, share of the previous step is
+ * where it is leaking.
+ */
+/**
+ * The frame is inlined rather than shared through a ChartFrame component.
+ *
+ * stx drops every prop passed from one component to another in this version: a
+ * wrapper passing an array, a boolean and a plain string attribute delivers an
+ * empty array, false and an empty string, with nothing warning. Page to
+ * component works fine, which is why it took a missing legend to notice. A
+ * shared frame would therefore have rendered without its legend on every chart,
+ * and the legend is what makes this palette legal.
+ */
+interface FunnelChartProps {
+  result: any
+  title?: string
+}
+
+const { result, title } = defineProps<FunnelChartProps>()
+
+const steps = (result.steps ?? []).map((step: any, index: number, all: any[]) => {
+  const previous = index === 0 ? step.count : all[index - 1].count
+  return {
+    name: step.name,
+    count: compact(step.count),
+    width: Math.max(2, step.rate * 100),
+    ofFirst: `${Math.round(step.rate * 100)}%`,
+    ofPrevious: previous === 0 ? '-' : `${Math.round((step.count / previous) * 100)}%`,
+    dropped: index === 0 ? null : compact(Math.max(0, previous - step.count)),
+    color: seriesColor(index),
+  }
+})
+
+const empty = steps.length === 0 || steps.every((step: any) => step.count === '0')
+const legend: Array<{ key: string, color: string, value?: string }> = []
+</script>
+
+<template>
+    <figure class="flex flex-col h-full m-0">
+    @if (title)
+      <figcaption class="mb-3 text-sm font-medium text-ink">{{ title }}</figcaption>
+    @endif
+
+    @if (empty)
+      <div class="flex flex-1 flex-col gap-1 justify-center items-center py-8 text-center">
+        <i class="w-5 h-5 text-subtle i-hugeicons-chart-line-data-01"></i>
+        <p class="text-sm text-muted">{{ emptyMessage }}</p>
+        <p class="text-xs text-subtle">Events that arrive later will appear here.</p>
+      </div>
+    @else
+      <div class="flex-1 min-h-0">
+    <ol class="flex flex-col gap-3 justify-center py-1 h-full list-none">
+      @foreach (steps as step)
+        <li>
+          <div class="flex gap-3 justify-between items-baseline mb-1">
+            <span class="text-sm text-ink">{{ step.name }}</span>
+            <span class="flex gap-3 items-baseline text-xs">
+              <span class="num text-ink">{{ step.count }}</span>
+              <span class="num text-subtle">{{ step.ofFirst }}</span>
+            </span>
+          </div>
+          <div class="overflow-hidden h-2.5 rounded-full bg-canvas">
+            <div class="h-full rounded-full" style="width: {{ step.width }}%; background: {{ step.color }}"></div>
+          </div>
+          @if (step.dropped)
+            <p class="mt-1 text-xs text-subtle">
+              <span class="num">{{ step.ofPrevious }}</span> of the previous step,
+              <span class="num">{{ step.dropped }}</span> dropped
+            </p>
+          @endif
+        </li>
+      @endforeach
+    </ol>
+      </div>
+
+      @if (legend.length > 1)
+        {{-- Always present for two or more series: identity must never rest on
+             colour alone, and one adjacent pair in this palette sits in the
+             band where a legend is the condition of the palette being usable.
+             Text wears text tokens; the swatch carries the identity. --}}
+        <ul class="flex flex-wrap gap-x-4 gap-y-1 items-center pt-3 mt-3 list-none border-t border-line">
+          @foreach (legend as entry)
+            <li class="flex gap-2 items-center text-xs text-muted">
+              <span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background: {{ entry.color }}"></span>
+              <span>{{ entry.key }}</span>
+              @if (entry.value)
+                <span class="num text-subtle">{{ entry.value }}</span>
+              @endif
+            </li>
+          @endforeach
+        </ul>
+      @endif
+    @endif
+  </figure>
+</template>

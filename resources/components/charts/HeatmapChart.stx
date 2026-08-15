@@ -1,0 +1,136 @@
+<script server>
+import { defineProps, withDefaults } from 'stx'
+import { compact, longDate } from '../../../app/Reports/charts'
+
+/**
+ * Magnitude over two dimensions, as a grid of cells.
+ *
+ * Named HeatmapChart, not Heatmap: stx ships a built-in `<Heatmap>` and the
+ * bare name silently resolved to it, so the page rendered someone else's
+ * component with a rainbow legend. Nothing warned; the only symptom was a
+ * gradient that could not have come from these tokens.
+ *
+ * Sequential colour, not categorical: one hue from light to dark, because the
+ * thing being encoded is "how much", and a rainbow makes a reader invent
+ * category boundaries that are not in the data.
+ *
+ * The scale is stated in the legend, since a cell's colour means nothing
+ * without knowing what the darkest one is.
+ */
+/**
+ * The frame is inlined rather than shared through a ChartFrame component.
+ *
+ * stx drops every prop passed from one component to another in this version: a
+ * wrapper passing an array, a boolean and a plain string attribute delivers an
+ * empty array, false and an empty string, with nothing warning. Page to
+ * component works fine, which is why it took a missing legend to notice. A
+ * shared frame would therefore have rendered without its legend on every chart,
+ * and the legend is what makes this palette legal.
+ */
+interface HeatmapProps {
+  result: any
+  title?: string
+  /** Row labels, one per series. Defaults to the series keys. */
+  rowLabels?: string[]
+}
+
+const { result, title, rowLabels } = withDefaults(defineProps<HeatmapProps>(), { rowLabels: [] })
+
+const max = Math.max(1, ...result.series.flatMap((series: any) => series.points.map((point: any) => point.value)))
+
+const rows = result.series.map((series: any, index: number) => ({
+  label: rowLabels[index] ?? (series.key === 'total' ? 'All events' : series.key),
+  cells: series.points.map((point: any) => ({
+    // Alpha rather than a stepped ramp: one hue, continuous magnitude, and a
+    // zero cell stays visibly empty rather than becoming the lightest step.
+    opacity: point.value === 0 ? 0 : 0.15 + (point.value / max) * 0.85,
+    value: compact(point.value),
+    when: longDate(point.t, result.grain),
+  })),
+}))
+
+const empty = max <= 1 && rows.every((row: any) => row.cells.every((cell: any) => cell.value === '0'))
+const legend: Array<{ key: string, color: string, value?: string }> = []
+const emptyMessage = 'No data in this range'
+</script>
+
+<template>
+    <figure class="flex flex-col h-full m-0">
+    @if (title)
+      <figcaption class="mb-3 text-sm font-medium text-ink">{{ title }}</figcaption>
+    @endif
+
+    @if (empty)
+      <div class="flex flex-1 flex-col gap-1 justify-center items-center py-8 text-center">
+        <i class="w-5 h-5 text-subtle i-hugeicons-chart-line-data-01"></i>
+        <p class="text-sm text-muted">{{ emptyMessage }}</p>
+        <p class="text-xs text-subtle">Events that arrive later will appear here.</p>
+      </div>
+    @else
+      <div class="flex-1 min-h-0">
+    <div class="flex flex-col gap-2 justify-center h-full">
+      @foreach (rows as row)
+        <div class="flex gap-3 items-center">
+          <span class="w-24 text-xs truncate shrink-0 text-muted">{{ row.label }}</span>
+          <div class="flex flex-1 gap-0.5">
+            @foreach (row.cells as cell)
+              {{-- A 2px gap between cells, so adjacent values never merge into
+                   one block. --}}
+              <div
+                class="flex-1 h-6 rounded-sm border heat-cell border-line"
+                style="background: color-mix(in srgb, var(--series-1) {{ cell.opacity * 100 }}%, transparent)"
+                title="{{ cell.when }}: {{ cell.value }}"
+              ></div>
+            @endforeach
+          </div>
+        </div>
+      @endforeach
+
+      <div class="flex gap-2 justify-end items-center mt-1 text-xs text-subtle">
+        <span>0</span>
+        <div class="flex gap-0.5">
+          <div class="w-4 h-2.5 rounded-sm" style="background: color-mix(in srgb, var(--series-1) 15%, transparent)"></div>
+          <div class="w-4 h-2.5 rounded-sm" style="background: color-mix(in srgb, var(--series-1) 40%, transparent)"></div>
+          <div class="w-4 h-2.5 rounded-sm" style="background: color-mix(in srgb, var(--series-1) 70%, transparent)"></div>
+          <div class="w-4 h-2.5 rounded-sm" style="background: var(--series-1)"></div>
+        </div>
+        <span class="num">{{ compact(max) }}</span>
+      </div>
+    </div>
+      </div>
+
+      @if (legend.length > 1)
+        {{-- Always present for two or more series: identity must never rest on
+             colour alone, and one adjacent pair in this palette sits in the
+             band where a legend is the condition of the palette being usable.
+             Text wears text tokens; the swatch carries the identity. --}}
+        <ul class="flex flex-wrap gap-x-4 gap-y-1 items-center pt-3 mt-3 list-none border-t border-line">
+          @foreach (legend as entry)
+            <li class="flex gap-2 items-center text-xs text-muted">
+              <span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background: {{ entry.color }}"></span>
+              <span>{{ entry.key }}</span>
+              @if (entry.value)
+                <span class="num text-subtle">{{ entry.value }}</span>
+              @endif
+            </li>
+          @endforeach
+        </ul>
+      @endif
+    @endif
+  </figure>
+</template>
+
+<style>
+.heat-cell {
+  transition: outline-color 0.12s ease;
+  outline: 2px solid transparent;
+}
+
+.heat-cell:hover {
+  outline-color: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heat-cell { transition: none; }
+}
+</style>

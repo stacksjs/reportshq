@@ -1,0 +1,71 @@
+<script server>
+import { defineProps, withDefaults } from 'stx'
+import { compact, delta, money } from '../../../app/Reports/charts'
+
+/**
+ * One number, and whether it moved.
+ *
+ * Not a chart, and deliberately so: when the answer is a single magnitude, a
+ * chart of one bar is a worse way to say it than the number itself.
+ *
+ * The direction is carried by an arrow as well as a colour, because colour
+ * alone fails for roughly 8% of men, and the headline number is the last place
+ * a product should make that trade.
+ */
+/**
+ * The frame is inlined rather than shared through a ChartFrame component.
+ *
+ * stx drops every prop passed from one component to another in this version: a
+ * wrapper passing an array, a boolean and a plain string attribute delivers an
+ * empty array, false and an empty string, with nothing warning. Page to
+ * component works fine, which is why it took a missing legend to notice. A
+ * shared frame would therefore have rendered without its legend on every chart,
+ * and the legend is what makes this palette legal.
+ */
+interface BigNumberProps {
+  result: any
+  title?: string
+  /** `currency` formats as money; `number` compacts to 1.2k. */
+  unit?: 'number' | 'currency'
+  currency?: string
+  /** For a metric where down is good, such as refunds or churn. */
+  invert?: boolean
+}
+
+const { result, title, unit, currency, invert } = withDefaults(
+  defineProps<BigNumberProps>(),
+  { unit: 'number', currency: 'USD', invert: false },
+)
+
+const value = unit === 'currency' ? money(result.total, currency) : compact(result.total)
+const change = result.comparison?.change ?? null
+const rose = change !== null && change > 0
+const good = change === null ? null : (invert ? !rose : rose)
+const tone = good === null ? 'text-subtle' : good ? 'text-pos' : 'text-neg'
+const icon = change === null ? '' : rose ? 'i-hugeicons-arrow-up-right' : 'i-hugeicons-arrow-down-right'
+const empty = result.total === 0 && !result.comparison
+</script>
+
+<template>
+  <div class="flex flex-col justify-center h-full">
+    @if (title)
+      <p class="text-sm text-muted">{{ title }}</p>
+    @endif
+
+    <p class="mt-1 text-3xl font-semibold tracking-tight num text-ink">{{ value }}</p>
+
+    @if (change !== null)
+      <p class="flex gap-1.5 items-center mt-2 text-sm {{ tone }}">
+        <i class="w-4 h-4 {{ icon }}"></i>
+        <span class="num">{{ delta(change) }}</span>
+        <span class="text-subtle">vs previous period</span>
+      </p>
+    @elseif (result.comparison)
+      {{-- Up from nothing is not a percentage, and rendering one is how a
+           dashboard claims a 4000% rise because yesterday was zero. --}}
+      <p class="mt-2 text-sm text-subtle">No activity in the previous period</p>
+    @elseif (empty)
+      <p class="mt-2 text-sm text-subtle">No events in this range</p>
+    @endif
+  </div>
+</template>

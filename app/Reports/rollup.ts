@@ -18,6 +18,10 @@ import { bucketsFor, truncate } from './range'
 /**
  * Whether the rollups can answer this question exactly.
  *
+ * The range is taken but unused: it was read when a single-day `count_unique`
+ * had an exception, and the parameter stays so callers do not have to change
+ * when a future measure needs it again.
+ *
  * Every clause here is a case where the pre-aggregate would otherwise be
  * subtly wrong:
  *
@@ -29,7 +33,7 @@ import { bucketsFor, truncate } from './range'
  * - **`count_unique`** does not compose across days, and summing daily uniques
  *   double-counts anyone who appears on two of them.
  */
-export function canUseRollups(query: BlockQuery, grain: Grain, range: Range): boolean {
+export function canUseRollups(query: BlockQuery, grain: Grain, _range: Range): boolean {
   if (query.dimension)
     return false
 
