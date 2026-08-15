@@ -75,10 +75,21 @@ export default defineModel({
       factory: () => 0,
     },
 
+    /**
+     * Fractional, because money is.
+     *
+     * `schema.number()` maps to an integer column, which is right for the
+     * counters beside this one and silently wrong here: on Postgres a day
+     * totalling 111.40 was stored as 111, and every report answered from the
+     * rollups showed truncated money while the same query with any filter went
+     * to the raw table and showed the real figure. SQLite is loosely typed
+     * enough to keep the fraction, so the whole class of bug was invisible in
+     * development and present in production.
+     */
     value_sum: {
       fillable: true,
       default: 0,
-      validation: { rule: schema.number() },
+      validation: { rule: schema.float() },
       factory: () => 0,
     },
 
@@ -94,14 +105,16 @@ export default defineModel({
       factory: () => 0,
     },
 
+    /** Fractional for the same reason as `value_sum`. */
     value_min: {
       fillable: true,
-      validation: { rule: schema.number() },
+      validation: { rule: schema.float() },
     },
 
+    /** Fractional for the same reason as `value_sum`. */
     value_max: {
       fillable: true,
-      validation: { rule: schema.number() },
+      validation: { rule: schema.float() },
     },
 
     /** Exact for a single day. Never summed across days. */

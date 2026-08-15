@@ -137,9 +137,37 @@ A month format that dropped the year would fold December 2025 and December 2026
 into one bar, and the chart would look entirely plausible: one tall December, no
 error, no gap. It does not, and now that is asserted rather than assumed.
 
+- [x] Rollup-vs-raw equivalence at scale: 1,800 fractional values across 45 days,
+      every measure, every grain, compared bucket by bucket rather than only on
+      the headline total
+
+**Found and fixed, and this one was live.** The existing equivalence tests use
+about fifty events with whole-number values, which is enough to catch a rollup
+that groups wrongly and not enough to catch this. `value_sum`, `value_min` and
+`value_max` were declared `schema.number()`, which maps to an `integer` column.
+On Postgres a day totalling 111.40 was stored as 111.
+
+So every report answered from the rollups showed **truncated money**, while the
+same report with any filter went to the raw table and showed the real figure.
+SQLite is loosely typed enough to keep the fraction, so the entire class of bug
+was invisible in development and present in production. It is the same mistake
+as the one fixed earlier on `Event.value`; fixing that column did not propagate
+to the three rollup columns that mirror it.
+
+**A schema fix is not a data fix**, which is the more important half. Widening
+the columns corrects what gets written next and leaves every row already written
+wrong, and the rebuild job only revisits a trailing three days. The rest would
+have stayed quietly wrong forever, and the fix would have looked like it worked.
+
+`rollup_states.build` now records which version of the computation produced a
+project's rows, exactly as `timezone` already recorded which zone did. Rows from
+an older build are not trusted, so queries fall back to the raw table until
+rebuilt: slower, and right. The column defaults to 0 and the current build is 1,
+so the invalidation applies itself on deploy rather than depending on anyone
+remembering a step.
+
 - [ ] Query engine fixture audit: hand-computed expected values for every
       measure/grain/dimension combination on a frozen dataset
-- [ ] Rollup-vs-raw equivalence at production scale factor
 
 ---
 

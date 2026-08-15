@@ -174,7 +174,7 @@
           },
           {
             "name": "value_sum",
-            "type": "integer",
+            "type": "float",
             "isPrimaryKey": false,
             "isUnique": false,
             "isNullable": true,
@@ -192,7 +192,7 @@
           },
           {
             "name": "value_min",
-            "type": "integer",
+            "type": "float",
             "isPrimaryKey": false,
             "isUnique": false,
             "isNullable": true,
@@ -200,7 +200,7 @@
           },
           {
             "name": "value_max",
-            "type": "integer",
+            "type": "float",
             "isPrimaryKey": false,
             "isUnique": false,
             "isNullable": true,
@@ -1567,6 +1567,15 @@
             "isUnique": false,
             "isNullable": true,
             "hasDefault": false
+          },
+          {
+            "name": "build",
+            "type": "integer",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": true,
+            "hasDefault": true,
+            "defaultValue": 0
           }
         ],
         "indexes": [
@@ -1780,7 +1789,7 @@
       }
     ]
   },
-  "hash": "127b7c6fe99ebc166bb7dfb8864729a9d7b99cc6c6c86e3162fef9602dfd8190",
+  "hash": "ecf06240ec4d898ad9f5c4071e13deb0a6057697e8fd860fefefa8ea65c00de6",
   "dialect": "postgres",
-  "updatedAt": "2026-08-15T21:21:53.381Z"
+  "updatedAt": "2026-08-15T22:46:46.232Z"
 }

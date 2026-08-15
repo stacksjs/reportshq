@@ -61,6 +61,28 @@ export default defineModel({
       factory: () => 'UTC',
     },
 
+    /**
+     * Which version of the rollup computation produced these rows.
+     *
+     * The companion to `timezone` above, for the other reason existing rows
+     * stop being trustworthy: not the data moving, but us changing how it is
+     * summarised or stored. Compared before the rollups are trusted, exactly
+     * as the zone is.
+     *
+     * It exists because a schema fix is not a data fix. `value_sum` was an
+     * integer column on Postgres, so every stored daily total was truncated to
+     * whole units; widening the column corrected what would be written next and
+     * left every existing row wrong, and the nightly job only revisits a
+     * trailing three days. Without this, the rest stayed quietly wrong forever,
+     * and the fix would have looked like it worked.
+     */
+    build: {
+      fillable: true,
+      default: 0,
+      validation: { rule: schema.number() },
+      factory: () => 0,
+    },
+
     built_at: {
       fillable: true,
       validation: { rule: schema.string() },

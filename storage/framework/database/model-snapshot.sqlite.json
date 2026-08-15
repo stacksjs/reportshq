@@ -1539,7 +1539,7 @@
           },
           {
             "name": "value_sum",
-            "type": "integer",
+            "type": "float",
             "isPrimaryKey": false,
             "isUnique": false,
             "isNullable": true,
@@ -1557,7 +1557,7 @@
           },
           {
             "name": "value_min",
-            "type": "integer",
+            "type": "float",
             "isPrimaryKey": false,
             "isUnique": false,
             "isNullable": true,
@@ -1565,7 +1565,7 @@
           },
           {
             "name": "value_max",
-            "type": "integer",
+            "type": "float",
             "isPrimaryKey": false,
             "isUnique": false,
             "isNullable": true,
@@ -1667,6 +1667,15 @@
             "isUnique": false,
             "isNullable": true,
             "hasDefault": false
+          },
+          {
+            "name": "build",
+            "type": "integer",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": true,
+            "hasDefault": true,
+            "defaultValue": 0
           }
         ],
         "indexes": [
@@ -1769,7 +1778,7 @@
       }
     ]
   },
-  "hash": "9f468672b4bfc4d1e5bb1516e62c2ca1b5eb4bae13a7610e61ccaa81a623e446",
+  "hash": "42ffde21eb127f21b5da08df5b6e8f254ce29215e017746cd34c358fa7dedb6f",
   "dialect": "sqlite",
-  "updatedAt": "2026-08-15T21:25:55.594Z"
+  "updatedAt": "2026-08-15T22:46:40.935Z"
 }

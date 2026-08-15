@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { db } from '@stacksjs/database'
 import { storeEvents } from '../../app/Events/ingest'
 import { runQuery } from '../../app/Reports/engine'
-import { canUseRollups, localDayString, rebuildDay, rebuildProject, rollupsCover } from '../../app/Reports/rollup'
+import { canUseRollups, localDayString, rebuildDay, rebuildProject, ROLLUP_BUILD, rollupsCover } from '../../app/Reports/rollup'
 import { createProject } from '../../app/Support/projects'
 
 const stamp = Date.now()
@@ -315,5 +315,244 @@ describe('coverage', () => {
     // The ten-minute job rebuilds three days; it must not drop every older
     // query back to the raw path each time it runs.
     expect(after.covered_from).toBe(before.covered_from)
+  })
+})
+
+/**
+ * The same agreement, at a scale where the two paths can drift apart.
+ *
+ * The fixture above is about fifty events. That is enough to catch a rollup
+ * that groups or filters wrongly, and not enough to catch the failure that only
+ * appears with volume: the two paths add the same numbers in a different order.
+ *
+ * The raw path sums every row in one pass. The rollup path sums each day, then
+ * sums the days. Floating point addition is not associative, so those are two
+ * different calculations that happen to agree on small, round inputs. Give them
+ * thousands of fractional values - money, which is what `value` mostly holds -
+ * and they can diverge in the last places. A dashboard that shows 4823.499999
+ * beside an invoice for 4823.50 is a support ticket, and a test built on tens
+ * of whole numbers will never produce one.
+ *
+ * Rows are inserted directly rather than through `storeEvents`, which refuses
+ * anything older than thirty days. The scale is deliberately modest: enough
+ * that order of summation matters, still fast enough to run on every commit.
+ */
+describe('the paths agree at scale', () => {
+  let scaleProject: number
+
+  const DAYS = 45
+  const PER_DAY = 40
+  const TOTAL = DAYS * PER_DAY
+
+  /** Values chosen to be unrepresentable in binary, which is most money. */
+  const valueFor = (day: number, index: number): number =>
+    Number((0.1 + (day % 7) * 0.7 + index * 0.03).toFixed(2))
+
+  const scaleRange = {
+    from: new Date(today.getTime() - DAYS * 86_400_000),
+    to: new Date(today.getTime() + 86_400_000),
+  }
+
+  beforeAll(async () => {
+    scaleProject = Number((await createProject(owner, { name: `Scale ${stamp}`, timezone: 'UTC' })).id)
+
+    // One multi-row insert per day rather than 1,800 statements.
+    for (let day = DAYS; day > 0; day--) {
+      const columns: string[] = []
+      const params: unknown[] = []
+
+      for (let index = 0; index < PER_DAY; index++) {
+        const base = params.length
+        const occurredAt = at(-day, index % 24)
+        columns.push(`($${base + 1}, 'commerce.order.created', $${base + 2}, $${base + 3}, $${base + 4}, 'USD', $${base + 5})`)
+        params.push(scaleProject, occurredAt, occurredAt, valueFor(day, index), `cust_${index % 50}`)
+      }
+
+      await db.unsafe(
+        `INSERT INTO events (project_id, name, occurred_at, received_at, value, currency, user_key)
+         VALUES ${columns.join(', ')}`,
+        params,
+      )
+    }
+
+    await rebuildProject(scaleProject, DAYS + 2, 'UTC', new Date(today.getTime() + 86_400_000))
+  })
+
+  afterAll(async () => {
+    await db.unsafe(`DELETE FROM rollup_states WHERE project_id = $1`, [scaleProject])
+    await db.unsafe(`DELETE FROM event_rollups WHERE project_id = $1`, [scaleProject])
+    await db.unsafe(`DELETE FROM events WHERE project_id = $1`, [scaleProject])
+    await db.unsafe(`DELETE FROM usage_counters WHERE project_id = $1`, [scaleProject])
+    await db.unsafe(`DELETE FROM projects WHERE id = $1`, [scaleProject])
+  })
+
+  /** The same question down both paths: rollups when allowed, raw when filtered. */
+  async function bothPaths(query: Record<string, unknown>, grain: 'day' | 'week' | 'month') {
+    const viaRollups = await runQuery({
+      projectId: scaleProject,
+      range: scaleRange,
+      query: { ...query, filters: [], grain } as never,
+    })
+
+    const viaRaw = await runQuery({
+      projectId: scaleProject,
+      range: scaleRange,
+      query: { ...query, filters: [alwaysTrue], grain } as never,
+    })
+
+    return { viaRollups, viaRaw }
+  }
+
+  test('the fixture is actually at scale, and the rollups are actually used', async () => {
+    // Both halves matter. A fixture that silently inserted nothing would make
+    // every comparison below trivially true, and a query that quietly went raw
+    // twice would compare the raw path with itself.
+    const rows = await db.unsafe(
+      `SELECT COUNT(*) AS n FROM events WHERE project_id = $1`,
+      [scaleProject],
+    ) as Array<{ n: number }>
+
+    expect(Number(rows[0]!.n)).toBe(TOTAL)
+    expect(canUseRollups({ events: ['commerce.order.created'], measure: 'sum', field: 'value', filters: [] } as never, 'day', scaleRange as never)).toBeTrue()
+    expect(canUseRollups({ events: ['commerce.order.created'], measure: 'sum', field: 'value', filters: [alwaysTrue] } as never, 'day', scaleRange as never)).toBeFalse()
+  })
+
+  for (const grain of ['day', 'week', 'month'] as const) {
+    test(`sum over ${TOTAL} fractional values agrees at ${grain} grain`, async () => {
+      const { viaRollups, viaRaw } = await bothPaths(
+        { events: ['commerce.order.created'], measure: 'sum', field: 'value' },
+        grain,
+      )
+
+      // Money, so the answer has to agree to the cent rather than approximately.
+      expect(Number(viaRollups.total).toFixed(2)).toBe(Number(viaRaw.total).toFixed(2))
+    })
+  }
+
+  test('avg agrees, though it is a ratio of two accumulated numbers', async () => {
+    const { viaRollups, viaRaw } = await bothPaths(
+      { events: ['commerce.order.created'], measure: 'avg', field: 'value' },
+      'day',
+    )
+
+    // Weaker tolerance than sum on purpose: an average divides one accumulated
+    // number by another, so it carries the error of both. A cent either way on
+    // an average of eighteen hundred values is not a defect; a penny per row
+    // would be.
+    expect(Math.abs(Number(viaRollups.total) - Number(viaRaw.total))).toBeLessThan(0.01)
+  })
+
+  test('count agrees exactly, because integers do not drift', async () => {
+    const { viaRollups, viaRaw } = await bothPaths(
+      { events: ['commerce.order.created'], measure: 'count' },
+      'day',
+    )
+
+    expect(Number(viaRollups.total)).toBe(TOTAL)
+    expect(Number(viaRaw.total)).toBe(TOTAL)
+  })
+
+  test('min and max agree, since neither accumulates', async () => {
+    for (const measure of ['min', 'max'] as const) {
+      const { viaRollups, viaRaw } = await bothPaths(
+        { events: ['commerce.order.created'], measure, field: 'value' },
+        'day',
+      )
+
+      expect(Number(viaRollups.total).toFixed(2)).toBe(Number(viaRaw.total).toFixed(2))
+    }
+  })
+
+  test('every bucket agrees, not just the headline total', async () => {
+    // A total can agree while individual days do not, if two errors cancel.
+    // The chart is what the customer reads, so the chart is what is compared.
+    const { viaRollups, viaRaw } = await bothPaths(
+      { events: ['commerce.order.created'], measure: 'sum', field: 'value' },
+      'day',
+    )
+
+    const rollupPoints = viaRollups.series[0]!.points
+    const rawPoints = viaRaw.series[0]!.points
+
+    expect(rollupPoints).toHaveLength(rawPoints.length)
+
+    for (const [index, point] of rollupPoints.entries())
+      expect(Number(point.value).toFixed(2)).toBe(Number(rawPoints[index]!.value).toFixed(2))
+  })
+})
+
+/**
+ * Rows from an older computation are not trusted.
+ *
+ * The case this exists for: `value_sum` was an integer column on Postgres, so
+ * every stored daily total was truncated to whole units. Widening the column
+ * corrected what would be written next and left every row already written
+ * wrong, and the rebuild job only revisits a trailing three days. The schema
+ * was fixed, the numbers were not, and nothing anywhere reported a problem.
+ *
+ * `build` is the guard. A project whose rollups were produced by an older
+ * version of this code answers from the raw table instead: slower, and right,
+ * which is the correct way round. The alternative is answering quickly from
+ * numbers known to have been produced differently.
+ */
+describe('rollups from an older build', () => {
+  test('are not used, so the answer comes from the raw table', async () => {
+    const covered = await rollupsCover(projectId, range, 'UTC')
+    expect(covered).toBeTrue()
+
+    // Exactly what a deploy does to every existing row: the column defaults to
+    // 0 and this code is a later build.
+    await db.unsafe(`UPDATE rollup_states SET build = 0 WHERE project_id = $1`, [projectId])
+
+    expect(await rollupsCover(projectId, range, 'UTC')).toBeFalse()
+
+    await db.unsafe(`UPDATE rollup_states SET build = $1 WHERE project_id = $2`, [ROLLUP_BUILD, projectId])
+    expect(await rollupsCover(projectId, range, 'UTC')).toBeTrue()
+  })
+
+  test('still give the right answer while they are distrusted', async () => {
+    // The whole point of falling back rather than failing: a customer opening a
+    // report during the window between a deploy and a rebuild sees correct
+    // numbers, not an error and not a stale one.
+    const expected = await runQuery({
+      projectId,
+      range,
+      query: { events: ['commerce.order.created'], measure: 'sum', field: 'value', filters: [], grain: 'day' },
+    })
+
+    await db.unsafe(`UPDATE rollup_states SET build = 0 WHERE project_id = $1`, [projectId])
+
+    const duringWindow = await runQuery({
+      projectId,
+      range,
+      query: { events: ['commerce.order.created'], measure: 'sum', field: 'value', filters: [], grain: 'day' },
+    })
+
+    expect(Number(duringWindow.total)).toBe(Number(expected.total))
+
+    await db.unsafe(`UPDATE rollup_states SET build = $1 WHERE project_id = $2`, [ROLLUP_BUILD, projectId])
+  })
+
+  test('a rebuild stamps the current build and coverage starts fresh', async () => {
+    await db.unsafe(
+      `UPDATE rollup_states SET build = 0, covered_from = '1999-01-01' WHERE project_id = $1`,
+      [projectId],
+    )
+
+    // `rebuildProject` rather than `rebuildDay`: coverage is a range, so it is
+    // recorded by the function that rebuilds one. That is what the maintenance
+    // job calls and what a deploy therefore runs.
+    await rebuildProject(projectId, 25, 'UTC', new Date(today.getTime() + 86_400_000))
+
+    const state = (await db.unsafe(
+      `SELECT build, covered_from FROM rollup_states WHERE project_id = $1`,
+      [projectId],
+    ))?.[0] as { build: number, covered_from: string }
+
+    expect(Number(state.build)).toBe(ROLLUP_BUILD)
+    // Coverage must not have been extended backwards over rows the old build
+    // wrote. Claiming 1999 would be claiming days whose numbers came out of a
+    // different calculation.
+    expect(state.covered_from).not.toBe('1999-01-01')
   })
 })

@@ -16,6 +16,24 @@ import { db } from '@stacksjs/database'
 import { bucketsFor, truncate } from './range'
 
 /**
+ * Which version of the rollup computation this code produces.
+ *
+ * **Bump this whenever a stored rollup value would come out different for the
+ * same events**: a changed aggregate, a changed bucketing rule, a corrected
+ * column type. Rows recorded under an older build are ignored until rebuilt, so
+ * queries answer from the raw table in the meantime - slower, and right.
+ *
+ * Not bumping it is the dangerous direction, and it is the quiet one. A fix
+ * ships, the numbers stay wrong, and everything reports success.
+ *
+ * 1: the first versioned build. `value_sum`, `value_min` and `value_max` were
+ *    integer columns on Postgres, so every stored total was truncated to whole
+ *    units. Widening them fixed what gets written next; every row already
+ *    written stayed wrong, and the nightly job only revisits three days.
+ */
+export const ROLLUP_BUILD = 1
+
+/**
  * Whether the rollups can answer this question exactly.
  *
  * The range is taken but unused: it was read when a single-day `count_unique`
@@ -163,28 +181,31 @@ export async function rebuildProject(projectId: number, days: number, timezone =
  */
 async function recordCoverage(projectId: number, from: string, through: string, timezone: string): Promise<void> {
   const existing = (await db.unsafe(
-    `SELECT covered_from, covered_through, timezone FROM rollup_states WHERE project_id = $1`,
+    `SELECT covered_from, covered_through, timezone, build FROM rollup_states WHERE project_id = $1`,
     [projectId],
-  ))?.[0] as { covered_from: string | null, covered_through: string | null, timezone: string } | undefined
+  ))?.[0] as { covered_from: string | null, covered_through: string | null, timezone: string, build: number | null } | undefined
 
-  const sameZone = existing?.timezone === timezone
+  // Coverage may only be widened from rows this build actually produced.
+  // Extending across a zone change or a build change would claim days whose
+  // stored numbers came out of a different calculation.
+  const comparable = existing?.timezone === timezone && Number(existing?.build ?? 0) === ROLLUP_BUILD
 
-  const nextFrom = sameZone && existing?.covered_from && existing.covered_from < from ? existing.covered_from : from
-  const nextThrough = sameZone && existing?.covered_through && existing.covered_through > through ? existing.covered_through : through
+  const nextFrom = comparable && existing?.covered_from && existing.covered_from < from ? existing.covered_from : from
+  const nextThrough = comparable && existing?.covered_through && existing.covered_through > through ? existing.covered_through : through
   const builtAt = new Date().toISOString()
 
   if (existing) {
     await db.unsafe(
-      `UPDATE rollup_states SET covered_from = $1, covered_through = $2, timezone = $3, built_at = $4 WHERE project_id = $5`,
-      [nextFrom, nextThrough, timezone, builtAt, projectId],
+      `UPDATE rollup_states SET covered_from = $1, covered_through = $2, timezone = $3, built_at = $4, build = $5 WHERE project_id = $6`,
+      [nextFrom, nextThrough, timezone, builtAt, ROLLUP_BUILD, projectId],
     )
     return
   }
 
   await db.unsafe(
-    `INSERT INTO rollup_states (project_id, covered_from, covered_through, timezone, built_at)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [projectId, nextFrom, nextThrough, timezone, builtAt],
+    `INSERT INTO rollup_states (project_id, covered_from, covered_through, timezone, built_at, build)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [projectId, nextFrom, nextThrough, timezone, builtAt, ROLLUP_BUILD],
   )
 }
 
@@ -198,14 +219,21 @@ async function recordCoverage(projectId: number, from: string, through: string, 
  */
 export async function rollupsCover(projectId: number, range: Range, timezone: string): Promise<boolean> {
   const state = (await db.unsafe(
-    `SELECT covered_from, covered_through, timezone FROM rollup_states WHERE project_id = $1`,
+    `SELECT covered_from, covered_through, timezone, build FROM rollup_states WHERE project_id = $1`,
     [projectId],
-  ))?.[0] as { covered_from: string | null, covered_through: string | null, timezone: string } | undefined
+  ))?.[0] as { covered_from: string | null, covered_through: string | null, timezone: string, build: number | null } | undefined
 
   if (!state?.covered_from || !state.covered_through)
     return false
 
   if (state.timezone !== timezone)
+    return false
+
+  // Rows from an older computation are not trusted. Falling back to the raw
+  // table is slower and always right, which is the correct way round: the
+  // alternative is answering quickly from numbers we know were produced
+  // differently.
+  if (Number(state.build ?? 0) !== ROLLUP_BUILD)
     return false
 
   const from = localDayString(range.from, timezone)
