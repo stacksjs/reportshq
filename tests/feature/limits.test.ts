@@ -25,6 +25,7 @@ import {
 import { counterFor, ingestAllowanceFor, markNotified, monthKey, recordUsage, secondsUntilNextMonth, usageFor } from '../../app/Billing/usage'
 import { assertCan, LimitReached, limitResponse } from '../../app/Billing/gates'
 import { projectsToPrune, pruneProject } from '../../app/Jobs/PruneEvents'
+import { noticeCandidates, thresholdFor } from '../../app/Jobs/QuotaNotices'
 import { createReport } from '../../app/Reports/reports'
 import { createProject } from '../../app/Support/projects'
 
@@ -528,5 +529,72 @@ describe('retention pruning', () => {
 
     expect(listed).toBeDefined()
     expect(['free', 'hobby', 'pro']).toContain(listed!.tier)
+  })
+})
+
+describe('quota notices', () => {
+  const allowance = PLANS.free.events
+
+  function candidate(used: number, notified = 0): Parameters<typeof thresholdFor>[0] {
+    return {
+      projectId,
+      projectName: 'Somewhere',
+      timezone: 'UTC',
+      ownerEmail: 'owner@example.com',
+      tier: 'free',
+      used,
+      notifiedAtPercent: notified,
+    }
+  }
+
+  test('nothing is due below the first threshold', () => {
+    expect(thresholdFor(candidate(Math.floor(allowance * 0.79)))).toBeNull()
+  })
+
+  test('80% is due, once', () => {
+    expect(thresholdFor(candidate(Math.floor(allowance * 0.8)))).toBe(80)
+    // Already told: silence is the correct second answer.
+    expect(thresholdFor(candidate(Math.floor(allowance * 0.85), 80))).toBeNull()
+  })
+
+  test('reaching the quota is due even after the 80% notice', () => {
+    expect(thresholdFor(candidate(allowance, 80))).toBe(100)
+  })
+
+  test('a jump straight past the quota sends the right one, not both', () => {
+    // Somebody going from 40% to 105% in a single batch should hear "you have
+    // used it", not "you are approaching it".
+    expect(thresholdFor(candidate(Math.floor(allowance * 1.05), 0))).toBe(100)
+  })
+
+  test('nothing is due once both have been sent', () => {
+    expect(thresholdFor(candidate(allowance * 2, 100))).toBeNull()
+  })
+
+  test('a bigger plan is not warned at a smaller plan\'s numbers', () => {
+    const pro = { ...candidate(allowance), tier: 'pro' }
+    expect(thresholdFor(pro)).toBeNull()
+  })
+
+  test('a project only appears while its own month is running', async () => {
+    await recordUsage(projectId, 'UTC', { events: Math.floor(allowance * 0.9) })
+
+    const now = await noticeCandidates()
+    expect(now.map(entry => entry.projectId)).toContain(projectId)
+
+    // Same counter, read from a later month: history, not something to email
+    // somebody about.
+    const later = await noticeCandidates(new Date(Date.now() + 40 * 86_400_000))
+    expect(later.map(entry => entry.projectId)).not.toContain(projectId)
+  })
+
+  test('a candidate carries what the email needs', async () => {
+    await recordUsage(projectId, 'UTC', { events: Math.floor(allowance * 0.9) })
+
+    const found = (await noticeCandidates()).find(entry => entry.projectId === projectId)!
+
+    expect(found.ownerEmail).toContain('@')
+    expect(found.tier).toBe('free')
+    expect(found.used).toBeGreaterThan(0)
   })
 })

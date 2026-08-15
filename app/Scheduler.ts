@@ -35,6 +35,14 @@ export default function () {
     .everyTenMinutes()
     .setTimeZone('UTC')
 
+  // Tell people about their quota while they can still act on it. Hourly: a
+  // warning is useful within the hour and pointless within the minute, and it
+  // reads every counter each run.
+  schedule
+    .job('QuotaNotices')
+    .hourly()
+    .setTimeZone('UTC')
+
   // Delete raw events past their plan's retention window. Daily and in the
   // quiet hours: retention is measured in days, so running more often would
   // remove the same rows a few hours earlier at the cost of a scan per project
