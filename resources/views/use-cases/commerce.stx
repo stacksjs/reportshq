@@ -1,0 +1,78 @@
+<script server>
+import { useSeoMeta } from 'stx'
+import { metaTitleFor, pageFor } from '../../../app/Marketing/pages'
+
+const page = pageFor('use-cases', 'commerce')!
+const canonical = 'https://reportshq.org/use-cases/commerce'
+
+useSeoMeta({
+  title: metaTitleFor(page.title),
+  description: page.description,
+  canonical,
+  ogUrl: canonical,
+  ogTitle: page.title,
+  ogDescription: page.description,
+  ogType: 'article',
+  ogSiteName: 'ReportsHQ',
+  twitterCard: 'summary_large_image',
+})
+
+const breadcrumbWidth = 'max-w-3xl'
+const breadcrumbs = [
+  { label: 'Home', href: '/' },
+  { label: 'Use cases', href: '/use-cases' },
+  { label: page.title },
+]
+
+const sections = [
+  {
+    "heading": "The events you already have",
+    "body": "An order created, an order refunded, a cart abandoned. A conventional shop fires all of these already, and the integrations translate them, so the first revenue report exists before anybody has configured a chart."
+  },
+  {
+    "heading": "Revenue, orders, and the number between them",
+    "body": "Totals and counts are easy. Average order value is where reporting tools quietly disagree with each other, because it depends on whether refunds are subtracted and whether tax is included. Each block states which query it ran, so the answer is checkable rather than a matter of trust."
+  },
+  {
+    "heading": "Refunds treated as data, not as an asterisk",
+    "body": "Refunds are their own events and can be reported on directly, including as a rate against orders. A revenue chart that silently nets refunds and one that does not are both defensible; a chart that will not say which it is doing is not."
+  },
+  {
+    "heading": "Breaking down without losing the tail",
+    "body": "Group by plan, region or channel, and the bounded dimensions say exactly what went into Other rather than dropping the long tail and letting the total stop adding up."
+  }
+]
+</script>
+
+<template>
+  <div class="min-h-[100dvh] bg-canvas text-ink">
+    @include('SiteNav')
+    @include('Breadcrumbs')
+
+    <main class="px-6 py-10 mx-auto max-w-3xl">
+      <h1 class="text-4xl font-semibold tracking-tighter md:text-5xl">{{ page.title }}</h1>
+      <p class="mt-5 text-lg leading-relaxed text-muted">{{ page.description }}</p>
+
+      <div class="grid gap-10 mt-14">
+        @foreach (sections as section)
+          <section>
+            <h2 class="text-xl font-semibold tracking-tight text-ink">{{ section.heading }}</h2>
+            <p class="mt-3 leading-relaxed text-muted">{{ section.body }}</p>
+          </section>
+        @endforeach
+      </div>
+
+      <div class="p-8 mt-16 rounded-2xl border border-line bg-panel">
+        <h2 class="text-xl font-semibold tracking-tight">Point it at your orders</h2>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          If your shop already fires an event when an order is created, the first commerce report builds itself.
+        </p>
+        <a href="/register" class="inline-block px-4 py-2.5 mt-5 text-sm font-medium no-underline rounded-lg bg-accent text-accent-ink">
+          Start free
+        </a>
+      </div>
+    </main>
+
+    @include('SiteFooter')
+  </div>
+</template>

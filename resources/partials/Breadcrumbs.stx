@@ -1,0 +1,34 @@
+{{-- Breadcrumbs for the marketing pages.
+
+     Reads two things from the including page: `breadcrumbs`, an array of
+     `{ label, href? }` with the deepest last, and `breadcrumbWidth`, the
+     container width of that page's own content. The last entry is the current
+     page and carries no link, because a link to where you already are is a link
+     nobody wants.
+
+     The width is passed in rather than fixed here because the prose pages are
+     narrower than the card grids, and a trail that does not start above the
+     heading it belongs to reads as a stray line of text.
+
+     A partial rather than a component, for the reason the rest of this app uses
+     partials: stx drops props passed component to component in this version, so
+     shared chrome built as a component would silently render empty. --}}
+<nav aria-label="Breadcrumb" class="px-6 pt-8 mx-auto {{ breadcrumbWidth }}">
+  <ol class="flex flex-wrap gap-2 items-center text-sm list-none text-subtle">
+    @foreach (breadcrumbs as crumb)
+      @if (!loop.first)
+        {{-- Decorative, so it is hidden from a screen reader, which gets the
+             list structure instead. --}}
+        <li aria-hidden="true" class="text-line">/</li>
+      @endif
+
+      <li>
+        @if (crumb.href)
+          <a href="{{ crumb.href }}" class="no-underline text-muted hover:text-ink">{{ crumb.label }}</a>
+        @else
+          <span aria-current="page" class="text-ink">{{ crumb.label }}</span>
+        @endif
+      </li>
+    @endforeach
+  </ol>
+</nav>

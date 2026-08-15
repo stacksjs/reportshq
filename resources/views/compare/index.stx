@@ -1,0 +1,56 @@
+<script server>
+// The comparisons hub.
+//
+// Rendered from app/Marketing/pages.ts, which is also what the sitemap and the
+// footer read. A hub page maintained separately from the list of pages is a hub
+// page that stops linking to the newest one, and nobody notices for months.
+import { useSeoMeta } from 'stx'
+import { HUBS, pagesIn, pathFor } from '../../../app/Marketing/pages'
+
+const hub = HUBS.compare
+const canonical = 'https://reportshq.org/compare'
+const pages = pagesIn('compare').map(page => ({ ...page, href: pathFor(page) }))
+
+useSeoMeta({
+  title: `${hub.title} | ReportsHQ`,
+  description: hub.description,
+  canonical,
+  ogUrl: canonical,
+  ogTitle: hub.heading,
+  ogType: 'website',
+  ogSiteName: 'ReportsHQ',
+  twitterCard: 'summary_large_image',
+})
+
+const breadcrumbWidth = 'max-w-6xl'
+const breadcrumbs = [
+  { label: 'Home', href: '/' },
+  { label: hub.title },
+]
+</script>
+
+<template>
+  <div class="min-h-[100dvh] bg-canvas text-ink">
+    @include('SiteNav')
+    @include('Breadcrumbs')
+
+    <main class="px-6 py-12 mx-auto max-w-6xl">
+      <div class="max-w-[52ch]">
+        <h1 class="text-4xl font-semibold tracking-tighter md:text-5xl">{{ hub.heading }}</h1>
+        <p class="mt-4 text-base leading-relaxed text-muted">{{ hub.description }}</p>
+      </div>
+
+      <div class="grid gap-5 mt-12 sm:grid-cols-2 lg:grid-cols-3">
+        @foreach (pages as page)
+          <a href="{{ page.href }}" class="flex flex-col p-6 no-underline rounded-xl border border-line bg-panel hover:border-accent">
+            <i class="w-5 h-5 {{ page.icon }} text-accent"></i>
+            <h2 class="mt-4 text-base font-medium text-ink">{{ page.title }}</h2>
+            <p class="mt-2 text-sm leading-relaxed text-muted">{{ page.description }}</p>
+          </a>
+        @endforeach
+      </div>
+    </main>
+
+    @include('SiteFooter')
+  </div>
+</template>

@@ -1,0 +1,78 @@
+<script server>
+import { useSeoMeta } from 'stx'
+import { metaTitleFor, pageFor } from '../../../app/Marketing/pages'
+
+const page = pageFor('use-cases', 'content')!
+const canonical = 'https://reportshq.org/use-cases/content'
+
+useSeoMeta({
+  title: metaTitleFor(page.title),
+  description: page.description,
+  canonical,
+  ogUrl: canonical,
+  ogTitle: page.title,
+  ogDescription: page.description,
+  ogType: 'article',
+  ogSiteName: 'ReportsHQ',
+  twitterCard: 'summary_large_image',
+})
+
+const breadcrumbWidth = 'max-w-3xl'
+const breadcrumbs = [
+  { label: 'Home', href: '/' },
+  { label: 'Use cases', href: '/use-cases' },
+  { label: page.title },
+]
+
+const sections = [
+  {
+    "heading": "Reads, not just hits",
+    "body": "A view event carries the thing that was viewed, so the report is about articles rather than URLs. That difference matters the first time a piece is republished at a new path and a page-based tool treats it as two unrelated things."
+  },
+  {
+    "heading": "Authors and topics",
+    "body": "Group by author, category or tag, using the properties already attached to the events. This is the report an editorial team actually asks for and the one that usually gets assembled by hand in a spreadsheet each month."
+  },
+  {
+    "heading": "What went into Other",
+    "body": "Dimensions are bounded, and the bound is stated. When two hundred tags become the top ten plus Other, the report says how many went into Other rather than letting a reader assume the tail does not exist."
+  },
+  {
+    "heading": "Older ranges still add up",
+    "body": "Raw events are pruned at the end of your retention window, but the daily rollups outlive them. A report over last year still shows correct totals; what goes away is the ability to drill into individual events, and that is said plainly rather than discovered."
+  }
+]
+</script>
+
+<template>
+  <div class="min-h-[100dvh] bg-canvas text-ink">
+    @include('SiteNav')
+    @include('Breadcrumbs')
+
+    <main class="px-6 py-10 mx-auto max-w-3xl">
+      <h1 class="text-4xl font-semibold tracking-tighter md:text-5xl">{{ page.title }}</h1>
+      <p class="mt-5 text-lg leading-relaxed text-muted">{{ page.description }}</p>
+
+      <div class="grid gap-10 mt-14">
+        @foreach (sections as section)
+          <section>
+            <h2 class="text-xl font-semibold tracking-tight text-ink">{{ section.heading }}</h2>
+            <p class="mt-3 leading-relaxed text-muted">{{ section.body }}</p>
+          </section>
+        @endforeach
+      </div>
+
+      <div class="p-8 mt-16 rounded-2xl border border-line bg-panel">
+        <h2 class="text-xl font-semibold tracking-tight">Report on what gets read</h2>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          Publish and view events are enough for the first content report, and the CMS integration sends both already.
+        </p>
+        <a href="/register" class="inline-block px-4 py-2.5 mt-5 text-sm font-medium no-underline rounded-lg bg-accent text-accent-ink">
+          Start free
+        </a>
+      </div>
+    </main>
+
+    @include('SiteFooter')
+  </div>
+</template>

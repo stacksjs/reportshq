@@ -1,0 +1,78 @@
+<script server>
+import { useSeoMeta } from 'stx'
+import { metaTitleFor, pageFor } from '../../../app/Marketing/pages'
+
+const page = pageFor('compare', 'looker-studio')!
+const canonical = 'https://reportshq.org/compare/looker-studio'
+
+useSeoMeta({
+  title: metaTitleFor(page.title),
+  description: page.description,
+  canonical,
+  ogUrl: canonical,
+  ogTitle: page.title,
+  ogDescription: page.description,
+  ogType: 'article',
+  ogSiteName: 'ReportsHQ',
+  twitterCard: 'summary_large_image',
+})
+
+const breadcrumbWidth = 'max-w-3xl'
+const breadcrumbs = [
+  { label: 'Home', href: '/' },
+  { label: 'Comparisons', href: '/compare' },
+  { label: page.title },
+]
+
+const sections = [
+  {
+    "heading": "Looker Studio draws, it does not collect",
+    "body": "It is a dashboard layer over connectors: a warehouse, a spreadsheet, an ads account. That makes it enormously flexible and means the interesting work is upstream of it, in whatever you built to get correct data into the thing it connects to."
+  },
+  {
+    "heading": "This owns both halves",
+    "body": "Collection and presentation are the same product, so a chart cannot disagree with the data behind it and there is no pipeline to keep alive. The cost is reach: it draws your events and nothing else, so it will never chart your ad spend beside your revenue."
+  },
+  {
+    "heading": "Where Looker Studio wins",
+    "body": "Pulling several sources into one view, which is exactly what a marketing team needs and exactly what this cannot do. It is also free."
+  },
+  {
+    "heading": "Where this wins",
+    "body": "Nothing to configure before the first report exists, no connector to re-authorise, and a share link that does not depend on a Google account."
+  }
+]
+</script>
+
+<template>
+  <div class="min-h-[100dvh] bg-canvas text-ink">
+    @include('SiteNav')
+    @include('Breadcrumbs')
+
+    <main class="px-6 py-10 mx-auto max-w-3xl">
+      <h1 class="text-4xl font-semibold tracking-tighter md:text-5xl">{{ page.title }}</h1>
+      <p class="mt-5 text-lg leading-relaxed text-muted">{{ page.description }}</p>
+
+      <div class="grid gap-10 mt-14">
+        @foreach (sections as section)
+          <section>
+            <h2 class="text-xl font-semibold tracking-tight text-ink">{{ section.heading }}</h2>
+            <p class="mt-3 leading-relaxed text-muted">{{ section.body }}</p>
+          </section>
+        @endforeach
+      </div>
+
+      <div class="p-8 mt-16 rounded-2xl border border-line bg-panel">
+        <h2 class="text-xl font-semibold tracking-tight">Fewer moving parts</h2>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          One place that collects the events and draws the charts, rather than a drawing tool plus the pipeline that feeds it.
+        </p>
+        <a href="/register" class="inline-block px-4 py-2.5 mt-5 text-sm font-medium no-underline rounded-lg bg-accent text-accent-ink">
+          Start free
+        </a>
+      </div>
+    </main>
+
+    @include('SiteFooter')
+  </div>
+</template>

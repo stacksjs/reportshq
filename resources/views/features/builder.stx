@@ -1,0 +1,83 @@
+<script server>
+import { useSeoMeta } from 'stx'
+import { metaTitleFor, pageFor } from '../../../app/Marketing/pages'
+
+const page = pageFor('features', 'builder')!
+const canonical = 'https://reportshq.org/features/builder'
+
+useSeoMeta({
+  title: metaTitleFor(page.title),
+  description: page.description,
+  canonical,
+  ogUrl: canonical,
+  ogTitle: page.title,
+  ogDescription: page.description,
+  ogType: 'article',
+  ogSiteName: 'ReportsHQ',
+  twitterCard: 'summary_large_image',
+})
+
+const breadcrumbWidth = 'max-w-3xl'
+const breadcrumbs = [
+  { label: 'Home', href: '/' },
+  { label: 'Features', href: '/features' },
+  { label: page.title },
+]
+
+const sections = [
+  {
+    heading: 'A grid that settles',
+    body: 'Blocks live on twelve columns. Drag one and the others move out of the way while you hold it; drop it and the server settles the layout before saving, so two blocks can never end up sharing a cell. That last part is done on the server on purpose: a layout agreed by the browser alone is a layout that disagrees with itself the moment two people edit the same report.',
+  },
+  {
+    heading: 'Keyboard, not just pointer',
+    body: 'Every move and resize has a keyboard path, and focus stays on the block you were holding. A builder that can only be driven by dragging excludes people who do not drag, and the work to avoid that is a few key handlers.',
+  },
+  {
+    heading: 'Draft and published are different things',
+    body: 'Edits go to a draft. The published version is what a teammate opens and what a share link serves, and it does not change until you say so. A half finished experiment is never what somebody else walks into.',
+  },
+  {
+    heading: 'Every block says what it counts',
+    body: 'Each block carries one sentence derived from the query it actually runs, not from a label somebody typed. Two charts both called Revenue can count different things, and a reader deserves to know which one is in front of them before they quote a number in a meeting.',
+  },
+  {
+    heading: 'Duplicating and archiving',
+    body: 'Duplicate a report to try a different cut without risking the one people rely on. Archive the ones you have finished with rather than deleting them, and restore later if it turns out you had not.',
+  },
+]
+</script>
+
+<template>
+  <div class="min-h-[100dvh] bg-canvas text-ink">
+    @include('SiteNav')
+    @include('Breadcrumbs')
+
+    <main class="px-6 py-10 mx-auto max-w-3xl">
+      <h1 class="text-4xl font-semibold tracking-tighter md:text-5xl">{{ page.title }}</h1>
+      <p class="mt-5 text-lg leading-relaxed text-muted">{{ page.description }}</p>
+
+      <div class="grid gap-10 mt-14">
+        @foreach (sections as section)
+          <section>
+            <h2 class="text-xl font-semibold tracking-tight text-ink">{{ section.heading }}</h2>
+            <p class="mt-3 leading-relaxed text-muted">{{ section.body }}</p>
+          </section>
+        @endforeach
+      </div>
+
+      <div class="p-8 mt-16 rounded-2xl border border-line bg-panel">
+        <h2 class="text-xl font-semibold tracking-tight">Try it on your own events</h2>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          The free plan carries a real month of a small project's events, and the builder is the
+          same one on every tier.
+        </p>
+        <a href="/register" class="inline-block px-4 py-2.5 mt-5 text-sm font-medium no-underline rounded-lg bg-accent text-accent-ink">
+          Start free
+        </a>
+      </div>
+    </main>
+
+    @include('SiteFooter')
+  </div>
+</template>

@@ -1,43 +1,76 @@
-<footer class="mt-24 border-t border-line">
-  <div class="grid gap-8 px-6 py-12 mx-auto max-w-6xl sm:grid-cols-2 lg:grid-cols-4">
-    <div>
-      <div class="flex gap-2 items-center">
-        <i class="w-4 h-4 i-hugeicons-chart-histogram text-accent"></i>
-        <span class="text-sm font-semibold text-ink">ReportsHQ</span>
+<script server>
+// The public footer.
+//
+// The link columns are rendered from app/Marketing/pages.ts, the same list the
+// sitemap is built from, so a new page is linked from every page on the site
+// the moment it is added. A footer maintained by hand is where internal links
+// go to become stale, and nothing ever surfaces the omission.
+import { pagesIn, pathFor } from '../../app/Marketing/pages'
+
+const footerColumns = [
+  {
+    heading: 'Features',
+    links: pagesIn('features').map(page => ({ label: page.title, href: pathFor(page) })),
+  },
+  {
+    heading: 'Use cases',
+    links: pagesIn('use-cases').map(page => ({ label: page.title, href: pathFor(page) })),
+  },
+  {
+    heading: 'Compare',
+    links: pagesIn('compare').map(page => ({
+      // The cards say "ReportsHQ compared with Metabase"; in a column of six,
+      // the repeated half is noise and the name is the part being scanned for.
+      label: page.title.replace('ReportsHQ compared with ', ''),
+      href: pathFor(page),
+    })),
+  },
+]
+</script>
+
+<template>
+  <footer class="mt-24 border-t border-line">
+    <div class="grid gap-8 px-6 py-12 mx-auto max-w-6xl sm:grid-cols-2 lg:grid-cols-5">
+      <div>
+        <div class="flex gap-2 items-center">
+          <i class="w-4 h-4 i-hugeicons-chart-histogram text-accent"></i>
+          <span class="text-sm font-semibold text-ink">ReportsHQ</span>
+        </div>
+        <p class="mt-2 max-w-[28ch] text-sm text-muted">
+          Reports that build themselves, from the events your app already sends.
+        </p>
       </div>
-      <p class="mt-2 max-w-[28ch] text-sm text-muted">
-        Reports that build themselves, from the events your app already sends.
-      </p>
+
+      <div>
+        <h2 class="mb-2 text-xs font-medium tracking-wide uppercase text-subtle">Product</h2>
+        <ul class="grid gap-1 list-none">
+          <li><a href="/pricing" class="text-sm no-underline text-muted hover:text-ink">Pricing</a></li>
+          <li><a href="/docs" class="text-sm no-underline text-muted hover:text-ink">Documentation</a></li>
+          <li><a href="/docs/ingest" class="text-sm no-underline text-muted hover:text-ink">HTTP ingest</a></li>
+          <li><a href="/docs/stacks" class="text-sm no-underline text-muted hover:text-ink">Stacks package</a></li>
+          <li><a href="/docs/laravel" class="text-sm no-underline text-muted hover:text-ink">Laravel package</a></li>
+          <li><a href="/register" class="text-sm no-underline text-muted hover:text-ink">Start free</a></li>
+        </ul>
+      </div>
+
+      @foreach (footerColumns as column)
+        <div>
+          <h2 class="mb-2 text-xs font-medium tracking-wide uppercase text-subtle">{{ column.heading }}</h2>
+          <ul class="grid gap-1 list-none">
+            @foreach (column.links as link)
+              <li><a href="{{ link.href }}" class="text-sm no-underline text-muted hover:text-ink">{{ link.label }}</a></li>
+            @endforeach
+          </ul>
+        </div>
+      @endforeach
     </div>
 
-    <div>
-      <h2 class="mb-2 text-xs font-medium tracking-wide uppercase text-subtle">Product</h2>
-      <ul class="grid gap-1 list-none">
-        <li><a href="/pricing" class="text-sm no-underline text-muted hover:text-ink">Pricing</a></li>
-        <li><a href="/docs" class="text-sm no-underline text-muted hover:text-ink">Documentation</a></li>
-        <li><a href="/register" class="text-sm no-underline text-muted hover:text-ink">Start free</a></li>
+    <div class="flex flex-wrap gap-4 justify-between px-6 pb-10 mx-auto max-w-6xl">
+      <p class="text-xs text-subtle">Built with Stacks. Self-host it or let us run it.</p>
+      <ul class="flex gap-4 list-none">
+        <li><a href="mailto:hello@reportshq.org" class="text-xs no-underline text-subtle hover:text-ink">Contact</a></li>
+        <li><a href="https://github.com/stacksjs/reportshq" class="text-xs no-underline text-subtle hover:text-ink">Source</a></li>
       </ul>
     </div>
-
-    <div>
-      <h2 class="mb-2 text-xs font-medium tracking-wide uppercase text-subtle">Integrate</h2>
-      <ul class="grid gap-1 list-none">
-        <li><a href="/docs/ingest" class="text-sm no-underline text-muted hover:text-ink">HTTP ingest</a></li>
-        <li><a href="/docs/stacks" class="text-sm no-underline text-muted hover:text-ink">Stacks package</a></li>
-        <li><a href="/docs/laravel" class="text-sm no-underline text-muted hover:text-ink">Laravel package</a></li>
-      </ul>
-    </div>
-
-    <div>
-      <h2 class="mb-2 text-xs font-medium tracking-wide uppercase text-subtle">Company</h2>
-      <ul class="grid gap-1 list-none">
-        <li><a href="mailto:hello@reportshq.org" class="text-sm no-underline text-muted hover:text-ink">Contact</a></li>
-        <li><a href="https://github.com/stacksjs/reportshq" class="text-sm no-underline text-muted hover:text-ink">Source</a></li>
-      </ul>
-    </div>
-  </div>
-
-  <div class="px-6 pb-10 mx-auto max-w-6xl">
-    <p class="text-xs text-subtle">Built with Stacks. Self-host it or let us run it.</p>
-  </div>
-</footer>
+  </footer>
+</template>

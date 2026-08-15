@@ -9,10 +9,23 @@
 //
 // The sample is stated as a sample. Numbers on a marketing page that imply a
 // real customer's business are a lie with a chart on it.
+import { useSeoMeta } from 'stx'
 import { PLANS } from '../../app/Billing/limits'
 
 const siteUrl = 'https://reportshq.org'
 const siteDescription = 'Reports that build themselves, from the events your application already sends. Send events over HTTP or install a package, and the Commerce, Users and Content reports appear with real numbers in them.'
+
+useSeoMeta({
+  title: 'ReportsHQ: reports that build themselves',
+  description: siteDescription,
+  canonical: siteUrl,
+  ogUrl: siteUrl,
+  ogTitle: 'Reports that build themselves',
+  ogDescription: siteDescription,
+  ogType: 'website',
+  ogSiteName: 'ReportsHQ',
+  twitterCard: 'summary_large_image',
+})
 
 /**
  * A fixed thirty days of sample data.
@@ -138,6 +151,24 @@ const features = [
 ]
 
 const freeEvents = PLANS.free.events.toLocaleString('en-GB')
+
+const docLinks = [
+  {
+    title: 'The ingest contract',
+    body: 'The endpoint, the batch limits, and what happens to an event that fails validation. Nothing is dropped without a reason you can read.',
+    href: '/docs/ingest',
+  },
+  {
+    title: 'The event taxonomy',
+    body: 'The names that make a report create itself, and how to send something the standard set does not cover.',
+    href: '/docs/taxonomy',
+  },
+  {
+    title: 'Limits and retention',
+    body: 'What each plan carries, the grace band past a quota, and what survives when raw events are pruned.',
+    href: '/docs/limits',
+  },
+]
 </script>
 
 <template>
@@ -244,6 +275,31 @@ const freeEvents = PLANS.free.events.toLocaleString('en-GB')
               <h3 class="mt-4 text-base font-medium text-ink">{{ feature.title }}</h3>
               <p class="mt-2 text-sm leading-relaxed text-muted">{{ feature.body }}</p>
             </div>
+          @endforeach
+        </div>
+      </section>
+
+      {{-- Docs teaser. Three real entry points rather than one "Read the docs"
+           button, because the question somebody has at this point is specific
+           and a landing page that knows which three it is saves them a search. --}}
+      <section class="px-6 pb-20 mx-auto max-w-6xl border-t border-line">
+        <div class="flex flex-wrap gap-4 justify-between items-end pt-20">
+          <div>
+            <h2 class="text-3xl font-semibold tracking-tight">Written down, not implied</h2>
+            <p class="mt-3 max-w-[52ch] text-sm leading-relaxed text-muted">
+              The ingest contract, the event taxonomy and the limits are documented, including
+              the parts that refuse things. Every bound the API enforces is stated.
+            </p>
+          </div>
+          <a href="/docs" class="text-sm no-underline text-accent hover:underline">All documentation</a>
+        </div>
+
+        <div class="grid gap-4 mt-10 lg:grid-cols-3">
+          @foreach (docLinks as doc)
+            <a href="{{ doc.href }}" class="block p-5 no-underline rounded-xl border border-line bg-panel hover:border-accent">
+              <h3 class="text-sm font-medium text-ink">{{ doc.title }}</h3>
+              <p class="mt-2 text-sm leading-relaxed text-muted">{{ doc.body }}</p>
+            </a>
           @endforeach
         </div>
       </section>

@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /account
+Disallow: /projects
+Disallow: /reports
+Disallow: /s/
+Disallow: /embed
+Disallow: /api/
+
+Sitemap: https://reportshq.org/sitemap.xml

@@ -8,9 +8,23 @@
 // paid for a number that turned out not to be true.
 //
 // If a limit changes, this page changes with it. Nothing here is typed twice.
+import { useSeoMeta } from 'stx'
 import { GRACE_FRACTION, PLANS, TIERS } from '../../app/Billing/limits'
 
 const siteUrl = 'https://reportshq.org'
+const pricingDescription = 'Three plans, and every number on the page is the number the product enforces. Free carries 50,000 events a month with no card. Collection continues through a stated grace band rather than stopping at the line.'
+
+useSeoMeta({
+  title: 'Pricing | ReportsHQ',
+  description: pricingDescription,
+  canonical: `${siteUrl}/pricing`,
+  ogUrl: `${siteUrl}/pricing`,
+  ogTitle: 'Pricing that reads like the product',
+  ogDescription: pricingDescription,
+  ogType: 'website',
+  ogSiteName: 'ReportsHQ',
+  twitterCard: 'summary_large_image',
+})
 
 function money(cents: number): string {
   if (cents === 0)
