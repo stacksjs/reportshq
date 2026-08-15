@@ -48,7 +48,7 @@ contract.
 To check a key without sending anything:
 
 ```bash
-curl https://reportshq.org/ingest/verify -H "X-ReportsHQ-Key: rhq_your_project_key"
+curl -X POST https://reportshq.org/ingest/verify -H "X-ReportsHQ-Key: rhq_your_project_key"
 ```
 
 ## 3. Watch the report build itself

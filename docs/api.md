@@ -20,7 +20,7 @@ exactly one capability, appending events to one project. It can never read.
 To check a key points where you think it does:
 
 ```bash
-curl https://reportshq.org/ingest/verify -H "X-ReportsHQ-Key: rhq_your_project_key"
+curl -X POST https://reportshq.org/ingest/verify -H "X-ReportsHQ-Key: rhq_your_project_key"
 ```
 
 That returns the project's name and nothing else, so a write credential never

@@ -146,6 +146,26 @@ describe('code samples', () => {
     expect(quickstart).toContain('X-ReportsHQ-Key')
   })
 
+  it('documents /ingest/verify as a POST, because a root GET never reaches the router', () => {
+    // A GET at the document root is answered by the view handler's 404 page and
+    // never reaches this app's routes (stacksjs/stacks#2326). The endpoint was
+    // documented as a GET in four places and returned 404 in production while
+    // looking correct in the source.
+    const files = readdirSync(docsDir).filter(name => name.endsWith('.md'))
+    const wrong: string[] = []
+
+    for (const file of files) {
+      const source = readFileSync(join(docsDir, file), 'utf8')
+
+      for (const line of source.split('\n')) {
+        if (line.includes('/ingest/verify') && line.trimStart().startsWith('curl') && !line.includes('-X POST'))
+          wrong.push(`${file}: ${line.trim()}`)
+      }
+    }
+
+    expect(wrong).toEqual([])
+  })
+
   it('the -d payload in the quickstart is a valid ingest body', () => {
     const quickstart = readFileSync(join(docsDir, 'quickstart.md'), 'utf8')
     const match = quickstart.match(/-d '([\s\S]*?)'\n```/)

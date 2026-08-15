@@ -131,7 +131,7 @@ itself from them.
 ## Checking the key
 
 ```bash
-curl https://reportshq.org/ingest/verify -H "X-ReportsHQ-Key: rhq_your_project_key"
+curl -X POST https://reportshq.org/ingest/verify -H "X-ReportsHQ-Key: rhq_your_project_key"
 ```
 
 Returns the project's name, and nothing else, so you can confirm the key points

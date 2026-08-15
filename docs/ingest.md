@@ -124,7 +124,7 @@ Match on the status rather than on `error` if you handle that case.
 ## Checking a key
 
 ```bash
-curl https://reportshq.org/ingest/verify -H "X-ReportsHQ-Key: rhq_your_project_key"
+curl -X POST https://reportshq.org/ingest/verify -H "X-ReportsHQ-Key: rhq_your_project_key"
 ```
 
 ```json

@@ -178,15 +178,31 @@ route.post('/ingest', async (request: EnhancedRequest) => {
  *
  * The SDKs call it on boot when a self-test is requested, and the onboarding UI
  * uses it to say "your key works" before the first real event arrives.
+ *
+ * The project's name, and nothing else. Enough to confirm the key points where
+ * the integrator thinks it does, without handing a public credential the
+ * ability to read anything about the account behind it.
  */
-route.get('/ingest/verify', async (request: EnhancedRequest) => {
+async function verifyKey(request: EnhancedRequest) {
   const project = await projectForIngestKey(request.headers.get('x-reportshq-key') ?? '')
 
   if (!project)
     return response.json({ ok: false, error: 'invalid_key' }, 401)
 
-  // The project's name, and nothing else. Enough to confirm the key points
-  // where the integrator thinks it does, without handing a public credential
-  // the ability to read anything about the account behind it.
   return response.json({ ok: true, project: { name: project.name } })
-})
+}
+
+/**
+ * Registered for both verbs, and POST is the one documented.
+ *
+ * A GET at the document root never reaches this router: the view handler
+ * answers first and returns its 404 page, so this endpoint was dead in
+ * production while looking perfectly correct in the source. Filed upstream as
+ * stacksjs/stacks#2326. POST at the root does reach the router, which is why
+ * `POST /ingest` has always worked.
+ *
+ * The GET stays so the documented-for-years shape starts working the moment the
+ * framework bug is fixed, rather than needing anyone to remember this.
+ */
+route.get('/ingest/verify', verifyKey)
+route.post('/ingest/verify', verifyKey)
