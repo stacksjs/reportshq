@@ -253,6 +253,25 @@ export async function removeMember(user: { id: number }, projectId: number, memb
   await db.unsafe(`DELETE FROM project_members WHERE project_id = $1 AND user_id = $2`, [projectId, memberUserId])
 }
 
+/**
+ * Turn automatic report creation on or off for a project.
+ *
+ * Lives here rather than in the route for the same reason every other write
+ * does: permission is decided in one place. An allowlisted setting rather than
+ * a general project update, because the projects row also holds the ingest key
+ * and the owner, and a generic updater is one typo away from letting a member
+ * rewrite either.
+ */
+export async function setAutoReports(user: { id: number }, projectId: number, enabled: boolean): Promise<void> {
+  if (!(await canAdminister(user, projectId)))
+    throw new Error('Only an owner or admin can change a project\'s settings.')
+
+  await db.unsafe(
+    `UPDATE projects SET auto_reports_enabled = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND deleted_at IS NULL`,
+    [enabled ? 1 : 0, projectId],
+  )
+}
+
 /** Everyone with access, owner first, for the members screen. */
 export async function membersOf(projectId: number): Promise<Array<Record<string, unknown>>> {
   return await db.unsafe(

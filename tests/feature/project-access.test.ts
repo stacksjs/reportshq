@@ -10,6 +10,7 @@
  */
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { db } from '@stacksjs/database'
+import { setAutoReports } from '../../app/Support/projects'
 import { accessFor, canAdminister, canRead, isOwner, projectForIngestKey, projectsFor } from '../../app/Support/access'
 
 interface Fixture {
@@ -78,6 +79,12 @@ afterAll(async () => {
   await db.unsafe(`DELETE FROM projects WHERE name LIKE $1`, [`%${stamp}`])
   await db.unsafe(`DELETE FROM users WHERE email LIKE $1`, [`%-${stamp}@reportshq.test`])
 })
+
+/** Whether the project currently builds reports on its own. */
+async function autoReports(projectId: number): Promise<boolean> {
+  const row = (await db.unsafe(`SELECT auto_reports_enabled FROM projects WHERE id = $1`, [projectId]))?.[0] as { auto_reports_enabled: number | boolean } | undefined
+  return Boolean(row?.auto_reports_enabled)
+}
 
 describe('reading a project', () => {
   test('the owner can read it', async () => {
@@ -215,5 +222,33 @@ describe('ingest keys', () => {
     }
 
     expect(failed).toBeTrue()
+  })
+})
+
+describe('project settings', () => {
+  test('an owner can turn automatic reports off and on', async () => {
+    await setAutoReports(f.owner, f.project.id, false)
+    expect(await autoReports(f.project.id)).toBeFalse()
+
+    await setAutoReports(f.owner, f.project.id, true)
+    expect(await autoReports(f.project.id)).toBeTrue()
+  })
+
+  test('an admin can too', async () => {
+    await setAutoReports(f.admin, f.project.id, false)
+    expect(await autoReports(f.project.id)).toBeFalse()
+    await setAutoReports(f.owner, f.project.id, true)
+  })
+
+  test('a member cannot', async () => {
+    // A member reads reports. Deciding whether the product creates them is
+    // administration.
+    expect(setAutoReports(f.member, f.project.id, false)).rejects.toThrow()
+    expect(await autoReports(f.project.id)).toBeTrue()
+  })
+
+  test('a stranger cannot, and the project is untouched', async () => {
+    expect(setAutoReports(f.stranger, f.project.id, false)).rejects.toThrow()
+    expect(await autoReports(f.project.id)).toBeTrue()
   })
 })

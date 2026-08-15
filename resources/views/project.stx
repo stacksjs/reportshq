@@ -98,6 +98,13 @@ const curlSnippet = ingestKey
               <span class="num">{{ eventCount }}</span> events &middot; {{ project.timezone }}
             </p>
           </div>
+
+          @if (mayAdminister)
+            <a
+              href="/project-settings?id={{ projectId }}"
+              class="px-3 py-2 text-sm no-underline rounded-lg border border-line text-ink hover:border-accent"
+            >Settings</a>
+          @endif
         </div>
 
         @if (!receiving)

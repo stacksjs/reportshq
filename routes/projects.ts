@@ -1,4 +1,5 @@
 import type { EnhancedRequest } from '@stacksjs/bun-router'
+import { db } from '@stacksjs/database'
 import { response, route } from '@stacksjs/router'
 import { eventNamesFor, eventsFor } from '../app/Events/query'
 import { cached } from '../app/Reports/cache'
@@ -14,6 +15,7 @@ import {
   removeMember,
   revokeInvite,
   rotateIngestKey,
+  setAutoReports,
 } from '../app/Support/projects'
 
 /**
@@ -248,6 +250,46 @@ route.post('/{id}/rotate-key', async (request: EnhancedRequest) => {
   }
 })
 
+/**
+ * Project settings a person can toggle.
+ *
+ * Only `auto_reports_enabled` today, and deliberately an allowlist rather than
+ * a general "patch the project row" endpoint: the projects table also holds the
+ * ingest key and the owner, and a generic updater is one typo away from letting
+ * a member rewrite either.
+ */
+route.post('/{id}/settings', async (request: EnhancedRequest) => {
+  const user = currentUser(request)
+  if (!user)
+    return unauthenticated()
+
+  const id = Number(request.param('id'))
+  if (!(await accessFor(user, id)))
+    return notFound()
+
+  let payload: Record<string, unknown> = {}
+  try {
+    const raw = await request.text()
+    payload = raw ? JSON.parse(raw) : {}
+  }
+  catch {
+    return response.json({ message: 'Expected a JSON body.' }, 422)
+  }
+
+  if (!('auto_reports_enabled' in payload))
+    return response.json({ message: 'Nothing to change.' }, 422)
+
+  const enabled = payload.auto_reports_enabled === true || payload.auto_reports_enabled === 'true' || payload.auto_reports_enabled === 1
+
+  try {
+    await setAutoReports(user, id, enabled)
+    return response.json({ auto_reports_enabled: enabled })
+  }
+  catch (error) {
+    return response.json({ message: (error as Error).message }, 403)
+  }
+})
+
 route.get('/{id}/members', async (request: EnhancedRequest) => {
   const user = currentUser(request)
   if (!user)
@@ -361,7 +403,6 @@ route.delete('/{id}', async (request: EnhancedRequest) => {
   if (!(await isOwner(user, id)))
     return response.json({ message: 'Only the project owner can delete a project.' }, 403)
 
-  const { db } = await import('@stacksjs/database')
   // Soft delete: the events and reports behind it stay addressable while the
   // retention job works through them, and access.ts already treats a deleted
   // project as gone for every reader.
