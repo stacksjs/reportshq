@@ -75,6 +75,41 @@ describe('event labels', () => {
   })
 })
 
+describe('the Stacks integration package', () => {
+  test('every event it can send is a documented one', async () => {
+    // The package translates framework events into reserved names. A name it
+    // emits that the doc does not describe is a name no template reads and no
+    // label exists for, so it arrives in somebody's project as an orphan.
+    const { MAPPINGS } = await import('../../packages/stacks/src/mappers')
+    const documented = new Set(documentedEvents())
+
+    const undocumented = Object.values(MAPPINGS)
+      .map(mapping => mapping.to)
+      .filter(name => !documented.has(name))
+
+    expect(undocumented).toEqual([])
+  })
+
+  test('every event it can send has a friendly label', async () => {
+    const { MAPPINGS } = await import('../../packages/stacks/src/mappers')
+
+    const unlabelled = Object.values(MAPPINGS)
+      .map(mapping => mapping.to)
+      .filter(name => !EVENT_LABELS[name])
+
+    expect(unlabelled).toEqual([])
+  })
+
+  test('no two framework events map to the same taxonomy name', async () => {
+    // Two mappings onto one name means one of them is unreachable in practice
+    // and the reports built on it silently double-count.
+    const { MAPPINGS } = await import('../../packages/stacks/src/mappers')
+    const targets = Object.values(MAPPINGS).map(mapping => mapping.to)
+
+    expect(new Set(targets).size).toBe(targets.length)
+  })
+})
+
 describe('field labels', () => {
   test('known columns read as words', () => {
     expect(fieldLabel('user_key')).toBe('User')

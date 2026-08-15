@@ -120,6 +120,16 @@ jobs:
       - name: Test Suite
         run: bun run test
 
+      # The integration packages are a separate workspace and `buddy test` only
+      # walks the app's own tests/, so without this their suites never run in
+      # CI and a broken transport ships silently. They typecheck separately too:
+      # the app's include list is framework-owned and does not reach into
+      # packages/, which hid two real type errors when this package was written.
+      - name: Integration packages
+        run: |
+          bun test ./packages
+          bunx --bun tsc --noEmit -p packages/stacks/tsconfig.json
+
       # The design system has no types and no tests of its own: a renamed custom
       # property resolves to the property's initial value rather than erroring,
       # and a documented contrast ratio can drift from the colour it describes
