@@ -21,6 +21,15 @@ export default function () {
   //
   // UTC deliberately: the job rebuilds each project in that project's own
   // timezone, so the schedule itself has no reason to prefer one.
+  // Create the reports a project has earned. Scheduled rather than run from
+  // the ingest path: ingest is the one request that must stay cheap, and a
+  // report appearing a few minutes after the first order reads exactly as well
+  // as one appearing 200ms after it.
+  schedule
+    .job('ProvisionReports')
+    .everyTenMinutes()
+    .setTimeZone('UTC')
+
   schedule
     .job('RebuildRollups')
     .everyTenMinutes()
