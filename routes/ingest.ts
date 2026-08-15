@@ -205,4 +205,8 @@ async function verifyKey(request: EnhancedRequest) {
  * framework bug is fixed, rather than needing anyone to remember this.
  */
 route.get('/ingest/verify', verifyKey)
-route.post('/ingest/verify', verifyKey)
+// `.skipCsrf()` for the same reason `POST /ingest` has it: the caller is an SDK
+// or a curl holding an ingest key, never a browser form with a session, so
+// there is no cross-site request to forge. Without it the endpoint answers 403
+// to every caller it exists for.
+route.post('/ingest/verify', verifyKey).skipCsrf()
