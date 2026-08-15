@@ -129,22 +129,20 @@ export const tsCloud: TsCloudConfig = {
       // The main site owns the state: it runs the migration that creates the
       // database, so it is the one that may seed the target.
       sharedPaths: sharedState(true),
+      // Markers between steps, kept deliberately. The remote log interleaves
+      // every command with no delimiters, and stdout flushes in chunks while a
+      // failing command's stderr goes straight through, so without them an
+      // error appears to belong to whichever command last managed to flush.
+      // Four deploys were spent misreading exactly that.
       preStart: [
-        // Diagnostics first: stdout is flushed in chunks while a failing
-        // command's stderr goes straight through, so anything printed AFTER
-        // the failing line never reaches the log and the error appears to
-        // belong to whichever command last managed to flush.
-        'echo "[reportshq] === release layout ==="',
-        'ls -la storage | head -6',
-        'echo "[reportshq] --- storage/framework ---"',
-        'ls storage/framework 2>&1 | head -6',
-        'echo "[reportshq] --- vendored cli present? ---"',
-        'test -f storage/framework/core/buddy/src/cli.ts && echo yes || echo no',
-        'echo "[reportshq] === installing ==="',
+        'echo "[reportshq] preStart: install"',
         'bun install --frozen-lockfile',
-        'echo "[reportshq] === migrating ==="',
+        'echo "[reportshq] preStart: migrate"',
+        // `buddy deploy` splices a `db:backup --before-migrations` in front of
+        // this line, deriving the invocation from it, so how this is written
+        // decides how the backup is taken.
         'bun node_modules/@stacksjs/buddy/dist/cli.js migrate',
-        'echo "[reportshq] === preStart complete ==="',
+        'echo "[reportshq] preStart: done"',
       ],
       env: {
         APP_ENV: 'production',
