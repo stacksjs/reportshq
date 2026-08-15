@@ -205,10 +205,10 @@ describe('the schedule list', () => {
   })
 
   test('pausing removes it from the list', async () => {
-    await db.unsafe(`UPDATE report_schedules SET is_active = 0 WHERE id = $1`, [scheduleId])
+    await db.unsafe(`UPDATE report_schedules SET is_active = FALSE WHERE id = $1`, [scheduleId])
     expect((await activeSchedules()).map(entry => entry.id)).not.toContain(scheduleId)
 
-    await db.unsafe(`UPDATE report_schedules SET is_active = 1 WHERE id = $1`, [scheduleId])
+    await db.unsafe(`UPDATE report_schedules SET is_active = TRUE WHERE id = $1`, [scheduleId])
   })
 
   test('unpublishing the report removes it too', async () => {

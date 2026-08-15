@@ -56,14 +56,16 @@ export default defineModel({
     /** BlockQuery as JSON. Empty for `text` blocks, which render prose. */
     query: {
       fillable: true,
-      validation: { rule: schema.string() },
+      // text for the same reason as Event.properties: a serialised BlockQuery
+      // with a few filters passes 255 characters easily.
+      validation: { rule: schema.text() },
       factory: () => JSON.stringify({ events: [], measure: 'count', filters: [], grain: 'day' }),
     },
 
     /** Axis labels, palette slot, number format. Presentation only. */
     viz: {
       fillable: true,
-      validation: { rule: schema.string() },
+      validation: { rule: schema.text() },
       factory: () => '{}',
     },
 

@@ -199,7 +199,7 @@ describe('provisioning', () => {
 
   test('a project can turn auto-reports off', async () => {
     const id = await project('Disabled')
-    await db.unsafe(`UPDATE projects SET auto_reports_enabled = 0 WHERE id = $1`, [id])
+    await db.unsafe(`UPDATE projects SET auto_reports_enabled = FALSE WHERE id = $1`, [id])
     await storeEvents(id, [{ name: 'commerce.order.created', occurred_at: yesterday, value: 10 }])
 
     const result = await provisionTemplates(id, owner)

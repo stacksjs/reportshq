@@ -92,7 +92,11 @@ export default defineModel({
      */
     properties: {
       fillable: true,
-      validation: { rule: schema.string() },
+      // text, not string: a plain string becomes varchar(255), and a property
+      // bag is JSON that routinely exceeds it. SQLite ignores the declared
+      // width, so an oversized bag stored fine there and was rejected by
+      // Postgres with "value too long for type character varying(255)".
+      validation: { rule: schema.text() },
     },
 
     /**

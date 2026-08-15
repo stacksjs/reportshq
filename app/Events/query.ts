@@ -7,6 +7,7 @@
  * problem with different indexes and lands separately.
  */
 import { db } from '@stacksjs/database'
+import { getDialectDriver, resolveDialect } from 'bun-query-builder'
 
 export interface EventQuery {
   name?: string
@@ -191,7 +192,7 @@ export async function propertyValuesFor(projectId: number, key: string, limit = 
     // be treated as a literal string rather than a path.
     // Aliased `property_value`, not `value`: the driver returns nulls for a
     // column by that name, so the query is right in sqlite and empty here.
-    `SELECT json_extract(properties, '$.${clean.replace(/[^\w.-]/g, '')}') AS property_value, COUNT(*) AS n
+    `SELECT ${getDialectDriver(resolveDialect()).jsonExtract('properties', `'${clean.replace(/[^\w.-]/g, '')}'`)} AS property_value, COUNT(*) AS n
        FROM events
       WHERE project_id = $1 AND properties IS NOT NULL
       GROUP BY property_value

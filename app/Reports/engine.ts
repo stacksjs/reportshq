@@ -18,6 +18,7 @@ import { db } from '@stacksjs/database'
 import { bucketsFor, defaultGrain, previousRange, resolveRange, truncate } from './range'
 import { canUseRollups, rollupSeries, rollupsCover } from './rollup'
 import { DEFAULT_SERIES, isAllowedField, validateBlockQuery } from './schema'
+import { getDialectDriver, resolveDialect, toDialectPlaceholders } from 'bun-query-builder'
 
 /**
  * Whether this query should read the pre-aggregate.
@@ -85,7 +86,7 @@ function columnFor(field: string): string {
     // Read through the driver's JSON accessor rather than string surgery on
     // the stored text. The key is a bound parameter, so a property called
     // `a") or 1=1 --` is a lookup that finds nothing rather than a hole.
-    return `json_extract(properties, '$.' || ?)`
+    return getDialectDriver(resolveDialect()).jsonExtract('properties', '?')
   }
 
   return `"${field}"`
@@ -203,21 +204,9 @@ function whereFor(projectId: number, query: BlockQuery, range: Range): Clause {
  * chart is off by one hour on two days a year, and never off by a whole row.
  */
 function bucketExpression(grain: Grain, offsetHours: number): string {
-  const shifted = `datetime(occurred_at, '${offsetHours >= 0 ? '+' : '-'}${Math.abs(offsetHours)} hours')`
-
-  switch (grain) {
-    case 'hour':
-      return `strftime('%Y-%m-%dT%H:00:00.000Z', ${shifted})`
-    case 'week':
-      // SQLite weeks start on Sunday; shift so they start on Monday.
-      return `strftime('%Y-%m-%dT00:00:00.000Z', ${shifted}, '-6 days', 'weekday 1')`
-    case 'month':
-      return `strftime('%Y-%m-01T00:00:00.000Z', ${shifted})`
-    case 'day':
-    default:
-      return `strftime('%Y-%m-%dT00:00:00.000Z', ${shifted})`
-  }
+  return getDialectDriver(resolveDialect()).dateBucket('occurred_at', grain, offsetHours)
 }
+
 
 function offsetHoursFor(timezone: string, at: Date): number {
   const formatted = new Intl.DateTimeFormat('en-US', {
@@ -355,12 +344,17 @@ async function runSeries(
 
   params.push(...where.params)
 
+  // The fragments above are written with `?`, which Postgres does not accept.
+  // The library renumbers them and leaves any `?` inside a literal alone.
   const rows = await db.unsafe(
-    `SELECT ${bucket} AS bucket, ${dimensionSql} AS series_key, ${aggregate.sql} AS value
+    toDialectPlaceholders(
+      `SELECT ${bucket} AS bucket, ${dimensionSql} AS series_key, ${aggregate.sql} AS value
        FROM events
       WHERE ${where.sql}
       GROUP BY bucket, series_key
       ORDER BY bucket`,
+      resolveDialect(),
+    ),
     params,
   ) as Array<{ bucket: string, series_key: string | null, value: number | null }>
 
@@ -490,7 +484,7 @@ async function runFunnel(
       params.push(...previousSessions)
     }
 
-    const rows = await db.unsafe(sql, params) as Array<{ session_key: string }>
+    const rows = await db.unsafe(toDialectPlaceholders(sql, resolveDialect()), params) as Array<{ session_key: string }>
     const sessions = rows.map(row => row.session_key)
 
     if (previousSessions === null)

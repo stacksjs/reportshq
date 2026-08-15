@@ -284,11 +284,17 @@ export async function setAutoReports(user: { id: number }, projectId: number, en
 /** Everyone with access, owner first, for the members screen. */
 export async function membersOf(projectId: number): Promise<Array<Record<string, unknown>>> {
   return await db.unsafe(
-    `SELECT u.id AS user_id, u.name, u.email, 'owner' AS role, p.created_at AS joined_at
+    // Both role columns are CAST to text on purpose. The owner is synthesised
+    // rather than being a row in project_members, and `role` there is an enum
+    // of admin and member. Left as a bare literal, Postgres unifies the two
+    // branches by coercing 'owner' INTO that enum and refuses it: "invalid
+    // input value for enum project_members_role_type". SQLite has no enum and
+    // accepted it, so this only ever failed on the real database.
+    `SELECT u.id AS user_id, u.name, u.email, CAST('owner' AS TEXT) AS role, p.created_at AS joined_at
        FROM projects p JOIN users u ON u.id = p.owner_id
       WHERE p.id = $1
       UNION ALL
-     SELECT m.user_id, u.name, m.email, m.role, m.created_at AS joined_at
+     SELECT m.user_id, u.name, m.email, CAST(m.role AS TEXT), m.created_at AS joined_at
        FROM project_members m JOIN users u ON u.id = m.user_id
       WHERE m.project_id = $1
       ORDER BY joined_at`,

@@ -44,7 +44,7 @@ export async function accessFor(user: unknown, projectId: number | string): Prom
 
   const row = (await db.unsafe(
     `SELECT p.id AS project_id,
-            CASE WHEN p.owner_id = $2 THEN 'owner' ELSE m.role END AS role
+            CASE WHEN p.owner_id = $2 THEN CAST('owner' AS TEXT) ELSE CAST(m.role AS TEXT) END AS role
        FROM projects p
        LEFT JOIN project_members m ON m.project_id = p.id AND m.user_id = $2
       WHERE p.id = $1
@@ -92,7 +92,7 @@ export async function projectsFor(user: unknown): Promise<Array<Record<string, u
     return []
 
   return await db.unsafe(
-    `SELECT p.*, CASE WHEN p.owner_id = $1 THEN 'owner' ELSE m.role END AS role
+    `SELECT p.*, CASE WHEN p.owner_id = $1 THEN CAST('owner' AS TEXT) ELSE CAST(m.role AS TEXT) END AS role
        FROM projects p
        LEFT JOIN project_members m ON m.project_id = p.id AND m.user_id = $1
       WHERE p.deleted_at IS NULL
