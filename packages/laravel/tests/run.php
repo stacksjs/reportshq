@@ -25,6 +25,7 @@ require __DIR__.'/../src/Transport.php';
 use ReportsHQ\Laravel\Config;
 use ReportsHQ\Laravel\Mapper;
 use ReportsHQ\Laravel\Sampler;
+use ReportsHQ\Laravel\Sender;
 use ReportsHQ\Laravel\Transport;
 
 final class Runner
@@ -366,6 +367,112 @@ $run->test('config comes out of an array the way Laravel stores it', function (R
     $run->same(false, $config->domains['cms'], 'expected cms off');
     $run->same(true, $config->domains['users'], 'expected users to default on');
     $run->same(null, $config->queue, 'expected an empty queue to read as none');
+});
+
+/*
+ * The real sender, over real HTTP.
+ *
+ * Every test above injects a fake sender, which is the right way to test retry
+ * and back pressure and the wrong way to find out whether the header is
+ * actually named X-ReportsHQ-Key on the wire. A fake agrees with whatever it is
+ * handed, including the wrong thing, so this posts to a PHP built-in server and
+ * reads back what arrived.
+ */
+$run->test('the built-in sender posts a taxonomy batch with the key header', function (Runner $run): void {
+    $record = sys_get_temp_dir().'/reportshq-fake-ingest.json';
+    @unlink($record);
+
+    // Port 0 is not available to php -S, so a high port is picked and the
+    // server is given a moment to bind.
+    $port = 8000 + random_int(100, 900);
+    $server = proc_open(
+        sprintf('php -S 127.0.0.1:%d %s', $port, escapeshellarg(__DIR__.'/server.php')),
+        [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']],
+        $pipes,
+    );
+
+    if (! is_resource($server)) {
+        throw new RuntimeException('could not start the fake ingest');
+    }
+
+    try {
+        $ready = false;
+        for ($attempt = 0; $attempt < 50; $attempt++) {
+            $probe = @fsockopen('127.0.0.1', $port, $code, $message, 0.1);
+            if (is_resource($probe)) {
+                fclose($probe);
+                $ready = true;
+                break;
+            }
+            usleep(100000);
+        }
+
+        $run->assert($ready, 'the fake ingest never came up');
+
+        $config = new Config(key: 'rhq_wire', endpoint: "http://127.0.0.1:{$port}/ingest", retryBaseMs: 0);
+        $transport = new Transport($config, Sender::stream());
+
+        $transport->track(['name' => 'commerce.order.created', 'value' => 4250, 'currency' => 'USD', 'user_key' => 'u1']);
+        $delivered = $transport->flush();
+
+        $run->same(1, $delivered, 'expected the event to be delivered');
+
+        $received = json_decode((string) file_get_contents($record), true, 512, JSON_THROW_ON_ERROR);
+
+        // The header name is the whole reason this test exists.
+        $run->same('rhq_wire', $received['key'], 'expected the key in X-ReportsHQ-Key');
+        $run->same('commerce.order.created', $received['body']['events'][0]['name'], 'expected the event name');
+        $run->same(4250, $received['body']['events'][0]['value'], 'expected the value');
+    } finally {
+        proc_terminate($server);
+        proc_close($server);
+    }
+});
+
+$run->test('the built-in sender reports a refusal rather than throwing', function (Runner $run): void {
+    $port = 8000 + random_int(100, 900);
+    $server = proc_open(
+        sprintf('php -S 127.0.0.1:%d %s', $port, escapeshellarg(__DIR__.'/server.php')),
+        [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']],
+        $pipes,
+    );
+
+    if (! is_resource($server)) {
+        throw new RuntimeException('could not start the fake ingest');
+    }
+
+    try {
+        for ($attempt = 0; $attempt < 50; $attempt++) {
+            $probe = @fsockopen('127.0.0.1', $port, $code, $message, 0.1);
+            if (is_resource($probe)) {
+                fclose($probe);
+                break;
+            }
+            usleep(100000);
+        }
+
+        $seen = [];
+        $config = new Config(
+            key: 'bad',
+            // A 401 is what a wrong key looks like, and the sender has to read
+            // the status off the response rather than treating it as a failure
+            // to connect.
+            endpoint: "http://127.0.0.1:{$port}/ingest?status=401",
+            retryBaseMs: 0,
+            onError: static function (string $message) use (&$seen): void {
+                $seen[] = $message;
+            },
+        );
+
+        $transport = new Transport($config, Sender::stream());
+        $transport->track(['name' => 'user.login']);
+
+        $run->same(0, $transport->flush(), 'expected no delivery');
+        $run->assert(str_contains($seen[0] ?? '', '401'), 'expected the 401 to be reported, got: '.($seen[0] ?? 'nothing'));
+    } finally {
+        proc_terminate($server);
+        proc_close($server);
+    }
 });
 
 echo "\n";
