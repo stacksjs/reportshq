@@ -152,6 +152,13 @@ one.
   not `.env.production`. Pass `--env production`. An encrypted `.env` without
   `DOTENV_PRIVATE_KEY_DEVELOPMENT` silently falls back to defaults for every
   variable, which looks like the app losing its configuration.
+- **Any error in an stx `<script server>` block silently blanks every binding
+  in the view.** The page still returns 200 and the only symptom is an
+  `[Foreach Error]` comment naming whatever variable the template happened to
+  loop over first, which is rarely the thing that broke. A missing import, an
+  undeclared variable, a stale cached module: all present identically. When
+  several bindings go blank at once, wrap the suspect section in a try/catch and
+  render the message rather than reading the template.
 - **A new export from an app module is invisible to stx until you clear its
   build cache.** `rm -rf storage/framework/stx/cache` and restart. Until then the
   import is `undefined` and the page reports `X is not a function` **only if you

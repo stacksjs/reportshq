@@ -168,3 +168,40 @@ export async function propertyKeysFor(projectId: number, limit = 50): Promise<Ar
     .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key))
     .slice(0, Math.min(Math.max(limit, 1), 200))
 }
+
+/**
+ * The values a property actually takes, most common first.
+ *
+ * Drives the report filter bar. Offering a text box instead would mean somebody
+ * typing `pro` when the data says `Pro` and concluding the product is broken;
+ * offering what is there makes a wrong answer impossible to pick.
+ *
+ * Sampled rather than exhaustive, for the same reason as `propertyKeysFor`:
+ * this runs while a dropdown opens, and a project with ten million events has
+ * the same handful of plan names as its first few thousand.
+ */
+export async function propertyValuesFor(projectId: number, key: string, limit = 20): Promise<string[]> {
+  const clean = String(key ?? '').replace(/^properties\./, '')
+  if (!clean || clean.length > 80)
+    return []
+
+  const rows = await db.unsafe(
+    // json_extract with a bound path is not portable, so the key is validated
+    // above and interpolated into the accessor. Bound as a parameter it would
+    // be treated as a literal string rather than a path.
+    // Aliased `property_value`, not `value`: the driver returns nulls for a
+    // column by that name, so the query is right in sqlite and empty here.
+    `SELECT json_extract(properties, '$.${clean.replace(/[^\w.-]/g, '')}') AS property_value, COUNT(*) AS n
+       FROM events
+      WHERE project_id = $1 AND properties IS NOT NULL
+      GROUP BY property_value
+      HAVING property_value IS NOT NULL
+      ORDER BY n DESC
+      LIMIT $2`,
+    [projectId, Math.min(Math.max(limit, 1), 100)],
+  ) as Array<{ property_value: unknown }>
+
+  return rows
+    .map(row => (row.property_value === null || row.property_value === undefined ? '' : String(row.property_value)))
+    .filter(Boolean)
+}

@@ -4,15 +4,36 @@
 // The range lives in the URL rather than in a cookie or component state, so a
 // view is linkable. Someone pasting a link into a conversation is sharing what
 // they are looking at, not a page that will resolve differently for the reader.
+import { propertyKeysFor, propertyValuesFor } from '../../app/Events/query'
+import { fieldLabel } from '../../app/Events/taxonomy'
 import { describeCaveat, describeQuery } from '../../app/Reports/describe'
 import { db as __db } from '@stacksjs/database'
 import { runQuery } from '../../app/Reports/engine'
 import { config } from '@stacksjs/config'
 import { publishedBlocks, reportBySlug } from '../../app/Reports/reports'
+import { applyFilters, describeFilters, parseFilters, serialiseFilters } from '../../app/Reports/filters'
 import { allowedRecipients, parseRecipients } from '../../app/Reports/schedules'
 import { sharesFor } from '../../app/Reports/shares'
 import { accessFor } from '../../app/Support/access'
 import { param, sessionCookieName, sessionFrom } from '../../app/Support/session'
+
+/**
+ * Every `f` parameter, however the runtime hands them over.
+ *
+ * stx gives a view a URLSearchParams on the serve path and a plain object
+ * elsewhere, and a repeated parameter is an array in one and a string in the
+ * other. One reader means the filter bar does not care which it got.
+ */
+function rawFilters(source: unknown): string[] {
+  if (source && typeof (source as URLSearchParams).getAll === 'function')
+    return (source as URLSearchParams).getAll('f')
+
+  const value = (source as Record<string, unknown>)?.f
+  if (Array.isArray(value))
+    return value.map(entry => String(entry))
+
+  return value === undefined || value === null || value === '' ? [] : [String(value)]
+}
 
 const session = await sessionFrom(cookies)
 const cookieName = sessionCookieName()
@@ -67,6 +88,13 @@ const snapshot = found ? await publishedBlocks(Number(report!.id)) : null
 const neverPublished = found && snapshot === null
 const blocks = snapshot ?? []
 
+// Report-wide filters, from the URL so the view stays linkable. Bounded to the
+// same allowlist a stored block config uses, because this arrives from a query
+// string anybody can edit and ends up in a query.
+const reportFilters = found ? parseFilters(rawFilters(query)) : []
+const filterQuery = serialiseFilters(reportFilters)
+const filterSummary = describeFilters(reportFilters, fieldLabel)
+
 // The draft being ahead is only worth mentioning to somebody who can act on it.
 const mayEdit = access?.role === 'owner' || access?.role === 'admin'
 const draftAhead = mayEdit && Boolean(report?.unpublished_changes)
@@ -104,6 +132,21 @@ const scheduleRows = schedules.map(schedule => ({
   lastRun: schedule.last_run_at ? String(schedule.last_run_at).slice(0, 16).replace('T', ' ') : 'never',
   lastStatus: schedule.last_status ? String(schedule.last_status) : '',
 }))
+
+// What the bar offers to filter on: the keys this project actually sends.
+// A text box would mean somebody typing "pro" where the data says "Pro" and
+// concluding the product is broken.
+const filterOptions: Array<{ field: string, label: string, values: string[] }> = []
+// A key with no values is not offered: a dropdown that opens onto nothing is
+// worse than one that is not there.
+const filterKeys = found ? await propertyKeysFor(projectId, 12) : []
+for (const entry of filterKeys) {
+  const values = await propertyValuesFor(projectId, entry.key, 12)
+  if (values.length > 0)
+    filterOptions.push({ field: `properties.${entry.key}`, label: entry.key, values })
+}
+
+const filterOptionsJson = JSON.stringify(filterOptions)
 
 const memberEmails = mayEdit && found
   ? [...(await allowedRecipients(projectId))].sort()
@@ -170,7 +213,9 @@ for (const block of blocks) {
       projectId,
       timezone,
       range: activeRange,
-      query: block.query as never,
+      // Narrowed by the report filter, not redefined by it: a block built to
+      // count refunds keeps counting refunds.
+      query: applyFilters(block.query as never, reportFilters) as never,
     })
   }
   catch (error) {
@@ -184,7 +229,7 @@ for (const block of blocks) {
 
 const rangeLinks = RANGES.map(entry => ({
   ...entry,
-  href: `/report?project=${projectId}&slug=${slug}&range=${entry.key}`,
+  href: `/report?project=${projectId}&slug=${slug}&range=${entry.key}${filterQuery ? `&${filterQuery}` : ''}`,
   active: entry.key === activeRange,
 }))
 </script>
@@ -262,6 +307,43 @@ const rangeLinks = RANGES.map(entry => ({
             This report has changes that have not been published. Everyone else is seeing the version below.
             <a href="{{ editHref }}" class="text-accent">Open the builder</a>
           </p>
+        @endif
+
+
+        {{-- The filter bar.
+
+             Plain links and a form rather than live-updating controls: the
+             whole point is that the URL is the state, so changing a filter is a
+             navigation. That also makes the back button work, which is what
+             somebody reaches for after narrowing a report too far. --}}
+        @if (filterOptions.length > 0)
+          <div class="flex flex-wrap gap-3 items-center px-4 py-3 mb-6 rounded-xl border border-line bg-panel">
+            <form id="filter-form" class="flex flex-wrap gap-2 items-center">
+              <span class="text-xs text-subtle">Filter</span>
+
+              <select id="filter-field" class="px-2 py-1.5 text-sm rounded-lg border border-line bg-canvas text-ink">
+                @foreach (filterOptions as option)
+                  <option value="{{ option.field }}">{{ option.label }}</option>
+                @endforeach
+              </select>
+
+              <select id="filter-operator" class="px-2 py-1.5 text-sm rounded-lg border border-line bg-canvas text-ink">
+                <option value="is">is</option>
+                <option value="is_not">is not</option>
+              </select>
+
+              <select id="filter-value" class="px-2 py-1.5 text-sm rounded-lg border border-line bg-canvas text-ink"></select>
+
+              <button type="submit" class="px-3 py-1.5 text-sm rounded-lg border border-line text-ink hover:border-accent">Apply</button>
+            </form>
+
+            @if (filterSummary)
+              <span class="text-sm text-muted">{{ filterSummary }}</span>
+              {{-- One link to clear everything. Removing filters one at a time
+                   from a URL is not something anybody should have to do. --}}
+              <a href="/report?project={{ projectId }}&slug={{ slug }}&range={{ activeRange }}" class="text-xs text-accent">Clear</a>
+            @endif
+          </div>
         @endif
 
         @if (neverPublished)
@@ -523,6 +605,42 @@ const rangeLinks = RANGES.map(entry => ({
       // would lift it and for a recipient names the address to remove.
       fail((data && data.message) || message)
     }).catch(function () { fail(message) })
+  }
+
+
+  // The filter bar. Values follow the chosen field, so the second dropdown only
+  // ever offers things that exist for the first.
+  var filterForm = document.getElementById('filter-form')
+  if (filterForm) {
+    var FILTER_OPTIONS = JSON.parse({{ filterOptionsJson }})
+    var fieldSelect = document.getElementById('filter-field')
+    var valueSelect = document.getElementById('filter-value')
+
+    function refreshValues() {
+      var chosen = FILTER_OPTIONS.find(function (option) { return option.field === fieldSelect.value })
+      valueSelect.innerHTML = ''
+
+      ;(chosen ? chosen.values : []).forEach(function (value) {
+        var option = document.createElement('option')
+        option.value = value
+        option.textContent = value
+        valueSelect.appendChild(option)
+      })
+    }
+
+    fieldSelect.addEventListener('change', refreshValues)
+    refreshValues()
+
+    filterForm.addEventListener('submit', function (event) {
+      event.preventDefault()
+      if (!valueSelect.value) return
+
+      // Appended to whatever is already in the URL, so filters stack rather
+      // than replacing each other.
+      var url = new URL(window.location.href)
+      url.searchParams.append('f', fieldSelect.value + ':' + document.getElementById('filter-operator').value + ':' + valueSelect.value)
+      window.location.href = url.toString()
+    })
   }
 
   var newShare = document.getElementById('new-share')
