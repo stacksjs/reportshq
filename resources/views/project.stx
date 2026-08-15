@@ -2,7 +2,7 @@
 // One project: its reports, and the integration state a new project cares
 // about most.
 import { db as __db } from '@stacksjs/database'
-import { reportsFor } from '../../app/Reports/reports'
+import { archivedReports, reportsFor } from '../../app/Reports/reports'
 import { accessFor, canAdminister } from '../../app/Support/access'
 import { param, sessionCookieName, sessionFrom } from '../../app/Support/session'
 
@@ -24,6 +24,7 @@ const project = allowed
   : null
 
 const reports = allowed ? await reportsFor(projectId) : []
+const archived = allowed ? await archivedReports(projectId) : []
 const mayAdminister = allowed && user ? await canAdminister(user, projectId) : false
 
 // The write credential is shown only to someone who may administer the
@@ -43,7 +44,18 @@ const cards = reports.map(report => ({
   status: String(report.status),
   origin: String(report.origin),
   description: report.description ? String(report.description) : '',
+  draft: String(report.status) === 'draft',
+  // A published report whose draft has moved on. Worth a word on the card,
+  // because "I published that" and "everyone can see that" stopped being the
+  // same sentence the moment the builder gained a draft.
+  ahead: String(report.status) === 'published' && Boolean(report.unpublished_changes),
   href: `/report?project=${projectId}&slug=${String(report.slug)}`,
+  editHref: `/report-edit?project=${projectId}&slug=${String(report.slug)}`,
+}))
+
+const shelved = archived.map(report => ({
+  id: Number(report.id),
+  name: String(report.name),
 }))
 
 const curlSnippet = ingestKey
@@ -128,12 +140,24 @@ const curlSnippet = ingestKey
                 Ask an owner or admin for the ingest key.
               </p>
             @endif
+
+            {{-- The page watches for the first event rather than making
+                 somebody refresh to find out whether their paste worked. That
+                 refresh is the moment an integration either feels instant or
+                 feels broken. --}}
+            <p id="listening" class="flex gap-2 items-center mt-5 text-sm text-muted">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              Waiting for the first event
+            </p>
           </section>
         @endif
 
         <section>
           <div class="flex flex-wrap gap-3 justify-between items-end mb-4">
             <h2 class="text-lg font-semibold">Reports</h2>
+            <button id="new-report" type="button" class="px-3 py-2 text-sm font-medium rounded-lg bg-accent text-accent-ink">
+              New report
+            </button>
           </div>
 
           @if (cards.length === 0)
@@ -144,12 +168,19 @@ const curlSnippet = ingestKey
                 Reports appear on their own once recognised events arrive, and you can build your
                 own at any time.
               </p>
+              <button id="new-report-empty" type="button" class="px-4 py-2 mt-5 text-sm font-medium rounded-lg bg-accent text-accent-ink">
+                Build one now
+              </button>
             </div>
           @else
             <ul class="grid gap-4 list-none sm:grid-cols-2 lg:grid-cols-3">
               @foreach (cards as card)
-                <li>
-                  <a href="{{ card.href }}" class="block p-5 h-full no-underline rounded-xl border transition-colors border-line bg-panel hover:border-accent">
+                {{-- The card is a link and the actions are buttons beside it,
+                     rather than buttons inside the link: a button nested in an
+                     anchor is invalid, and every click on it also follows the
+                     link. --}}
+                <li class="flex flex-col rounded-xl border transition-colors border-line bg-panel hover:border-accent">
+                  <a href="{{ card.href }}" class="block flex-1 p-5 no-underline">
                     <div class="flex gap-3 justify-between items-start">
                       <h3 class="text-base font-medium text-ink">{{ card.name }}</h3>
                       @if (card.origin === 'template')
@@ -159,16 +190,223 @@ const curlSnippet = ingestKey
                     @if (card.description)
                       <p class="mt-2 text-sm text-muted">{{ card.description }}</p>
                     @endif
-                    @if (card.status === 'draft')
-                      <p class="mt-3 text-xs text-warn">Draft</p>
+                    @if (card.draft)
+                      <p class="mt-3 text-xs text-warn">Draft, nobody else can see it</p>
+                    @elseif (card.ahead)
+                      <p class="mt-3 text-xs text-warn">Unpublished changes</p>
                     @endif
                   </a>
+
+                  <div class="flex gap-3 items-center px-5 py-3 border-t border-line">
+                    <a href="{{ card.editHref }}" class="text-xs no-underline text-muted hover:text-ink">Edit</a>
+                    <button type="button" class="text-xs duplicate-report text-muted hover:text-ink" data-slug="{{ card.slug }}">Duplicate</button>
+                    <button type="button" class="ml-auto text-xs archive-report text-subtle hover:text-neg" data-slug="{{ card.slug }}">Archive</button>
+                  </div>
                 </li>
               @endforeach
             </ul>
           @endif
+
+          @if (shelved.length > 0)
+            {{-- Archived reports are listed rather than hidden. Archiving is
+                 reversible, and a reversible action nobody can find is not. --}}
+            <details class="mt-6">
+              <summary class="text-sm cursor-pointer text-muted">Archived ({{ shelved.length }})</summary>
+              <ul class="mt-3 rounded-xl border divide-y list-none border-line divide-line bg-panel">
+                @foreach (shelved as item)
+                  <li class="flex gap-3 justify-between items-center px-5 py-3">
+                    <span class="text-sm text-muted">{{ item.name }}</span>
+                    <button type="button" class="text-xs restore-report text-accent" data-id="{{ item.id }}">Restore</button>
+                  </li>
+                @endforeach
+              </ul>
+            </details>
+          @endif
+
+          <p id="reports-error" class="mt-4 text-sm text-warn" hidden></p>
         </section>
       @endif
     </main>
   </div>
+
+{{-- Report management.
+
+     A plain script for the same reason as everywhere else in this app: it runs
+     before the runtime and touches the DOM directly, which is the exemption
+     these pages already take. --}}
+<script>
+(function () {
+  // Named to avoid every top-level server binding on this page. stx publishes
+  // a server binding into the HTML as bridge data as soon as its name appears in
+  // a client script, so a local called `project` collides with the project row
+  // and takes `{{ project.name }}` and the report list down with it.
+  var currentProject = new URLSearchParams(window.location.search).get('id')
+  if (!currentProject) return
+
+  var error = document.getElementById('reports-error')
+
+  // ---- Waiting for the first event ------------------------------------
+  //
+  // Polled rather than pushed. A websocket for a state that changes exactly
+  // once per project, and is only watched during onboarding, would be a
+  // connection to maintain forever to save a handful of requests during the
+  // one minute anybody is looking.
+  var listening = document.getElementById('listening')
+  if (listening) {
+    var INTERVAL = 3000
+    // Ten minutes. A tab left open on this page overnight should not keep
+    // asking; whoever comes back will reload anyway.
+    var GIVE_UP_AT = Date.now() + 10 * 60 * 1000
+    var timer = null
+
+    function stopListening() {
+      if (timer) clearInterval(timer)
+      timer = null
+    }
+
+    function poll() {
+      if (Date.now() > GIVE_UP_AT) {
+        stopListening()
+        listening.textContent = 'Still nothing. Reload when you have sent one.'
+        return
+      }
+
+      // Skipped while the tab is hidden: nobody is watching, and a backgrounded
+      // tab polling every three seconds is somebody's battery.
+      if (document.hidden) return
+
+      fetch('/api/projects/' + currentProject, { credentials: 'same-origin' })
+        .then(function (res) { return res.ok ? res.json() : null })
+        .then(function (data) {
+          if (!data || !data.project || !data.project.first_event_at) return
+
+          stopListening()
+          listening.textContent = 'First event received'
+          // A moment to read that before the page changes under them.
+          setTimeout(function () { window.location.reload() }, 800)
+        })
+        .catch(function () {
+          // A failed poll is not worth reporting: the next one is three
+          // seconds away and the page is still correct.
+        })
+    }
+
+    timer = setInterval(poll, INTERVAL)
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) poll()
+    })
+  }
+
+  function fail(message) {
+    if (!error) return
+    error.textContent = message || ''
+    error.hidden = !message
+  }
+
+  // The builder's write surface is CSRF-exempt by design (see routes/reports.ts),
+  // so these posts carry no token. Everything they can do is scoped to a project
+  // the caller already has access to.
+  function post(path, payload) {
+    return fetch('/api/reports/' + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  function reloadOr(res, message) {
+    if (res.ok) {
+      window.location.reload()
+      return
+    }
+    return res.json().then(function (data) {
+      fail((data && data.message) || message)
+    }).catch(function () { fail(message) })
+  }
+
+  function create() {
+    fail('')
+    // Named on creation rather than asked for up front. A dialog demanding a
+    // name before showing the grid is a decision made at the least informed
+    // moment; it is renamed in the builder's settings panel.
+    post('create', { project: Number(currentProject), name: 'Untitled report' })
+      .then(function (res) {
+        if (!res.ok) return reloadOr(res, 'Could not create that report.')
+
+        return res.json().then(function (data) {
+          var slug = data && data.report && data.report.slug
+          // Straight into the builder: creating a report and then being left
+          // on a list to find it is a step nobody wanted.
+          window.location.href = slug
+            ? '/report-edit?project=' + currentProject + '&slug=' + encodeURIComponent(slug)
+            : window.location.href
+        })
+      })
+      .catch(function () { fail('Could not reach the server.') })
+  }
+
+  var newButton = document.getElementById('new-report')
+  if (newButton) newButton.addEventListener('click', create)
+
+  var newEmpty = document.getElementById('new-report-empty')
+  if (newEmpty) newEmpty.addEventListener('click', create)
+
+  Array.prototype.forEach.call(document.querySelectorAll('.duplicate-report'), function (button) {
+    button.addEventListener('click', function () {
+      fail('')
+      post('duplicate', { project: Number(currentProject), slug: button.dataset.slug })
+        .then(function (res) { return reloadOr(res, 'Could not duplicate that report.') })
+        .catch(function () { fail('Could not reach the server.') })
+    })
+  })
+
+  Array.prototype.forEach.call(document.querySelectorAll('.archive-report'), function (button) {
+    button.addEventListener('click', function () {
+      fail('')
+      // No confirmation dialog. Archiving is reversible and the archived list
+      // is right there; a confirm on a reversible action trains people to
+      // dismiss confirms on the irreversible ones.
+      post('archive', { project: Number(currentProject), slug: button.dataset.slug })
+        .then(function (res) { return reloadOr(res, 'Could not archive that report.') })
+        .catch(function () { fail('Could not reach the server.') })
+    })
+  })
+
+  Array.prototype.forEach.call(document.querySelectorAll('.restore-report'), function (button) {
+    button.addEventListener('click', function () {
+      fail('')
+      post('restore', { project: Number(currentProject), id: Number(button.dataset.id) })
+        .then(function (res) { return reloadOr(res, 'Could not restore that report.') })
+        .catch(function () { fail('Could not reach the server.') })
+    })
+  })
+}())
+</script>
 </template>
+
+<style>
+/* The listening indicator. A slow pulse rather than a spinner: nothing is
+ * loading, something is being waited for, and those should not look the same. */
+.pulse-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--accent);
+  animation: pulse-dot 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+</style>
+

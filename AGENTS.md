@@ -126,6 +126,15 @@ one.
   survived a full HTTP pass: every page returned 200 with correct markup, and
   every one of them bounced in a real browser. Load a page in the browser before
   believing a front-end change works.
+- **A new export from an app module is invisible to stx until you clear its
+  build cache.** `rm -rf storage/framework/stx/cache` and restart. Until then the
+  import is `undefined` and the page reports `X is not a function` **only if you
+  catch it**: uncaught, stx discards the entire server script, so *every*
+  binding in the view is empty at once and the page renders as a structurally
+  correct shell with no data. The visible symptom is an unrelated
+  `[Foreach Error]` comment about a different variable, which sends you hunting
+  in the wrong place. If several bindings go blank together, suspect the cache
+  before suspecting the template.
 - **A new `.stx` view needs a dev server restart.** The route table is built at
   boot, so a freshly added view 404s while its path is listed on the 404 page's
   own "available pages", which is a confusing way to find out.

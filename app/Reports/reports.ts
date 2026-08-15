@@ -452,3 +452,99 @@ export async function removeBlock(reportId: number, blockId: number): Promise<vo
   await db.unsafe(`DELETE FROM report_blocks WHERE report_id = $1 AND id = $2`, [reportId, blockId])
   await markDraftChanged(reportId)
 }
+
+/**
+ * Copy a report, blocks and all.
+ *
+ * The copy is **always the person's own**: `origin` becomes `user` and
+ * `template_key` is dropped, even when the original was auto-created. Carrying
+ * the key over would make the template engine treat the copy as the report it
+ * had already provisioned, so the next template version would rewrite somebody's
+ * duplicate under them, and `already.has(key)` would be true twice for one key.
+ *
+ * The copy starts as a draft. Duplicating is what somebody does before trying
+ * something, and publishing that attempt the moment it exists would put an
+ * experiment in front of their team.
+ */
+export async function duplicateReport(
+  projectId: number,
+  user: { id: number },
+  reportId: number,
+): Promise<Record<string, unknown> | null> {
+  const original = (await db.unsafe(
+    `SELECT * FROM reports WHERE id = $1 AND project_id = $2 AND deleted_at IS NULL`,
+    [reportId, projectId],
+  ))?.[0] as Record<string, unknown> | undefined
+
+  if (!original)
+    return null
+
+  const copy = await createReport(projectId, user, {
+    name: `${String(original.name)} copy`,
+    description: original.description ? String(original.description) : undefined,
+    defaultRange: original.default_range ? String(original.default_range) : undefined,
+  })
+
+  for (const block of await blocksOf(reportId)) {
+    await addBlock(Number(copy.id), {
+      kind: String(block.kind) as BlockKind,
+      title: block.title ? String(block.title) : undefined,
+      layout: {
+        x: Number(block.x) || 0,
+        y: Number(block.y) || 0,
+        w: Number(block.w) || 1,
+        h: Number(block.h) || 1,
+      },
+      query: block.query as BlockQuery,
+      viz: block.viz as Record<string, unknown>,
+      body: block.body ? String(block.body) : undefined,
+    })
+  }
+
+  return copy
+}
+
+/**
+ * Archive a report.
+ *
+ * A soft delete, so the events behind it are untouched and the decision is
+ * reversible. Nothing here removes rows: a report somebody archived in April
+ * and wants back in June is a support conversation, not a restore from backup.
+ */
+export async function archiveReport(projectId: number, reportId: number): Promise<boolean> {
+  const rows = await db.unsafe(
+    `SELECT id FROM reports WHERE id = $1 AND project_id = $2 AND deleted_at IS NULL`,
+    [reportId, projectId],
+  ) as Array<{ id: number }>
+
+  if (rows.length === 0)
+    return false
+
+  await db.unsafe(`UPDATE reports SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1`, [reportId])
+  return true
+}
+
+/** Bring an archived report back. The other half of archiving being reversible. */
+export async function restoreReport(projectId: number, reportId: number): Promise<boolean> {
+  const rows = await db.unsafe(
+    `SELECT id FROM reports WHERE id = $1 AND project_id = $2 AND deleted_at IS NOT NULL`,
+    [reportId, projectId],
+  ) as Array<{ id: number }>
+
+  if (rows.length === 0)
+    return false
+
+  await db.unsafe(`UPDATE reports SET deleted_at = NULL WHERE id = $1`, [reportId])
+  return true
+}
+
+/** Archived reports, so they can be found again rather than only remembered. */
+export async function archivedReports(projectId: number): Promise<Array<Record<string, unknown>>> {
+  return await db.unsafe(
+    `SELECT id, name, slug, status, origin, deleted_at
+       FROM reports
+      WHERE project_id = $1 AND deleted_at IS NOT NULL
+      ORDER BY deleted_at DESC`,
+    [projectId],
+  ) as Array<Record<string, unknown>>
+}

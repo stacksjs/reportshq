@@ -3,8 +3,11 @@ import { response, route } from '@stacksjs/router'
 import { firstFreeRow } from '../app/Reports/layout'
 import {
   addBlock,
+  archiveReport,
   blocksOf,
   createReport,
+  duplicateReport,
+  restoreReport,
   publishReport,
   removeBlock,
   reportBySlug,
@@ -181,6 +184,63 @@ route.post('/publish', async (request: EnhancedRequest) => {
   await publishReport(context.reportId, context.user)
 
   return response.json({ published: true })
+}).skipCsrf()
+
+/**
+ * Copy a report.
+ *
+ * Takes the source by slug like everything else here, so a report is always
+ * reached through its project and an id from another tenant resolves to
+ * nothing.
+ */
+route.post('/duplicate', async (request: EnhancedRequest) => {
+  const payload = await body(request)
+  const context = await editableReport(request, payload)
+  if (!context)
+    return notFound()
+
+  try {
+    const copy = await duplicateReport(context.projectId, context.user, context.reportId)
+    if (!copy)
+      return notFound()
+
+    return response.json({ report: copy }, 201)
+  }
+  catch (error) {
+    return response.json({ message: (error as Error).message }, 422)
+  }
+}).skipCsrf()
+
+route.post('/archive', async (request: EnhancedRequest) => {
+  const payload = await body(request)
+  const context = await editableReport(request, payload)
+  if (!context)
+    return notFound()
+
+  return response.json({ archived: await archiveReport(context.projectId, context.reportId) })
+}).skipCsrf()
+
+/**
+ * Bring an archived report back.
+ *
+ * Resolved by id rather than through `editableReport`, because that helper
+ * looks a report up by slug and deliberately ignores archived ones. Project
+ * access is still checked first, and the id is scoped to the project inside
+ * `restoreReport`, so nothing widens.
+ */
+route.post('/restore', async (request: EnhancedRequest) => {
+  const payload = await body(request)
+  const user = currentUser(request)
+  if (!user)
+    return notFound()
+
+  const projectId = Number(payload.project ?? 0)
+  const reportId = Number(payload.id ?? 0)
+
+  if (!projectId || !reportId || !(await accessFor(user, projectId)))
+    return notFound()
+
+  return response.json({ restored: await restoreReport(projectId, reportId) })
 }).skipCsrf()
 
 route.post('/create', async (request: EnhancedRequest) => {

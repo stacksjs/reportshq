@@ -9,7 +9,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { db } from '@stacksjs/database'
 import { hasOverlap } from '../../app/Reports/layout'
-import { addBlock, blocksOf, createReport, MAX_AUTOSAVES, publishedBlocks, publishReport, removeBlock, reportBySlug, reportsFor, saveRevision, settleLayout, updateBlocks } from '../../app/Reports/reports'
+import { addBlock, archiveReport, archivedReports, blocksOf, createReport, duplicateReport, MAX_AUTOSAVES, publishedBlocks, publishReport, removeBlock, reportBySlug, reportsFor, restoreReport, saveRevision, settleLayout, updateBlocks } from '../../app/Reports/reports'
 import { GRID_COLUMNS, isAllowedField, MAX_SERIES, validateBlockLayout, validateBlockQuery } from '../../app/Reports/schema'
 import { createProject } from '../../app/Support/projects'
 
@@ -530,5 +530,97 @@ describe('the stored layout can never overlap', () => {
     // No compaction: a gap is a decision somebody is allowed to make.
     for (const block of after)
       expect(block.y).toBe(before.find(entry => entry.id === block.id)!.y)
+  })
+})
+
+describe('managing reports', () => {
+  let sourceId: number
+
+  beforeAll(async () => {
+    sourceId = Number((await createReport(projectId, owner, { name: `Manageable ${stamp}`, description: 'The original' })).id)
+    await addBlock(sourceId, {
+      kind: 'big_number',
+      title: 'Counted',
+      layout: { x: 0, y: 0, w: 3, h: 3 },
+      query: { events: ['user.registered'], measure: 'count', filters: [] },
+    })
+    await publishReport(sourceId, owner)
+  })
+
+  test('a duplicate carries the blocks across', async () => {
+    const copy = await duplicateReport(projectId, owner, sourceId)
+    const blocks = await blocksOf(Number(copy!.id))
+
+    expect(blocks).toHaveLength(1)
+    expect(blocks[0]!.title).toBe('Counted')
+    expect((blocks[0]!.query as { measure: string }).measure).toBe('count')
+  })
+
+  test('a duplicate is a draft, and does not share the original\'s slug', async () => {
+    const copy = await duplicateReport(projectId, owner, sourceId)
+
+    expect(copy!.status).toBe('draft')
+    expect(copy!.slug).not.toBe((await db.unsafe(`SELECT slug FROM reports WHERE id = $1`, [sourceId]))?.[0]?.slug)
+  })
+
+  test('a duplicate of a template report belongs to the person, not the template', async () => {
+    // Otherwise the template engine treats the copy as the report it already
+    // provisioned: the next version would rewrite somebody's duplicate under
+    // them, and the key would match two reports at once.
+    const templated = Number((await createReport(
+      projectId,
+      owner,
+      { name: `Templated ${stamp}` },
+      { origin: 'template', templateKey: 'commerce.overview', templateVersion: 1 },
+    )).id)
+
+    const copy = await duplicateReport(projectId, owner, templated)
+
+    expect(copy!.origin).toBe('user')
+    expect(copy!.template_key).toBeFalsy()
+  })
+
+  test('a report from another project cannot be duplicated', async () => {
+    expect(await duplicateReport(otherProjectId, owner, sourceId)).toBeNull()
+  })
+
+  test('archiving hides it from the list without touching its blocks', async () => {
+    const target = Number((await createReport(projectId, owner, { name: `Archivable ${stamp}` })).id)
+    await addBlock(target, {
+      kind: 'line',
+      layout: { x: 0, y: 0, w: 6, h: 4 },
+      query: { events: [], measure: 'count', filters: [] },
+    })
+
+    expect(await archiveReport(projectId, target)).toBeTrue()
+    expect((await reportsFor(projectId)).map(report => Number(report.id))).not.toContain(target)
+    // Soft, so the decision is reversible and nothing behind it is lost.
+    expect(await blocksOf(target)).toHaveLength(1)
+  })
+
+  test('an archived report is listed as archived, and can be restored', async () => {
+    const target = Number((await createReport(projectId, owner, { name: `Restorable ${stamp}` })).id)
+    await archiveReport(projectId, target)
+
+    expect((await archivedReports(projectId)).map(report => Number(report.id))).toContain(target)
+
+    expect(await restoreReport(projectId, target)).toBeTrue()
+    expect((await reportsFor(projectId)).map(report => Number(report.id))).toContain(target)
+    expect((await archivedReports(projectId)).map(report => Number(report.id))).not.toContain(target)
+  })
+
+  test('archiving something already archived reports that it did nothing', async () => {
+    const target = Number((await createReport(projectId, owner, { name: `Twice archived ${stamp}` })).id)
+
+    expect(await archiveReport(projectId, target)).toBeTrue()
+    expect(await archiveReport(projectId, target)).toBeFalse()
+  })
+
+  test('neither archive nor restore reaches into another project', async () => {
+    const target = Number((await createReport(projectId, owner, { name: `Fenced ${stamp}` })).id)
+
+    expect(await archiveReport(otherProjectId, target)).toBeFalse()
+    await archiveReport(projectId, target)
+    expect(await restoreReport(otherProjectId, target)).toBeFalse()
   })
 })
