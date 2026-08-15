@@ -50,25 +50,24 @@ export default {
    * value. Re-read on every message, so a change takes effect on the next
    * provision without a restart.
    *
-   * `support@` and `billing@` are addresses people will try whether or not we
-   * publish them, and an address that bounces reads as a company that has gone
-   * away. They forward rather than becoming mailboxes, because there is nobody
-   * to read a second and third inbox.
+   * **Only full-address keys, deliberately.** The bare local-part form is not
+   * domain-scoped, and this mail server hosts a dozen domains: a bare `support`
+   * key catches support@ for every tenant that has no real mailbox at that
+   * address. Declaring `support@reportshq.org` and `billing@reportshq.org`
+   * here produced exactly that, and the mail of five other domains would have
+   * been forwarded into this project's inbox.
    *
-   * Both key forms are written for each alias. The server looks a forward up by
-   * the mailbox it delivered to: the full address when that address is a
-   * registered mailbox, and the bare local part when it is not - which is the
-   * case for an alias. The full-address key is the one that starts working if
-   * the alias ever becomes a real mailbox.
+   * The consequence is that an alias only works for an address that is also a
+   * registered mailbox, since that is when the server looks a forward up by
+   * full address. So support@ and billing@ are not offered at all rather than
+   * offered unsafely; hello@ is the published address, and either can become a
+   * real mailbox later if it earns one.
    */
   forwards: {
-    'support': ['hello@reportshq.org'],
-    'support@reportshq.org': ['hello@reportshq.org'],
-    'billing': ['hello@reportshq.org'],
-    'billing@reportshq.org': ['hello@reportshq.org'],
     // Replies to transactional mail. Somebody answering a quota warning is
     // trying to reach a person, and no-reply@ is a convention rather than an
-    // instruction they are obliged to follow.
+    // instruction they are obliged to follow. Safe as a full-address key
+    // because no-reply@ is a real mailbox on this domain.
     'no-reply@reportshq.org': ['hello@reportshq.org'],
   },
 

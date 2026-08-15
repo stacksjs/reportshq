@@ -1,24 +1,28 @@
 <script server>
-// Signing in.
+// Choosing a new password, from an emailed link.
 //
-// The one page in the app that must render for a stranger, so it carries no
-// AuthGuard and no app chrome. It does the opposite check instead: somebody who
-// already has a session is sent to their projects rather than shown a form
-// asking them to do something they have already done.
-import { sessionCookieName, sessionFrom } from '../../app/Support/session'
+// The token and address come from the query string, which is where the email
+// put them. They are read here only to hand back to the API: the page never
+// decides whether a token is valid, because a page cannot be trusted to.
+import { param, sessionCookieName, sessionFrom } from '../../app/Support/session'
 
 const session = await sessionFrom(cookies)
 const cookieName = sessionCookieName()
-const signedIn = session.user !== null
+// Deliberately not bounced when signed in. Somebody resetting a password may
+// well have a stale session open in another tab, and that is the case they are
+// most likely trying to fix.
+const signedIn = false
+
+const token = param(query, 'token') ?? ''
+const email = param(query, 'email') ?? ''
+const usable = token !== '' && email !== ''
 </script>
 
 <template>
   <div class="min-h-[100dvh] bg-canvas text-ink">
     {{-- Already signed in: bounce before anything paints, the same way the
          guard does in the other direction. --}}
-    @if (signedIn)
-      <script>window.location.replace('/projects')</script>
-    @endif
+
 
     <script>document.documentElement.setAttribute('data-session-cookie', {{ cookieName }})</script>
 
@@ -29,36 +33,33 @@ const signedIn = session.user !== null
           <span class="font-semibold tracking-tight text-ink">ReportsHQ</span>
         </a>
 
-        <h1 class="text-2xl font-semibold tracking-tight">Sign in</h1>
-        <p class="mt-1 mb-6 text-sm text-muted">Your reports are where you left them.</p>
+        <h1 class="text-2xl font-semibold tracking-tight">Choose a new password</h1>
+        @if (usable)
+          <p class="mt-1 mb-6 text-sm text-muted">For {{ email }}. Signing in elsewhere ends when you save this.</p>
+        @else
+          <p class="mt-1 mb-6 text-sm text-warn">This link is missing part of itself. Ask for a new one.</p>
+        @endif
 
         {{-- A real form, so a password manager recognises it and the enter key
              submits. The script intercepts it; without the script it still
              posts somewhere sensible rather than nowhere. --}}
-        <form id="signin" method="post" action="/api/auth/login" class="grid gap-4">
+        <form id="signin" method="post" action="/api/auth/reset" class="grid gap-4" @if (!usable) hidden @endif>
+          <input id="token" type="hidden" value="{{ token }}" />
+          <input id="email" type="hidden" value="{{ email }}" />
+
           <label class="block">
-            <span class="block mb-1 text-sm text-muted">Email</span>
+            <span class="block mb-1 text-sm text-muted">New password</span>
             <input
-              id="email"
-              name="email"
-              type="email"
-              autocomplete="username"
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="new-password"
               required
               class="px-3 py-2 w-full text-sm rounded-lg border border-line bg-panel text-ink"
             />
           </label>
 
-          <label class="block">
-            <span class="block mb-1 text-sm text-muted">Password</span>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autocomplete="current-password"
-              required
-              class="px-3 py-2 w-full text-sm rounded-lg border border-line bg-panel text-ink"
-            />
-          </label>
+          <p class="-mt-2 text-xs text-subtle">At least 10 characters. Length beats punctuation.</p>
 
           <p id="error" class="text-sm text-warn" hidden></p>
 
@@ -66,19 +67,11 @@ const signedIn = session.user !== null
             id="submit"
             type="submit"
             class="px-4 py-2.5 text-sm font-medium rounded-lg bg-accent text-accent-ink disabled:opacity-60"
-          >Sign in</button>
+          >Save it</button>
         </form>
 
         <p class="mt-6 text-sm text-muted">
-          No account yet?
-          <a href="/register" class="text-accent">Create one</a>
-        </p>
-
-        {{-- Below the sign-in action, not beside the password field: somebody
-             who knows their password should never be routed past a way to
-             reset it. --}}
-        <p class="mt-2 text-sm text-muted">
-          <a href="/forgot" class="text-subtle hover:text-ink">Forgot your password?</a>
+          <a href="/forgot" class="text-accent">Ask for a new link</a>
         </p>
       </div>
     </main>
@@ -100,34 +93,36 @@ const signedIn = session.user !== null
     error.textContent = message
     error.hidden = !message
     submit.disabled = false
-    submit.textContent = 'Sign in'
+    submit.textContent = 'Save it'
   }
 
   form.addEventListener('submit', function (event) {
     event.preventDefault()
     fail('')
     submit.disabled = true
-    submit.textContent = 'Signing in'
+    submit.textContent = 'Saving'
 
-    fetch('/api/auth/login', {
+    fetch('/api/auth/reset', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
       body: JSON.stringify({
         email: document.getElementById('email').value,
+        token: document.getElementById('token').value,
         password: document.getElementById('password').value,
       }),
     }).then(function (res) {
       if (res.ok) {
-        // replace, not assign: the back button should not return to a sign-in
-        // form the person has already used.
-        window.location.replace('/projects')
+        // To sign-in rather than straight into the app: the reset revoked every
+        // session, including any this browser was holding, so there is nothing
+        // to walk into.
+        window.location.replace('/login')
         return
       }
 
       return res.json().then(function (data) {
-        fail((data && data.message) || 'Could not sign you in.')
-      }).catch(function () { fail('Could not sign you in.') })
+        fail((data && data.message) || 'Could not save that password.')
+      }).catch(function () { fail('Could not save that password.') })
     }).catch(function () {
       fail('Could not reach the server.')
     })

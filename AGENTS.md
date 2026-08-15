@@ -126,6 +126,13 @@ one.
   survived a full HTTP pass: every page returned 200 with correct markup, and
   every one of them bounced in a real browser. Load a page in the browser before
   believing a front-end change works.
+- **Never declare a bare-local-part forward on the shared mail server.** The
+  bare form is not domain-scoped, and the box hosts a dozen domains: a `support`
+  key catches support@ for every tenant with no real mailbox at that address.
+  Use full-address keys only, which means an alias only works for an address
+  that is also a real mailbox. Provisioning writes the bare form automatically
+  for any forward whose address is not a *password-bearing* mailbox, so this
+  fires on a first provision before passwords are set.
 - **Mail submission is port 587 with STARTTLS, never 465.** The SMTP driver
   opens a plain socket and negotiates, so implicit-TLS 465 hangs and fails with
   `SMTP connection timed out after 30000ms` and nothing else. A raw TLS client

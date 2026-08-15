@@ -1,5 +1,5 @@
 import type { EnhancedRequest } from '@stacksjs/bun-router'
-import { Auth, authCookie, authCookieName, clearAuthCookie, register } from '@stacksjs/auth'
+import { Auth, authCookie, authCookieName, clearAuthCookie, passwordResets, register } from '@stacksjs/auth'
 import { db } from '@stacksjs/database'
 import { response, route } from '@stacksjs/router'
 import { clientAddress } from '../app/Events/limits'
@@ -120,6 +120,82 @@ route.post('/login', async (request: EnhancedRequest) => {
     // auth backend, because "something went wrong for you specifically" is
     // still a signal about whether the account exists.
     return response.json({ message: REFUSED }, 401)
+  }
+}).skipCsrf()
+
+/**
+ * Ask for a reset link.
+ *
+ * Always answers the same, whether or not the address has an account. A
+ * different answer turns this into a way to find out who is a customer, which
+ * is the same reason /login refuses in one voice.
+ *
+ * Rate limited on the same windows as sign-in, since it sends mail on demand
+ * and is otherwise a way to have us deliver unwanted email to anybody.
+ */
+route.post('/forgot', async (request: EnhancedRequest) => {
+  const payload = await body(request)
+  const email = field(payload, 'email').toLowerCase()
+
+  const sent = { message: 'If that email has an account, a reset link is on its way.' }
+
+  if (!email || !email.includes('@'))
+    return response.json(sent)
+
+  const limit = await checkSigninLimits(email, clientAddress(request))
+  if (!limit.ok) {
+    return response.json(
+      { message: 'Too many attempts. Try again in a moment.' },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfter) } },
+    )
+  }
+
+  try {
+    await passwordResets(email).sendEmail()
+  }
+  catch (error) {
+    // Logged, not surfaced. Whether the send failed and whether the account
+    // exists are both things this endpoint must not reveal, and a person
+    // staring at a different message would learn one of them.
+    console.error('[auth] password reset send failed:', (error as Error).message)
+  }
+
+  return response.json(sent)
+}).skipCsrf()
+
+/**
+ * Use a reset link.
+ *
+ * The framework owns the token: it hashes it, checks the expiry, sets the new
+ * password and revokes every existing session and token for the account. That
+ * last part is the one worth not reimplementing - somebody resetting a password
+ * is often doing it because somebody else has their old one.
+ */
+route.post('/reset', async (request: EnhancedRequest) => {
+  const payload = await body(request)
+  const email = field(payload, 'email').toLowerCase()
+  const token = field(payload, 'token')
+  const password = String(payload.password ?? '')
+
+  if (!email || !token)
+    return response.json({ message: 'That reset link is not valid.' }, 422)
+
+  if (password.length < 10)
+    return response.json({ message: 'Use at least 10 characters.' }, 422)
+
+  try {
+    const result = await passwordResets(email).resetPassword(token, password)
+
+    if (!result.success) {
+      // The framework's own message, which distinguishes an expired link from
+      // a wrong one. Both are safe to say: the person is holding the link.
+      return response.json({ message: result.message || 'That reset link is not valid or has expired.' }, 422)
+    }
+
+    return response.json({ reset: true })
+  }
+  catch (error) {
+    return response.json({ message: (error as Error).message }, 422)
   }
 }).skipCsrf()
 

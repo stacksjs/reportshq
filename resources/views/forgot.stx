@@ -1,10 +1,9 @@
 <script server>
-// Signing in.
+// Asking for a reset link.
 //
-// The one page in the app that must render for a stranger, so it carries no
-// AuthGuard and no app chrome. It does the opposite check instead: somebody who
-// already has a session is sent to their projects rather than shown a form
-// asking them to do something they have already done.
+// Renders for a stranger, like /login. The response never says whether the
+// address has an account, so this page cannot be used to find out who is a
+// customer; the confirmation below is deliberately the same either way.
 import { sessionCookieName, sessionFrom } from '../../app/Support/session'
 
 const session = await sessionFrom(cookies)
@@ -29,13 +28,13 @@ const signedIn = session.user !== null
           <span class="font-semibold tracking-tight text-ink">ReportsHQ</span>
         </a>
 
-        <h1 class="text-2xl font-semibold tracking-tight">Sign in</h1>
-        <p class="mt-1 mb-6 text-sm text-muted">Your reports are where you left them.</p>
+        <h1 class="text-2xl font-semibold tracking-tight">Reset your password</h1>
+        <p class="mt-1 mb-6 text-sm text-muted">We will email you a link. It works once and expires in an hour.</p>
 
         {{-- A real form, so a password manager recognises it and the enter key
              submits. The script intercepts it; without the script it still
              posts somewhere sensible rather than nowhere. --}}
-        <form id="signin" method="post" action="/api/auth/login" class="grid gap-4">
+        <form id="signin" method="post" action="/api/auth/forgot" class="grid gap-4">
           <label class="block">
             <span class="block mb-1 text-sm text-muted">Email</span>
             <input
@@ -48,37 +47,20 @@ const signedIn = session.user !== null
             />
           </label>
 
-          <label class="block">
-            <span class="block mb-1 text-sm text-muted">Password</span>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autocomplete="current-password"
-              required
-              class="px-3 py-2 w-full text-sm rounded-lg border border-line bg-panel text-ink"
-            />
-          </label>
-
           <p id="error" class="text-sm text-warn" hidden></p>
 
           <button
             id="submit"
             type="submit"
             class="px-4 py-2.5 text-sm font-medium rounded-lg bg-accent text-accent-ink disabled:opacity-60"
-          >Sign in</button>
+          >Send the link</button>
         </form>
 
-        <p class="mt-6 text-sm text-muted">
-          No account yet?
-          <a href="/register" class="text-accent">Create one</a>
-        </p>
+        <p id="done" class="p-3 mt-4 text-sm rounded-lg border border-line text-muted" hidden></p>
 
-        {{-- Below the sign-in action, not beside the password field: somebody
-             who knows their password should never be routed past a way to
-             reset it. --}}
-        <p class="mt-2 text-sm text-muted">
-          <a href="/forgot" class="text-subtle hover:text-ink">Forgot your password?</a>
+        <p class="mt-6 text-sm text-muted">
+          Remembered it?
+          <a href="/login" class="text-accent">Sign in</a>
         </p>
       </div>
     </main>
@@ -100,34 +82,32 @@ const signedIn = session.user !== null
     error.textContent = message
     error.hidden = !message
     submit.disabled = false
-    submit.textContent = 'Sign in'
+    submit.textContent = 'Send the link'
   }
 
   form.addEventListener('submit', function (event) {
     event.preventDefault()
     fail('')
     submit.disabled = true
-    submit.textContent = 'Signing in'
+    submit.textContent = 'Sending'
 
-    fetch('/api/auth/login', {
+    fetch('/api/auth/forgot', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
-      body: JSON.stringify({
-        email: document.getElementById('email').value,
-        password: document.getElementById('password').value,
-      }),
+      body: JSON.stringify({ email: document.getElementById('email').value }),
     }).then(function (res) {
-      if (res.ok) {
-        // replace, not assign: the back button should not return to a sign-in
-        // form the person has already used.
-        window.location.replace('/projects')
-        return
-      }
-
       return res.json().then(function (data) {
-        fail((data && data.message) || 'Could not sign you in.')
-      }).catch(function () { fail('Could not sign you in.') })
+        if (res.ok) {
+          // The same confirmation whether or not the address has an account.
+          var done = document.getElementById('done')
+          done.textContent = (data && data.message) || 'If that email has an account, a reset link is on its way.'
+          done.hidden = false
+          form.hidden = true
+          return
+        }
+        fail((data && data.message) || 'Could not send that link.')
+      }).catch(function () { fail('Could not send that link.') })
     }).catch(function () {
       fail('Could not reach the server.')
     })

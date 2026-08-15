@@ -87,7 +87,16 @@ export default {
      *
      * @default 60
      */
-    expire: env.AUTH_PASSWORD_RESET_EXPIRE ||60,
+    expire: env.AUTH_PASSWORD_RESET_EXPIRE || 60,
+
+    /**
+     * Where the emailed link points.
+     *
+     * Must match the page that exists, or the reset email sends people to a
+     * 404 with a valid token in the URL - the worst version of this failure,
+     * because it looks like the token is broken.
+     */
+    url: '/reset?token={token}&email={email}',
 
     /**
      * Throttle time in seconds between password reset requests.
