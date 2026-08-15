@@ -17,6 +17,7 @@ import {
 } from '../app/Reports/reports'
 import { assertCan, LimitReached, limitResponse } from '../app/Billing/gates'
 import { db } from '@stacksjs/database'
+import { exportsFor, generateExport, resolveExport, signExport } from '../app/Reports/export-store'
 import { assertRecipientsAllowed, parseRecipients } from '../app/Reports/schedules'
 import { createShare, revokeShare, rotateShare, sharesFor } from '../app/Reports/shares'
 import { accessFor } from '../app/Support/access'
@@ -434,6 +435,128 @@ route.post('/schedules/remove', async (request: EnhancedRequest) => {
 
   return response.json({ removed: true })
 }).skipCsrf()
+
+/**
+ * Exports for a report.
+ *
+ * Generated on the spot rather than queued: an export of a report this size is
+ * a handful of engine queries, and a queue for a millisecond operation is a
+ * moving part that can be down while the thing it protects cannot. The row
+ * carries a status either way, so moving to a worker later is a change of
+ * caller rather than a migration.
+ */
+route.post('/exports/create', async (request: EnhancedRequest) => {
+  const payload = await body(request)
+  const context = await editableReport(request, payload)
+  if (!context)
+    return notFound()
+
+  const format = String(payload.format ?? 'csv')
+  if (!['csv', 'xlsx'].includes(format))
+    return response.json({ message: 'Format must be csv or xlsx.' }, 422)
+
+  try {
+    if (format === 'xlsx')
+      await assertCan(context.projectId, 'xlsx', 'XLSX export')
+  }
+  catch (error) {
+    if (error instanceof LimitReached) {
+      const { body: limitBody, status } = limitResponse(error)
+      return response.json(limitBody, status)
+    }
+    return response.json({ message: (error as Error).message }, 422)
+  }
+
+  const report = (await db.unsafe(
+    `SELECT r.name AS name, p.timezone AS timezone, r.default_range AS default_range
+       FROM reports r JOIN projects p ON p.id = r.project_id WHERE r.id = $1`,
+    [context.reportId],
+  ))?.[0] as { name: string, timezone: string, default_range: string } | undefined
+
+  try {
+    const record = await generateExport({
+      projectId: context.projectId,
+      reportId: context.reportId,
+      reportName: String(report?.name ?? 'report'),
+      // The project's zone, so an export matches the viewer it was taken from.
+      timezone: String(report?.timezone ?? 'UTC'),
+      range: String(payload.range ?? report?.default_range ?? 'last_30_days'),
+      format: format as 'csv' | 'xlsx',
+      user: context.user,
+    })
+
+    // The signed link, built once and never stored. The signature covers the
+    // expiry, so the URL cannot be extended by editing it.
+    const url = `/api/reports/exports/download?id=${record.id}&expires=${encodeURIComponent(record.expiresAt)}&signature=${signExport(record.id, record.expiresAt)}`
+
+    return response.json({ export: record, url }, 201)
+  }
+  catch (error) {
+    return response.json({ message: (error as Error).message }, 422)
+  }
+}).skipCsrf()
+
+route.post('/exports', async (request: EnhancedRequest) => {
+  const payload = await body(request)
+  const context = await editableReport(request, payload)
+  if (!context)
+    return notFound()
+
+  return response.json({ exports: await exportsFor(context.reportId) })
+}).skipCsrf()
+
+/**
+ * Download a generated export.
+ *
+ * A GET, because it is a file and a browser follows a link to it.
+ *
+ * **A session is still required**, since this route sits under the `auth`
+ * registry with everything else here. The signature is not a replacement for
+ * that; it narrows an authenticated request to one export and gives the link a
+ * lifetime, so a signed-in person cannot reach another tenant's file by
+ * guessing an id, and a URL that leaks stops working on its own. Project access
+ * is checked as well, so a valid signature alone is not enough.
+ */
+route.get('/exports/download', async (request: EnhancedRequest) => {
+  const user = currentUser(request)
+  if (!user)
+    return response.json({ message: 'This download is not available.' }, 404)
+
+  const url = new URL(request.url)
+  const id = Number(url.searchParams.get('id') ?? 0)
+  const expires = String(url.searchParams.get('expires') ?? '')
+  const signature = String(url.searchParams.get('signature') ?? '')
+
+  const resolved = id ? await resolveExport(id, expires, signature) : null
+
+  // One answer for a bad signature, an expired link, a failed export and a
+  // missing file: telling them apart tells somebody holding a forged link
+  // which part they got right.
+  if (!resolved)
+    return response.json({ message: 'This download is not available.' }, 404)
+
+  // Defence in depth. The signature already binds the link to one export, but
+  // an export is somebody's business numbers and this is the cheapest possible
+  // second check.
+  if (!(await accessFor(user, resolved.projectId)))
+    return response.json({ message: 'This download is not available.' }, 404)
+
+  const file = Bun.file(resolved.path)
+  if (!(await file.exists()))
+    return response.json({ message: 'This download is not available.' }, 404)
+
+  return new Response(file, {
+    headers: {
+      'Content-Type': resolved.format === 'xlsx'
+        ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        : 'text/csv; charset=utf-8',
+      // The filename a person recognises, not the id it is stored under.
+      'Content-Disposition': `attachment; filename="${resolved.filename}"`,
+      // Never cached: the link expires, and a cached copy would outlive it.
+      'Cache-Control': 'no-store',
+    },
+  })
+})
 
 route.post('/create', async (request: EnhancedRequest) => {
   const user = currentUser(request)

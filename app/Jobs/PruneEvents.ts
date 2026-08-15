@@ -147,5 +147,14 @@ export default new Job({
 
     if (total > 0)
       console.log(`[prune] ${total} events removed`)
+
+    // Generated export files expire with their download links. Keeping them
+    // past the life of the only URL that reaches them would be storing
+    // somebody's numbers for no reason anybody could state.
+    const { pruneExports } = await import('../Reports/export-store')
+    const exports = await pruneExports()
+
+    if (exports > 0)
+      console.log(`[prune] ${exports} expired export${exports === 1 ? '' : 's'} removed`)
   },
 })

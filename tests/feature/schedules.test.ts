@@ -13,6 +13,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { db } from '@stacksjs/database'
 import { rangeFor } from '../../app/Jobs/DeliverReports'
 import { storeEvents } from '../../app/Events/ingest'
+import { exportsFor, generateExport, pruneExports, resolveExport, signExport } from '../../app/Reports/export-store'
 import { EXPORT_HEADINGS, exportContent, exportCsv, exportFilename, exportXlsx } from '../../app/Reports/exports'
 import { addBlock, createReport, publishReport } from '../../app/Reports/reports'
 import { activeSchedules, allowedRecipients, assertRecipientsAllowed, isDue, localParts, parseRecipients, recordRun } from '../../app/Reports/schedules'
@@ -352,5 +353,100 @@ describe('who may receive a scheduled report', () => {
       await db.unsafe(`DELETE FROM usage_counters WHERE project_id = $1`, [other])
       await db.unsafe(`DELETE FROM projects WHERE id = $1`, [other])
     }
+  })
+})
+
+describe('on-demand exports', () => {
+  const request = (format: 'csv' | 'xlsx' = 'csv') => generateExport({
+    projectId,
+    reportId,
+    reportName: 'Exportable',
+    timezone: 'UTC',
+    range: 'last_7_days',
+    format,
+    user: owner,
+  })
+
+  afterAll(async () => {
+    await db.unsafe(`DELETE FROM report_exports WHERE report_id = $1`, [reportId])
+  })
+
+  test('generating one produces a ready row with a real file', async () => {
+    const record = await request()
+
+    expect(record.status).toBe('ready')
+    expect(record.sizeBytes).toBeGreaterThan(0)
+    expect(record.filename).toEndWith('.csv')
+  })
+
+  test('a signed link resolves to the file', async () => {
+    const record = await request()
+    const resolved = await resolveExport(record.id, record.expiresAt, signExport(record.id, record.expiresAt))
+
+    expect(resolved).not.toBeNull()
+    expect(resolved!.reportId).toBe(reportId)
+  })
+
+  test('a forged signature resolves to nothing', async () => {
+    const record = await request()
+
+    expect(await resolveExport(record.id, record.expiresAt, 'deadbeef')).toBeNull()
+    expect(await resolveExport(record.id, record.expiresAt, '')).toBeNull()
+  })
+
+  test('the signature is bound to the export it was issued for', async () => {
+    const first = await request()
+    const second = await request()
+
+    // Otherwise one valid link would open every export on the instance.
+    const borrowed = signExport(first.id, first.expiresAt)
+    expect(await resolveExport(second.id, second.expiresAt, borrowed)).toBeNull()
+  })
+
+  test('the expiry cannot be extended by editing the URL', async () => {
+    const record = await request()
+    const later = new Date(Date.now() + 86_400_000).toISOString()
+
+    // The signature covers the expiry, so a longer one does not verify.
+    expect(await resolveExport(record.id, later, signExport(record.id, record.expiresAt))).toBeNull()
+    // And re-signing the later expiry does not match the row.
+    expect(await resolveExport(record.id, later, signExport(record.id, later))).toBeNull()
+  })
+
+  test('an expired link stops working', async () => {
+    const record = await request()
+    const past = new Date(Date.now() - 1000).toISOString()
+
+    await db.unsafe(`UPDATE report_exports SET expires_at = $1 WHERE id = $2`, [past, record.id])
+
+    expect(await resolveExport(record.id, past, signExport(record.id, past))).toBeNull()
+  })
+
+  test('an export of a deleted report is not downloadable', async () => {
+    const record = await request()
+    await db.unsafe(`UPDATE reports SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1`, [reportId])
+
+    expect(await resolveExport(record.id, record.expiresAt, signExport(record.id, record.expiresAt))).toBeNull()
+
+    await db.unsafe(`UPDATE reports SET deleted_at = NULL WHERE id = $1`, [reportId])
+  })
+
+  test('the history lists recent exports', async () => {
+    await request()
+    const listed = await exportsFor(reportId)
+
+    expect(listed.length).toBeGreaterThan(0)
+    expect(String(listed[0]!.status)).toBe('ready')
+  })
+
+  test('pruning removes expired exports and their files', async () => {
+    const record = await request()
+    await db.unsafe(`UPDATE report_exports SET expires_at = $1 WHERE id = $2`, [new Date(Date.now() - 1000).toISOString(), record.id])
+
+    const removed = await pruneExports()
+    expect(removed).toBeGreaterThan(0)
+
+    const rows = await db.unsafe(`SELECT COUNT(*) AS n FROM report_exports WHERE id = $1`, [record.id]) as Array<{ n: number }>
+    expect(Number(rows[0]?.n)).toBe(0)
   })
 })

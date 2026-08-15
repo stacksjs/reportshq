@@ -66,6 +66,10 @@ discovered-packages.json
 #   storage/framework/stx      stx build cache + generated route manifest
 #   storage/framework/runtime  migration lock, temp bundles, CLI scratch
 #   storage/cloud              cloud driver state + dashboard credentials
+# Generated export files. Machine-local, expiring, and somebody's business
+# numbers: never committed.
+storage/exports/
+
 storage/framework/stx/
 storage/framework/runtime/
 storage/cloud/
