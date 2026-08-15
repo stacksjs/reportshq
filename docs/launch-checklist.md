@@ -240,6 +240,22 @@ either way.
 - [x] Deploy is push-to-deploy from CI only, gated on lint, typecheck and both
       dialect suites (`docs/deploy.md`)
 - [x] Backups: nightly, plus one taken before every migration
+
+**This was ticked before it was true, which is worth recording.** The
+pre-migration dump is spliced in front of the first preStart entry mentioning
+"migrate", and the invocation is derived from that entry. The echo markers added
+between preStart steps, to make a remote deploy log readable, meant
+`echo "[reportshq] preStart: migrate"` matched first. The backup could not be
+derived from an echo, so it was skipped, with a warning in the deploy output:
+
+> No pre-migration backup for "main": its migrate step (echo "[reportshq]
+> preStart: migrate") is not a buddy invocation this can reuse.
+
+Every deploy since those markers were added migrated production with no dump in
+front of it, and reported success. Fixed at the source in Stacks 0.70.378:
+quoted text is removed before looking for the migrate step, because what a
+command says is not what it does. Confirmed by watching the warning disappear
+from a real deploy.
 - [ ] Rollback drill, actually exercised rather than documented
 - [ ] Backup restore drill: restore the Postgres backup to a scratch database and
       boot the app against it
