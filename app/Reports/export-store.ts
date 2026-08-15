@@ -20,8 +20,16 @@ import { config } from '@stacksjs/config'
 import { db } from '@stacksjs/database'
 import { exportCsv, exportFilename, exportXlsx } from './exports'
 
-/** Where files live. Machine-local state, gitignored, safe to delete. */
-export const EXPORT_DIR = join(process.cwd(), 'storage', 'exports')
+/**
+ * Where files live. Machine-local state, gitignored, safe to delete.
+ *
+ * Configurable because production deploys atomically into a new release
+ * directory each time: left under the working directory, every generated export
+ * would be destroyed by the next deploy, and a link somebody was handed minutes
+ * earlier would 404 for no reason they could see. In production this points
+ * outside the release, next to the database.
+ */
+export const EXPORT_DIR = process.env.EXPORT_DIR || join(process.cwd(), 'storage', 'exports')
 
 /**
  * How long a download link lasts.

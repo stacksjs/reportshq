@@ -24,6 +24,22 @@ const PORT_MAIN = 3150
 const PORT_API = 3158
 
 /**
+ * State that must outlive a release.
+ *
+ * Deploys are atomic: each one activates a NEW directory and the old one goes
+ * away. Anything written inside it is therefore destroyed on the next deploy,
+ * so the database would be wiped every time somebody pushed to main, and the
+ * only symptom would be that all the customer data was gone. It lives here
+ * instead, and the deploy creates the directory before migrating into it.
+ *
+ * Generated exports sit beside it for a smaller version of the same reason: a
+ * download link handed out minutes before a deploy should still resolve.
+ */
+const STATE_DIR = '/var/lib/reportshq'
+const DB_PATH = `${STATE_DIR}/reportshq.sqlite`
+const EXPORT_DIR = `${STATE_DIR}/exports`
+
+/**
  * Deploy configuration.
  *
  * This app is a TENANT on the Hetzner box owned by the `stacks` project, not a
@@ -86,15 +102,30 @@ export const tsCloud: TsCloudConfig = {
       domain: APP_DOMAIN,
       start: 'bun node_modules/@stacksjs/buddy/dist/serve-entry.js',
       port: PORT_MAIN,
+      // Each step announces itself. The remote log interleaves every command's
+      // output with no markers, so when a step fails the error arrives with no
+      // indication of which command produced it: the first deploy died on
+      // `Module not found "storage/framework/core/buddy/src/cli.ts"` directly
+      // beneath the output of `bun install`, which is not the command that
+      // raised it.
       preStart: [
+        'echo "[reportshq] preStart 1/3: install"',
         'bun install --frozen-lockfile',
+        'echo "[reportshq] preStart 2/3: state dirs"',
+        // Before migrating, so the first deploy has somewhere to migrate into.
+        `mkdir -p ${STATE_DIR} ${EXPORT_DIR}`,
+        'echo "[reportshq] preStart 3/3: migrate"',
         'bun node_modules/@stacksjs/buddy/dist/cli.js migrate',
+        'echo "[reportshq] preStart complete"',
       ],
       env: {
         APP_ENV: 'production',
         NODE_ENV: 'production',
         PORT_API: String(PORT_API),
         API_URL: `http://127.0.0.1:${PORT_API}`,
+        DB_CONNECTION: 'sqlite',
+        DB_DATABASE_PATH: DB_PATH,
+        EXPORT_DIR,
       },
     },
 
@@ -102,11 +133,18 @@ export const tsCloud: TsCloudConfig = {
       root: '.',
       start: 'bun node_modules/@stacksjs/actions/dist/serve/api.js',
       port: PORT_API,
-      preStart: ['bun install --frozen-lockfile'],
+      preStart: ['echo "[reportshq] api preStart: install"', 'bun install --frozen-lockfile'],
       env: {
         HOST: '127.0.0.1',
         APP_ENV: 'production',
         NODE_ENV: 'production',
+        // The same database and the same export directory as the site above.
+        // These two processes serve one application, and pointing them at
+        // different files would mean the API writes an event the page cannot
+        // read, which looks like the app losing data rather than a config bug.
+        DB_CONNECTION: 'sqlite',
+        DB_DATABASE_PATH: DB_PATH,
+        EXPORT_DIR,
       },
     },
 
