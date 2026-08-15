@@ -187,8 +187,23 @@ served `/blog`.
 
 ## Docs
 
+- [x] Every documented event payload is one the ingest actually accepts, every
+      JSON sample parses, and the samples name the header and endpoints the
+      routes really read: 5 tests, run on every commit
+
+The first thing a new customer does is paste the quickstart curl into a
+terminal. A stale sample is not cosmetic there: it is the product failing at the
+one moment the customer has no reason to assume the fault is theirs.
+
+**Worth recording, because the first version of this test was useless.** It told
+a request sample from a response sample by checking that every entry carried a
+`name` field. So a sample with `nmae` was not a broken sample, it was an
+unrecognised one: skipped in silence, suite green. The check now identifies a
+request by the shape of its wrapper and never by whether its contents look
+valid. Caught only by mutation testing, because a passing test looks identical
+either way.
+
 - [ ] Quickstart executed verbatim on a clean machine profile
-- [ ] Every doc code sample runs
 
 ---
 
