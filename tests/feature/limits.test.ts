@@ -23,6 +23,8 @@ import {
   usageOf,
 } from '../../app/Billing/limits'
 import { counterFor, ingestAllowanceFor, markNotified, monthKey, recordUsage, secondsUntilNextMonth, usageFor } from '../../app/Billing/usage'
+import { assertCan, LimitReached, limitResponse } from '../../app/Billing/gates'
+import { createReport } from '../../app/Reports/reports'
 import { createProject } from '../../app/Support/projects'
 
 const stamp = Date.now()
@@ -303,5 +305,129 @@ describe('the ingest allowance', () => {
 
     expect(secondsUntilNextMonth('UTC', mid)).toBeGreaterThan(15 * 24 * 3600)
     expect(secondsUntilNextMonth('UTC', new Date('2026-12-31T00:00:00.000Z'))).toBeLessThanOrEqual(24 * 3600)
+  })
+})
+
+describe('creation gates', () => {
+  test('a free account may create its one project, and not a second', async () => {
+    const email = `gate-projects-${stamp}@reportshq.test`
+    await db.unsafe(
+      `INSERT INTO users (name, email, password, plan, created_at) VALUES ($1, $2, $3, 'free', CURRENT_TIMESTAMP)`,
+      ['gate owner', email, 'not-a-real-hash'],
+    )
+    const row = (await db.unsafe(`SELECT id FROM users WHERE email = $1`, [email]))?.[0] as { id: number }
+    const gated = { id: Number(row.id) }
+
+    const first = await createProject(gated, { name: `Gate one ${stamp}` })
+
+    try {
+      expect(createProject(gated, { name: `Gate two ${stamp}` })).rejects.toThrow(/covers 1 project/)
+    }
+    finally {
+      await db.unsafe(`DELETE FROM usage_counters WHERE project_id = $1`, [first.id])
+      await db.unsafe(`DELETE FROM projects WHERE id = $1`, [first.id])
+      await db.unsafe(`DELETE FROM users WHERE id = $1`, [gated.id])
+    }
+  })
+
+  test('the refusal names the tier that would lift it', async () => {
+    const email = `gate-message-${stamp}@reportshq.test`
+    await db.unsafe(
+      `INSERT INTO users (name, email, password, plan, created_at) VALUES ($1, $2, $3, 'free', CURRENT_TIMESTAMP)`,
+      ['gate message', email, 'not-a-real-hash'],
+    )
+    const row = (await db.unsafe(`SELECT id FROM users WHERE email = $1`, [email]))?.[0] as { id: number }
+    const gated = { id: Number(row.id) }
+
+    const first = await createProject(gated, { name: `Gate msg ${stamp}` })
+
+    try {
+      await createProject(gated, { name: `Gate msg two ${stamp}` })
+      throw new Error('expected a refusal')
+    }
+    catch (error) {
+      // "You have reached the Free limit" is a dead end; naming Hobby is a
+      // next step, and that difference is the whole point of these messages.
+      expect((error as Error).message).toContain('Hobby')
+      expect((error as LimitReached).upgradeTo).toBe('hobby')
+      expect((error as LimitReached).meter).toBe('projects')
+    }
+    finally {
+      await db.unsafe(`DELETE FROM usage_counters WHERE project_id = $1`, [first.id])
+      await db.unsafe(`DELETE FROM projects WHERE id = $1`, [first.id])
+      await db.unsafe(`DELETE FROM users WHERE id = $1`, [gated.id])
+    }
+  })
+
+  test('reports are refused at the plan limit, not one report early or late', async () => {
+    await db.unsafe(`UPDATE users SET plan = 'free' WHERE id = $1`, [owner.id])
+
+    const allowance = PLANS.free.reports
+    const made: number[] = []
+
+    try {
+      for (let index = 0; index < allowance; index++)
+        made.push(Number((await createReport(projectId, owner, { name: `Gate report ${index} ${stamp}` })).id))
+
+      // The limit-1 case passed above; this is the limit case.
+      expect(createReport(projectId, owner, { name: `One too many ${stamp}` })).rejects.toThrow(/covers 5 reports/)
+    }
+    finally {
+      for (const id of made) {
+        await db.unsafe(`DELETE FROM report_revisions WHERE report_id = $1`, [id])
+        await db.unsafe(`DELETE FROM report_blocks WHERE report_id = $1`, [id])
+      }
+      await db.unsafe(`DELETE FROM reports WHERE project_id = $1`, [projectId])
+    }
+  })
+
+  test('an auto-created report is never refused by the report limit', async () => {
+    // The engine delivering the reports it promised is not somebody choosing
+    // to exceed their plan, and refusing there would leave a project with a
+    // partial set of auto-reports and no explanation.
+    await db.unsafe(`UPDATE users SET plan = 'free' WHERE id = $1`, [owner.id])
+
+    const made: number[] = []
+    try {
+      for (let index = 0; index < PLANS.free.reports; index++)
+        made.push(Number((await createReport(projectId, owner, { name: `Filler ${index} ${stamp}` })).id))
+
+      const auto = await createReport(
+        projectId,
+        owner,
+        { name: `Auto ${stamp}` },
+        { origin: 'template', templateKey: 'commerce.overview', templateVersion: 1 },
+      )
+
+      expect(auto.id).toBeTruthy()
+      made.push(Number(auto.id))
+    }
+    finally {
+      for (const id of made) {
+        await db.unsafe(`DELETE FROM report_revisions WHERE report_id = $1`, [id])
+        await db.unsafe(`DELETE FROM report_blocks WHERE report_id = $1`, [id])
+      }
+      await db.unsafe(`DELETE FROM reports WHERE project_id = $1`, [projectId])
+    }
+  })
+
+  test('a refused limit answers 402, not 403', async () => {
+    // This is not a permission problem, and a client treating every 403 as
+    // "sign in again" would send somebody round a loop that cannot help them.
+    const error = new LimitReached('Free covers 1 project.', 'projects', null, 'free', 1, 1, 'hobby')
+    const { status, body } = limitResponse(error)
+
+    expect(status).toBe(402)
+    expect(body.error).toBe('plan_limit')
+    expect(body.upgrade_to).toBe('hobby')
+  })
+
+  test('a capability check names the tier that includes it', async () => {
+    await db.unsafe(`UPDATE users SET plan = 'free' WHERE id = $1`, [owner.id])
+
+    expect(assertCan(projectId, 'xlsx', 'XLSX export')).rejects.toThrow(/Pro/)
+    // And passes where the tier does include it.
+    await db.unsafe(`UPDATE users SET plan = 'pro' WHERE id = $1`, [owner.id])
+    expect(assertCan(projectId, 'xlsx', 'XLSX export')).resolves.toBeUndefined()
   })
 })

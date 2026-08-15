@@ -20,7 +20,9 @@ interface Person { id: number, email: string }
 async function makeUser(label: string): Promise<Person> {
   const email = `${label}-inv-${stamp}@reportshq.test`
   await db.unsafe(
-    `INSERT INTO users (name, email, password, created_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)`,
+    // On Pro, so a fixture building a dozen reports is testing reports rather
+    // than testing the free plan's limits. limits.test.ts sets its own tier.
+    `INSERT INTO users (name, email, password, plan, created_at) VALUES ($1, $2, $3, 'pro', CURRENT_TIMESTAMP)`,
     [label, email, 'not-a-real-hash'],
   )
   const row = (await db.unsafe(`SELECT id FROM users WHERE email = $1`, [email]))?.[0] as { id: number }

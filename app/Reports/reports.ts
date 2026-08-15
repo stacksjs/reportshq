@@ -9,6 +9,7 @@
 import type { BlockKind, BlockLayout, BlockQuery } from './schema'
 import type { Placement } from './layout'
 import { db } from '@stacksjs/database'
+import { assertWithin } from '../Billing/gates'
 import { packBlocks } from './layout'
 import { needsQuery, validateBlockLayout, validateBlockQuery } from './schema'
 
@@ -84,6 +85,17 @@ export async function createReport(
   const name = String(input.name ?? '').trim()
   if (!name)
     throw new Error('A report needs a name.')
+
+  // Before the write, and before the slug is claimed. A report refused after
+  // taking a slug would leave `revenue-2` behind for a report that does not
+  // exist.
+  //
+  // Template provisioning is exempt: the engine creating the reports it
+  // promised is not a person choosing to exceed their plan, and refusing there
+  // would leave a project with a partial set of auto-reports and no way to see
+  // why.
+  if ((options.origin ?? 'user') !== 'template')
+    await assertWithin(projectId, 'reports', 'report')
 
   const slug = await availableSlug(projectId, name)
 

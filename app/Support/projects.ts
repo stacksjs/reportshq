@@ -8,6 +8,7 @@
  * trusts its caller is a helper that eventually gets called from somewhere new.
  */
 import { db } from '@stacksjs/database'
+import { assertCanCreateProject, assertWithin } from '../Billing/gates'
 import { canAdminister, isOwner } from './access'
 
 /** How long an unaccepted invite stays usable. */
@@ -52,6 +53,11 @@ export async function createProject(user: { id: number }, input: CreateProjectIn
   const name = String(input.name ?? '').trim()
   if (!name)
     throw new Error('A project needs a name.')
+
+  // Before the write, so nothing half-exists. A project created and then
+  // refused would need cleaning up, and the cleanup is the part that goes
+  // wrong.
+  await assertCanCreateProject(user)
 
   const key = newIngestKey()
 
@@ -108,6 +114,9 @@ export async function inviteToProject(
   const address = normalizeEmail(email)
   if (!address.includes('@'))
     throw new Error('That does not look like an email address.')
+
+  // Seats are a plan limit, counted with the owner included.
+  await assertWithin(projectId, 'members', 'member')
 
   const alreadyAMember = (await db.unsafe(
     `SELECT 1 FROM project_members WHERE project_id = $1 AND lower(email) = $2 LIMIT 1`,
