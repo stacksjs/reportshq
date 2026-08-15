@@ -90,8 +90,14 @@ const rangeLinks = RANGES.map(entry => ({
 
 <template>
   {{-- The guard is a plain script and cannot import; the name it must
-       check is stamped here, from the same resolver the middleware uses. --}}
-  <script>document.documentElement.setAttribute('data-session-cookie', '{{ cookieName }}')</script>
+       check is stamped here, from the same resolver the middleware uses.
+
+       No quotes around the interpolation. stx JSON-encodes `{{ }}` inside a
+       script block, so the value arrives already quoted; wrapping it again
+       produced a cookie name containing literal quote characters, the guard
+       looked for a cookie nobody had, and every signed-in visitor was bounced
+       to /login. curl never caught it because curl does not run scripts. --}}
+  <script>document.documentElement.setAttribute('data-session-cookie', {{ cookieName }})</script>
   @include('AuthGuard')
 
   <div class="min-h-[100dvh] bg-canvas text-ink">

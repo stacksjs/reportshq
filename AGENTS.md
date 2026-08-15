@@ -114,6 +114,18 @@ one.
 - **Never anchor a test fixture to "today".** Ingest clamps future timestamps, so
   a fixture at "today 08:00" collapses into the wrong bucket when the suite runs
   after UTC midnight. It broke CI once. Anchor to yesterday.
+- **stx JSON-encodes `{{ }}` inside a `<script>` block**, so the value arrives
+  already quoted. Writing `setAttribute('x', '{{ name }}')` renders
+  `setAttribute("x", '"auth-token"')` and the value carries literal quote
+  characters. This broke every signed-in page: the auth guard looked for a
+  cookie named `"auth-token"` including the quotes, never found it, and
+  redirected to /login. Write `setAttribute('x', {{ name }})` with no quotes of
+  your own. In an HTML *attribute* the same interpolation is HTML-escaped and
+  needs the quotes, so the two contexts genuinely differ.
+- **curl cannot verify anything that depends on JavaScript.** The bug above
+  survived a full HTTP pass: every page returned 200 with correct markup, and
+  every one of them bounced in a real browser. Load a page in the browser before
+  believing a front-end change works.
 - **`./buddy lint` only sees files git already tracks**, so a file you just wrote
   is skipped and the project reports clean without it ever being opened. CI reads
   it one commit later and fails. Either `git add` before linting, or run
