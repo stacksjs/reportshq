@@ -130,11 +130,21 @@ export const tsCloud: TsCloudConfig = {
       // database, so it is the one that may seed the target.
       sharedPaths: sharedState(true),
       preStart: [
-        'echo "[reportshq] preStart 1/2: install"',
+        // Diagnostics first: stdout is flushed in chunks while a failing
+        // command's stderr goes straight through, so anything printed AFTER
+        // the failing line never reaches the log and the error appears to
+        // belong to whichever command last managed to flush.
+        'echo "[reportshq] === release layout ==="',
+        'ls -la storage | head -6',
+        'echo "[reportshq] --- storage/framework ---"',
+        'ls storage/framework 2>&1 | head -6',
+        'echo "[reportshq] --- vendored cli present? ---"',
+        'test -f storage/framework/core/buddy/src/cli.ts && echo yes || echo no',
+        'echo "[reportshq] === installing ==="',
         'bun install --frozen-lockfile',
-        'echo "[reportshq] preStart 2/2: migrate"',
+        'echo "[reportshq] === migrating ==="',
         'bun node_modules/@stacksjs/buddy/dist/cli.js migrate',
-        'echo "[reportshq] preStart complete"',
+        'echo "[reportshq] === preStart complete ==="',
       ],
       env: {
         APP_ENV: 'production',
