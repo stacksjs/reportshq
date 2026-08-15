@@ -41,6 +41,15 @@ export interface Plan {
   name: string
   /** Monthly price in cents. Zero is free, and is shown as free rather than as 0.00. */
   price: number
+  /**
+   * Price in cents for a year paid up front. Zero on a free plan.
+   *
+   * Ten months rather than twelve, so a year costs the same as paying monthly
+   * and skipping two. The pricing page states the saving by computing it from
+   * these two numbers rather than printing a claim beside them, which is how a
+   * discount ends up advertised as larger than it is.
+   */
+  yearlyPrice: number
   /** Events per calendar month, per project. */
   events: number
   /** Projects per account. */
@@ -69,6 +78,7 @@ export const PLANS: Record<Tier, Plan> = {
     tier: 'free',
     name: 'Free',
     price: 0,
+    yearlyPrice: 0,
     events: 50_000,
     projects: 1,
     reports: 5,
@@ -81,6 +91,7 @@ export const PLANS: Record<Tier, Plan> = {
     tier: 'hobby',
     name: 'Hobby',
     price: 900,
+    yearlyPrice: 9000,
     events: 500_000,
     projects: 3,
     reports: 25,
@@ -93,6 +104,7 @@ export const PLANS: Record<Tier, Plan> = {
     tier: 'pro',
     name: 'Pro',
     price: 2900,
+    yearlyPrice: 29000,
     events: 5_000_000,
     projects: 25,
     reports: 200,

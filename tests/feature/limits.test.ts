@@ -598,3 +598,48 @@ describe('quota notices', () => {
     expect(found.used).toBeGreaterThan(0)
   })
 })
+
+/**
+ * Yearly pricing.
+ *
+ * The pricing page prints "get N months free", where N is computed from the
+ * two prices rather than typed beside them. These pin the relationship so the
+ * sentence cannot quietly become a lie: change a yearly price without the
+ * monthly one and the claim changes with it, but change it to something that is
+ * not a whole number of months and this fails instead of rounding into a
+ * statement nobody checked.
+ */
+describe('yearly pricing', () => {
+  test('a year costs ten months on every paid plan', () => {
+    for (const tier of TIERS) {
+      const plan = PLANS[tier]
+      if (plan.price === 0)
+        continue
+
+      expect(plan.yearlyPrice).toBe(plan.price * 10)
+    }
+  })
+
+  test('the saving is a whole number of months', () => {
+    for (const tier of TIERS) {
+      const plan = PLANS[tier]
+      if (plan.price === 0)
+        continue
+
+      const saved = (plan.price * 12 - plan.yearlyPrice) / plan.price
+      expect(Number.isInteger(saved)).toBe(true)
+      expect(saved).toBeGreaterThan(0)
+    }
+  })
+
+  test('a free plan is free for a year too', () => {
+    expect(PLANS.free.yearlyPrice).toBe(0)
+  })
+
+  test('paying yearly never costs more than paying monthly', () => {
+    for (const tier of TIERS) {
+      const plan = PLANS[tier]
+      expect(plan.yearlyPrice).toBeLessThanOrEqual(plan.price * 12)
+    }
+  })
+})
