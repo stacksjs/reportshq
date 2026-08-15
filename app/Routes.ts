@@ -20,6 +20,11 @@ export default {
   // `/ingest/ingest`.
   'ingest': { path: 'ingest', prefix: '' },
 
+  // The builder's write surface. Behind `auth` for the same reason as
+  // projects, and every handler resolves the project before touching a report,
+  // so a report id from another tenant never resolves to anything.
+  'reports': { path: 'reports', prefix: '/api/reports', middleware: ['auth'] },
+
   // Project tenancy: creation, membership, invites, ingest key rotation.
   // Behind `auth` at the registry level rather than per route, so a route added
   // to that file later cannot be published unauthenticated by omission. Every

@@ -1,0 +1,490 @@
+<script server>
+// The builder.
+//
+// The grid is rendered on the server from the stored blocks, so the report is
+// correct before any JavaScript arrives; the client adds dragging, resizing and
+// selection on top of markup that already reads properly. That ordering is the
+// point: a builder whose blocks only appear after hydration shows an empty grid
+// to anyone on a slow connection, which is exactly when they are least patient.
+import { runQuery } from '../../app/Reports/engine'
+import { blocksOf, reportBySlug } from '../../app/Reports/reports'
+import { GRID_COLUMNS } from '../../app/Reports/schema'
+import { accessFor } from '../../app/Support/access'
+import { param, sessionCookieName, sessionFrom } from '../../app/Support/session'
+
+const session = await sessionFrom(cookies)
+const cookieName = sessionCookieName()
+const user = session.user
+const authPending = session.stale
+
+const projectId = Number(param(query, 'project') ?? 0)
+const slug = param(query, 'slug') ?? ''
+
+const access = user && projectId ? await accessFor(user, projectId) : null
+const report = access && slug ? await reportBySlug(projectId, slug) : null
+const found = report !== null
+
+const timezone = String(report?.timezone ?? 'UTC')
+const blocks = found ? await blocksOf(Number(report!.id)) : []
+
+// Previews use the report's own default range. The builder is for arranging and
+// configuring; reading a specific window is what the viewer is for, and adding
+// a range picker here would be a second place to change the same thing.
+const rendered: Array<Record<string, unknown>> = []
+for (const block of blocks) {
+  const kind = String(block.kind)
+  const entry = {
+    id: Number(block.id),
+    kind,
+    title: block.title ? String(block.title) : '',
+    body: block.body ? String(block.body) : '',
+    x: Number(block.x) || 0,
+    y: Number(block.y) || 0,
+    w: Math.max(1, Math.min(GRID_COLUMNS, Number(block.w) || 6)),
+    h: Math.max(1, Number(block.h) || 4),
+    result: null as unknown,
+    error: '',
+  }
+
+  if (kind !== 'text') {
+    try {
+      entry.result = await runQuery({
+        projectId,
+        timezone,
+        range: String(report!.default_range ?? 'last_30_days'),
+        query: block.query as never,
+      })
+    }
+    catch (error) {
+      entry.error = (error as Error).message
+    }
+  }
+
+  rendered.push(entry)
+}
+
+/** The palette, in the order someone reaches for them. */
+const kinds = [
+  { kind: 'big_number', label: 'Big number', w: 3, h: 2, icon: 'i-hugeicons-chart-average' },
+  { kind: 'line', label: 'Line', w: 6, h: 4, icon: 'i-hugeicons-chart-line-data-01' },
+  { kind: 'area', label: 'Area', w: 6, h: 4, icon: 'i-hugeicons-chart-histogram' },
+  { kind: 'bar', label: 'Bar', w: 6, h: 4, icon: 'i-hugeicons-chart-bar-line' },
+  { kind: 'donut', label: 'Donut', w: 4, h: 4, icon: 'i-hugeicons-pie-chart' },
+  { kind: 'table', label: 'Table', w: 4, h: 4, icon: 'i-hugeicons-table' },
+  { kind: 'funnel', label: 'Funnel', w: 6, h: 4, icon: 'i-hugeicons-filter' },
+  { kind: 'heatmap', label: 'Heatmap', w: 12, h: 3, icon: 'i-hugeicons-grid' },
+  { kind: 'text', label: 'Note', w: 12, h: 1, icon: 'i-hugeicons-text' },
+]
+
+const isPublished = String(report?.status ?? 'draft') === 'published'
+const viewHref = `/report?project=${projectId}&slug=${slug}`
+</script>
+
+<template>
+  {{-- The guard is a plain script and cannot import; the name it must
+       check is stamped here, from the same resolver the middleware uses. --}}
+  <script>document.documentElement.setAttribute('data-session-cookie', '{{ cookieName }}')</script>
+  @include('AuthGuard')
+
+  <div class="min-h-[100dvh] bg-canvas text-ink">
+    @if (authPending)
+      <div id="auth-pending" hidden></div>
+    @endif
+
+    @include('AppNav')
+
+    <main class="px-6 py-8 mx-auto max-w-7xl">
+      @if (!found)
+        <div class="px-6 py-16 text-center rounded-xl border border-line bg-panel">
+          <h1 class="text-base font-medium">Report not found</h1>
+          <a href="/projects" class="inline-block mt-5 text-sm text-accent">Back to projects</a>
+        </div>
+      @else
+        <div class="flex flex-wrap gap-4 justify-between items-end mb-6">
+          <div>
+            <nav class="mb-2 text-sm text-subtle">
+              <a href="/project?id={{ projectId }}" class="text-muted">Project</a>
+              <span class="mx-2">/</span>
+              <a href="{{ viewHref }}" class="text-muted">{{ report.name }}</a>
+              <span class="mx-2">/</span>
+              <span>Edit</span>
+            </nav>
+            <h1 class="text-2xl font-semibold tracking-tight">{{ report.name }}</h1>
+          </div>
+
+          <div class="flex gap-2 items-center">
+            {{-- The save state is a word, not a spinner. "Saved" is the thing a
+                 person needs to know before closing a tab. --}}
+            <span id="save-state" class="text-sm text-subtle" aria-live="polite">Saved</span>
+            <a href="{{ viewHref }}" class="px-3 py-2 text-sm no-underline rounded-lg border border-line text-ink">View</a>
+            <button id="publish" type="button" class="px-4 py-2 text-sm font-medium rounded-lg bg-accent text-accent-ink">
+              @if (isPublished) Republish @else Publish @endif
+            </button>
+          </div>
+        </div>
+
+        <div class="grid gap-6 lg:grid-cols-[200px_1fr]">
+          <aside>
+            <h2 class="mb-2 text-xs font-medium tracking-wide uppercase text-subtle">Add a block</h2>
+            <ul class="grid grid-cols-2 gap-2 list-none lg:grid-cols-1">
+              @foreach (kinds as entry)
+                <li>
+                  <button
+                    type="button"
+                    class="flex gap-2 items-center px-3 py-2 w-full text-sm text-left rounded-lg border transition-colors add-block border-line bg-panel text-ink hover:border-accent"
+                    data-kind="{{ entry.kind }}"
+                    data-w="{{ entry.w }}"
+                    data-h="{{ entry.h }}"
+                  >
+                    <i class="w-4 h-4 {{ entry.icon }} text-subtle"></i>
+                    {{ entry.label }}
+                  </button>
+                </li>
+              @endforeach
+            </ul>
+
+            <p class="mt-4 text-xs leading-relaxed text-subtle">
+              Drag a block to move it, drag its bottom right corner to resize. Arrow keys move the
+              selected block, and Delete removes it.
+            </p>
+          </aside>
+
+          <section>
+            @if (rendered.length === 0)
+              <div class="px-6 py-20 text-center rounded-xl border border-dashed border-line">
+                <h2 class="text-base font-medium">An empty grid</h2>
+                <p class="mx-auto mt-1 max-w-sm text-sm text-muted">
+                  Add a block from the left. Every block reads the events already in this project, so
+                  it will show real numbers as soon as it lands.
+                </p>
+              </div>
+            @else
+              {{-- 12 columns, matching the stored layout exactly, so what is
+                   dragged here is what the viewer renders. --}}
+              <div id="grid" class="grid grid-cols-12 gap-3 auto-rows-[56px]">
+                @foreach (rendered as block)
+                  <article
+                    class="block-tile relative rounded-xl border border-line bg-panel p-4 col-start-[{{ block.x + 1 }}] col-span-{{ block.w }} row-span-{{ block.h }}"
+                    data-id="{{ block.id }}"
+                    data-x="{{ block.x }}"
+                    data-y="{{ block.y }}"
+                    data-w="{{ block.w }}"
+                    data-h="{{ block.h }}"
+                    tabindex="0"
+                    role="group"
+                    aria-label="{{ block.title }} block, column {{ block.x }}, row {{ block.y }}"
+                  >
+                    <div class="overflow-hidden h-full pointer-events-none">
+                      @if (block.error)
+                        <p class="text-sm font-medium text-ink">{{ block.title }}</p>
+                        <p class="mt-2 text-sm text-warn">{{ block.error }}</p>
+                      @elseif (block.kind === 'text')
+                        <TextBlock title="{{ block.title }}" body="{{ block.body }}" />
+                      @elseif (block.kind === 'big_number')
+                        <BigNumber :result="block.result" title="{{ block.title }}" />
+                      @elseif (block.kind === 'bar')
+                        <BarChart :result="block.result" title="{{ block.title }}" />
+                      @elseif (block.kind === 'donut')
+                        <DonutChart :result="block.result" title="{{ block.title }}" />
+                      @elseif (block.kind === 'table')
+                        <DataTable :result="block.result" title="{{ block.title }}" />
+                      @elseif (block.kind === 'funnel')
+                        <FunnelChart :result="block.result" title="{{ block.title }}" />
+                      @elseif (block.kind === 'heatmap')
+                        <HeatmapChart :result="block.result" title="{{ block.title }}" />
+                      @elseif (block.kind === 'area')
+                        <LineChart :result="block.result" title="{{ block.title }}" variant="area" />
+                      @else
+                        <LineChart :result="block.result" title="{{ block.title }}" />
+                      @endif
+                    </div>
+
+                    {{-- A real handle rather than a hover-anywhere resize: the
+                         corner is where people already expect it, and it keeps
+                         the whole tile free for dragging. --}}
+                    <span class="resize-handle" aria-hidden="true"></span>
+                  </article>
+                @endforeach
+              </div>
+            @endif
+          </section>
+        </div>
+      @endif
+    </main>
+  </div>
+
+{{-- Dragging, resizing, selection and saving.
+
+     A plain script rather than a client block, and deliberately so. The design
+     rules ban driving continuous values through signal state re-read every
+     frame, which is exactly what a pointer-driven drag is; and this needs
+     pointer capture and live grid measurement, neither of which a composable
+     wraps. So it uses pointer events directly, writes CSS custom properties
+     rather than reactive state during a drag, and touches the DOM only inside
+     this one file. The same exemption AuthGuard takes, for the same kind of
+     reason.
+
+     Pointer events rather than mouse events: the same code then works with a
+     finger and a stylus, and pointer capture means a fast drag that leaves the
+     tile does not drop the gesture. --}}
+<script>
+(function () {
+  var grid = document.getElementById('grid')
+  if (!grid) return
+
+  var params = new URLSearchParams(window.location.search)
+  var project = params.get('project')
+  var slug = params.get('slug')
+  var state = document.getElementById('save-state')
+  var COLUMNS = 12
+  var ROW = 56
+  var GAP = 12
+
+  var selected = null
+  var pending = null
+
+  function say(text) {
+    if (state) state.textContent = text
+  }
+
+  function tiles() {
+    return Array.prototype.slice.call(grid.querySelectorAll('.block-tile'))
+  }
+
+  function place(tile, x, y, w, h) {
+    tile.dataset.x = String(x)
+    tile.dataset.y = String(y)
+    tile.dataset.w = String(w)
+    tile.dataset.h = String(h)
+    tile.style.gridColumnStart = String(x + 1)
+    tile.style.gridColumnEnd = 'span ' + w
+    tile.style.gridRowStart = String(y + 1)
+    tile.style.gridRowEnd = 'span ' + h
+    tile.setAttribute('aria-label', (tile.getAttribute('aria-label') || '').replace(/column \d+, row \d+/, 'column ' + x + ', row ' + y))
+  }
+
+  // Read the stored layout back onto the grid, so the server's ordering and the
+  // client's agree from the first frame rather than after the first drag.
+  tiles().forEach(function (tile) {
+    place(tile, Number(tile.dataset.x), Number(tile.dataset.y), Number(tile.dataset.w), Number(tile.dataset.h))
+  })
+
+  function cellWidth() {
+    return (grid.clientWidth - GAP * (COLUMNS - 1)) / COLUMNS
+  }
+
+  function save() {
+    // Debounced: a drag ends in one commit, and dropping three blocks in quick
+    // succession should be one request rather than three racing ones.
+    if (pending) clearTimeout(pending)
+    say('Saving')
+    pending = setTimeout(function () {
+      var blocks = tiles().map(function (tile) {
+        return {
+          id: Number(tile.dataset.id),
+          layout: {
+            x: Number(tile.dataset.x),
+            y: Number(tile.dataset.y),
+            w: Number(tile.dataset.w),
+            h: Number(tile.dataset.h),
+          },
+        }
+      })
+
+      fetch('/api/reports/blocks/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: project, slug: slug, blocks: blocks }),
+      }).then(function (res) {
+        say(res.ok ? 'Saved' : 'Not saved')
+      }).catch(function () {
+        // Says so rather than pretending. A builder that reports "Saved" when
+        // the request failed is how a session's work disappears silently.
+        say('Not saved')
+      })
+    }, 400)
+  }
+
+  function select(tile) {
+    tiles().forEach(function (other) { other.classList.remove('is-selected') })
+    if (tile) tile.classList.add('is-selected')
+    selected = tile
+  }
+
+  grid.addEventListener('pointerdown', function (event) {
+    var tile = event.target.closest ? event.target.closest('.block-tile') : null
+    if (!tile) return
+
+    select(tile)
+
+    var resizing = event.target.classList && event.target.classList.contains('resize-handle')
+    var startX = event.clientX
+    var startY = event.clientY
+    var originX = Number(tile.dataset.x)
+    var originY = Number(tile.dataset.y)
+    var originW = Number(tile.dataset.w)
+    var originH = Number(tile.dataset.h)
+    var unit = cellWidth()
+
+    tile.setPointerCapture(event.pointerId)
+    tile.classList.add('is-dragging')
+    grid.classList.add('is-arranging')
+
+    function move(moveEvent) {
+      var dx = Math.round((moveEvent.clientX - startX) / (unit + GAP))
+      var dy = Math.round((moveEvent.clientY - startY) / (ROW + GAP))
+
+      if (resizing) {
+        var w = Math.max(1, Math.min(COLUMNS - originX, originW + dx))
+        var h = Math.max(1, originH + dy)
+        place(tile, originX, originY, w, h)
+      }
+      else {
+        // Clamped to the grid: a block that starts inside and ends outside is
+        // the shape a drag produces at the right edge, and the server would
+        // reject it, so it never gets that far.
+        var x = Math.max(0, Math.min(COLUMNS - originW, originX + dx))
+        var y = Math.max(0, originY + dy)
+        place(tile, x, y, originW, originH)
+      }
+    }
+
+    function end() {
+      tile.releasePointerCapture(event.pointerId)
+      tile.classList.remove('is-dragging')
+      grid.classList.remove('is-arranging')
+      tile.removeEventListener('pointermove', move)
+      tile.removeEventListener('pointerup', end)
+      tile.removeEventListener('pointercancel', end)
+      save()
+    }
+
+    tile.addEventListener('pointermove', move)
+    tile.addEventListener('pointerup', end)
+    tile.addEventListener('pointercancel', end)
+  })
+
+  // Keyboard equivalents, because a grid that can only be arranged by dragging
+  // cannot be arranged at all by someone who does not use a mouse.
+  document.addEventListener('keydown', function (event) {
+    if (!selected) return
+    if (event.target && event.target.tagName === 'INPUT') return
+
+    var x = Number(selected.dataset.x)
+    var y = Number(selected.dataset.y)
+    var w = Number(selected.dataset.w)
+    var h = Number(selected.dataset.h)
+    var handled = true
+
+    if (event.key === 'ArrowLeft') place(selected, Math.max(0, x - 1), y, w, h)
+    else if (event.key === 'ArrowRight') place(selected, Math.min(COLUMNS - w, x + 1), y, w, h)
+    else if (event.key === 'ArrowUp') place(selected, x, Math.max(0, y - 1), w, h)
+    else if (event.key === 'ArrowDown') place(selected, x, y + 1, w, h)
+    else if (event.key === 'Delete' || event.key === 'Backspace') {
+      var id = Number(selected.dataset.id)
+      fetch('/api/reports/blocks/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: project, slug: slug, id: id }),
+      }).then(function () { window.location.reload() })
+      return
+    }
+    else handled = false
+
+    if (handled) {
+      event.preventDefault()
+      save()
+    }
+  })
+
+  Array.prototype.forEach.call(document.querySelectorAll('.add-block'), function (button) {
+    button.addEventListener('click', function () {
+      say('Adding')
+      fetch('/api/reports/blocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: project,
+          slug: slug,
+          kind: button.dataset.kind,
+          w: Number(button.dataset.w),
+          h: Number(button.dataset.h),
+        }),
+      }).then(function (res) {
+        // A reload rather than an optimistic insert: the new block has to be
+        // rendered by the engine anyway, and the server already knows how.
+        if (res.ok) window.location.reload()
+        else say('Could not add that')
+      })
+    })
+  })
+
+  var publish = document.getElementById('publish')
+  if (publish) {
+    publish.addEventListener('click', function () {
+      say('Publishing')
+      fetch('/api/reports/publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: project, slug: slug }),
+      }).then(function (res) {
+        say(res.ok ? 'Published' : 'Not published')
+      })
+    })
+  }
+}())
+</script>
+</template>
+
+<style>
+.block-tile {
+  cursor: grab;
+  transition: box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.block-tile:focus-visible,
+.block-tile.is-selected {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.block-tile.is-dragging {
+  cursor: grabbing;
+  opacity: 0.85;
+  z-index: 20;
+}
+
+.resize-handle {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  border-right: 2px solid var(--text-3);
+  border-bottom: 2px solid var(--text-3);
+  border-bottom-right-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.block-tile:hover .resize-handle,
+.block-tile.is-selected .resize-handle {
+  opacity: 0.6;
+}
+
+/* The drop target, drawn under the tile being moved so the destination is
+ * visible while dragging rather than guessed. */
+#grid.is-arranging .block-tile:not(.is-dragging) {
+  transition: transform 0.12s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block-tile,
+  .resize-handle,
+  #grid.is-arranging .block-tile:not(.is-dragging) {
+    transition: none;
+  }
+}
+</style>

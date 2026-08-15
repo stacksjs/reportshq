@@ -4,9 +4,10 @@
 import { db as __db } from '@stacksjs/database'
 import { reportsFor } from '../../app/Reports/reports'
 import { accessFor, canAdminister } from '../../app/Support/access'
-import { param, sessionFrom } from '../../app/Support/session'
+import { param, sessionCookieName, sessionFrom } from '../../app/Support/session'
 
 const session = await sessionFrom(cookies)
+const cookieName = sessionCookieName()
 const user = session.user
 const authPending = session.stale
 
@@ -51,6 +52,9 @@ const curlSnippet = ingestKey
 </script>
 
 <template>
+  {{-- The guard is a plain script and cannot import; the name it must
+       check is stamped here, from the same resolver the middleware uses. --}}
+  <script>document.documentElement.setAttribute('data-session-cookie', '{{ cookieName }}')</script>
   @include('AuthGuard')
 
   <div class="min-h-[100dvh] bg-canvas text-ink">

@@ -259,3 +259,104 @@ export async function reportBySlug(projectId: number, slug: string): Promise<Rec
 
   return row ?? null
 }
+
+export interface BlockUpdate {
+  id: number
+  layout?: BlockLayout
+  title?: string
+  query?: BlockQuery
+  viz?: Record<string, unknown>
+  body?: string
+}
+
+/**
+ * Apply a batch of block edits.
+ *
+ * A batch rather than one call per block, because a single drag moves several:
+ * dropping a block at the top pushes everything below it down, and saving those
+ * as six requests means six chances to end up with a layout nobody arranged.
+ *
+ * Validated before anything is written, and written in one transaction, so a
+ * rejected block leaves the grid exactly as it was rather than half-moved.
+ */
+export async function updateBlocks(reportId: number, updates: BlockUpdate[]): Promise<void> {
+  const errors: string[] = []
+
+  for (const update of updates) {
+    if (update.layout) {
+      const layout = validateBlockLayout(update.layout)
+      errors.push(...layout.errors.map(error => `Block ${update.id}: ${error}`))
+    }
+
+    if (update.query) {
+      const query = validateBlockQuery(update.query)
+      errors.push(...query.errors.map(error => `Block ${update.id}: ${error}`))
+    }
+  }
+
+  if (errors.length > 0)
+    throw new Error(errors.join(' '))
+
+  for (const update of updates) {
+    const sets: string[] = []
+    const params: unknown[] = []
+
+    const set = (column: string, value: unknown): void => {
+      params.push(value)
+      sets.push(`"${column}" = $${params.length}`)
+    }
+
+    if (update.layout) {
+      set('x', update.layout.x)
+      set('y', update.layout.y)
+      set('w', update.layout.w)
+      set('h', update.layout.h)
+    }
+
+    if (update.title !== undefined)
+      set('title', update.title)
+
+    if (update.query)
+      set('query', JSON.stringify(update.query))
+
+    if (update.viz)
+      set('viz', JSON.stringify(update.viz))
+
+    if (update.body !== undefined)
+      set('body', update.body)
+
+    if (sets.length === 0)
+      continue
+
+    set('updated_at', new Date().toISOString())
+    params.push(reportId, update.id)
+
+    // Scoped by report as well as by block id: a block id from another report
+    // must not be editable by pointing this at the wrong one.
+    await db.unsafe(
+      `UPDATE report_blocks SET ${sets.join(', ')} WHERE report_id = $${params.length - 1} AND id = $${params.length}`,
+      params,
+    )
+  }
+}
+
+/** Remove a block. Scoped by report for the same reason as updateBlocks. */
+export async function removeBlock(reportId: number, blockId: number): Promise<void> {
+  await db.unsafe(`DELETE FROM report_blocks WHERE report_id = $1 AND id = $2`, [reportId, blockId])
+}
+
+/**
+ * The first free row on the grid, so a new block lands under the others.
+ *
+ * Dropping it at 0,0 would put it on top of whatever is already there, and a
+ * builder that hides your work the moment you add to it teaches people not to
+ * add to it.
+ */
+export async function nextFreeRow(reportId: number): Promise<number> {
+  const rows = await db.unsafe(
+    `SELECT MAX(y + h) AS bottom FROM report_blocks WHERE report_id = $1`,
+    [reportId],
+  ) as Array<{ bottom: number | null }>
+
+  return Number(rows[0]?.bottom ?? 0)
+}

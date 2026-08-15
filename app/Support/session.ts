@@ -13,10 +13,20 @@
  * source. Calling `userFromCookies(cookies)` keeps the token inside this
  * module, where it is a local and cannot be published.
  */
-import { Auth } from '@stacksjs/auth'
+import { Auth, authCookieName } from '@stacksjs/auth'
 
-/** The cookie the session lives in. Matches what sign-in writes. */
-export const SESSION_COOKIE = 'reportshq_token'
+/**
+ * The cookie the session lives in, resolved from the framework rather than
+ * spelled out here.
+ *
+ * The `auth` middleware reads whatever `authCookieName()` returns, so hardcoding
+ * a second name is how a page authenticates happily while every request it makes
+ * comes back 401. That is exactly what happened: the builder rendered, and its
+ * save endpoint refused every call.
+ */
+export function sessionCookieName(): string {
+  return authCookieName()
+}
 
 export interface SessionUser {
   id: number
@@ -46,7 +56,7 @@ export interface Session {
  * when a dependency is having a bad minute.
  */
 export async function sessionFrom(cookies: Record<string, string> | undefined): Promise<Session> {
-  const raw = String(cookies?.[SESSION_COOKIE] ?? '').trim()
+  const raw = String(cookies?.[sessionCookieName()] ?? '').trim()
 
   if (!raw)
     return { user: null, stale: false }

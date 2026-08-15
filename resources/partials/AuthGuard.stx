@@ -8,15 +8,20 @@
      did not authenticate. The server cannot tell "no cookie yet" from "bad
      cookie" at render time, so it says which happened and this clears the stale
      one. Bouncing both identically puts anyone whose token expired into a
-     redirect loop. --}}
+     redirect loop.
+
+     The cookie name comes from the root element rather than being spelled out
+     here, because the `auth` middleware resolves it from config: two spellings
+     is how a page authenticates while every request it makes is refused. --}}
 <script>
 (function () {
-  if (!/(^|;)\s*reportshq_token=/.test(document.cookie)) {
+  var name = document.documentElement.getAttribute('data-session-cookie') || 'auth-token'
+  if (document.cookie.indexOf(name + '=') === -1) {
     window.location.replace('/login')
     return
   }
   if (document.getElementById('auth-pending')) {
-    document.cookie = 'reportshq_token=; path=/; max-age=0'
+    document.cookie = name + '=; path=/; max-age=0'
     window.location.replace('/login')
   }
 })()
