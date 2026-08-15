@@ -130,6 +130,14 @@ jobs:
           bun test ./packages
           bunx --bun tsc --noEmit -p packages/stacks/tsconfig.json
 
+      # The Laravel package is plain PHP with no Illuminate dependency in the
+      # parts worth testing, so this needs the php the runner already ships and
+      # nothing else: no composer install, no vendor directory, no network. It
+      # runs the same docs/fixtures/sdk-events.json contract the Stacks package
+      # asserts, which is what stops the two SDKs drifting.
+      - name: Laravel package
+        run: php packages/laravel/tests/run.php
+
       # The design system has no types and no tests of its own: a renamed custom
       # property resolves to the property's initial value rather than erroring,
       # and a documented contrast ratio can drift from the colour it describes
