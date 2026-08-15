@@ -102,6 +102,15 @@ one.
   shell `( ... &)`, which is killed when the call returns. `PORT` is pinned in
   `.env`; another project on the same port makes the views server exit without a
   word.
+- **Resolve the session cookie name from the framework**, never spell it out.
+  `sessionCookieName()` wraps `authCookieName()`, which is what the `auth`
+  middleware reads. Picking your own name makes pages authenticate happily while
+  every request they make returns 401, which looks like a permissions bug and is
+  not one.
+- **`request.input()` does not surface JSON body fields** on the API path. Parse
+  the body explicitly, as `routes/ingest.ts` and `routes/reports.ts` do. A
+  handler relying on `input()` sees empty values and answers "not found" for a
+  record that is right there.
 - **Never anchor a test fixture to "today".** Ingest clamps future timestamps, so
   a fixture at "today 08:00" collapses into the wrong bucket when the suite runs
   after UTC midnight. It broke CI once. Anchor to yesterday.
