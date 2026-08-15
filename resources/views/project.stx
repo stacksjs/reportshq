@@ -2,6 +2,8 @@
 // One project: its reports, and the integration state a new project cares
 // about most.
 import { db as __db } from '@stacksjs/database'
+import { planFor } from '../../app/Billing/limits'
+import { usageFor } from '../../app/Billing/usage'
 import { archivedReports, reportsFor } from '../../app/Reports/reports'
 import { accessFor, canAdminister } from '../../app/Support/access'
 import { param, sessionCookieName, sessionFrom } from '../../app/Support/session'
@@ -37,6 +39,30 @@ const rows = allowed
   ? await __db.unsafe(`SELECT COUNT(*) AS n FROM events WHERE project_id = $1`, [projectId]) as Array<{ n: number }>
   : []
 const eventCount = Number(rows[0]?.n ?? 0)
+
+// The event meter. Shown before it bites rather than after: a limit somebody
+// discovers by having their data refused is a limit the product failed to
+// mention.
+const eventUsage = allowed ? await usageFor(projectId, 'events') : null
+const planRow = allowed
+  ? (await __db.unsafe(`SELECT u.plan AS plan FROM projects p JOIN users u ON u.id = p.owner_id WHERE p.id = $1`, [projectId]))?.[0] as { plan: string } | undefined
+  : undefined
+const plan = planFor(planRow?.plan)
+
+const meter = eventUsage
+  ? {
+      used: eventUsage.used.toLocaleString('en-GB'),
+      allowance: eventUsage.allowance.toLocaleString('en-GB'),
+      percent: Math.min(100, Math.round(eventUsage.fraction * 100)),
+      // Three states rather than a single bar, because "nearly out" and "out"
+      // need different words and a different colour.
+      tone: eventUsage.atLimit ? 'text-warn' : eventUsage.nearLimit ? 'text-warn' : 'text-subtle',
+      near: eventUsage.nearLimit && !eventUsage.atLimit,
+      over: eventUsage.atLimit,
+      retention: plan.retentionDays,
+      planName: plan.name,
+    }
+  : null
 
 const cards = reports.map(report => ({
   name: String(report.name),
@@ -119,6 +145,31 @@ const curlSnippet = ingestKey
             <p class="mt-1 text-sm text-muted">
               <span class="num">{{ eventCount }}</span> events &middot; {{ project.timezone }}
             </p>
+
+            @if (meter)
+              <div class="mt-3 max-w-xs">
+                <div class="flex gap-2 justify-between items-baseline text-xs">
+                  <span class="text-subtle">This month</span>
+                  <span class="{{ meter.tone }}">
+                    <span class="num">{{ meter.used }}</span> / <span class="num">{{ meter.allowance }}</span>
+                  </span>
+                </div>
+                {{-- A bar rather than a number alone: the point of a meter is
+                     that somebody can see they are close without reading it. --}}
+                <div class="overflow-hidden mt-1 h-1 rounded-full bg-line">
+                  <div class="h-full rounded-full bg-accent" style="width: {{ meter.percent }}%"></div>
+                </div>
+                @if (meter.over)
+                  <p class="mt-1 text-xs text-warn">
+                    Past the {{ meter.planName }} allowance. Collection continues through the grace band, then stops.
+                  </p>
+                @elseif (meter.near)
+                  <p class="mt-1 text-xs text-warn">Approaching the {{ meter.planName }} allowance.</p>
+                @else
+                  <p class="mt-1 text-xs text-subtle">{{ meter.planName }} &middot; {{ meter.retention }} days of raw events</p>
+                @endif
+              </div>
+            @endif
           </div>
 
           @if (mayAdminister)

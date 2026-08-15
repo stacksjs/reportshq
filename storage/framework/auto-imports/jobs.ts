@@ -2,4 +2,5 @@
 export { default as RebuildRollups } from '../../../app/Jobs/RebuildRollups'
 export { default as ProvisionReports } from '../../../app/Jobs/ProvisionReports'
 export { default as SendWelcomeEmail } from '../../../app/Jobs/SendWelcomeEmail'
+export { default as PruneEvents } from '../../../app/Jobs/PruneEvents'
 export { default as Inspire } from '../../../app/Jobs/Inspire'

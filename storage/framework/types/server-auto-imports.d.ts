@@ -147,6 +147,7 @@ declare global {
   const RebuildRollups: typeof import('../../../app/Jobs/RebuildRollups')['default']
   const ProvisionReports: typeof import('../../../app/Jobs/ProvisionReports')['default']
   const SendWelcomeEmail: typeof import('../../../app/Jobs/SendWelcomeEmail')['default']
+  const PruneEvents: typeof import('../../../app/Jobs/PruneEvents')['default']
   const Inspire: typeof import('../../../app/Jobs/Inspire')['default']
   const QueryController: typeof import('../defaults/app/Controllers/QueryController')['default']
   const ComingSoonController: typeof import('../defaults/app/Controllers/ComingSoonController')['default']
