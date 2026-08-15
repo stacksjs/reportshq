@@ -114,8 +114,14 @@ jobs:
       # file at all (it is gitignored, being machine-local state). Without this
       # the suite fails in beforeAll with "no such table", which reads like a
       # broken test rather than a missing schema.
+      # --force because this database is created from nothing in this job, a
+      # few seconds earlier, so there is nothing a destructive change could
+      # destroy. `migrate` otherwise refuses them non-interactively, which is
+      # exactly the behaviour production should keep: a rebuild there blocks
+      # the deploy and asks a human, and the deploy step deliberately does NOT
+      # pass this flag.
       - name: Migrate the database
-        run: bun buddy migrate
+        run: bun buddy migrate --force
 
       - name: Test Suite
         run: bun run test
@@ -299,8 +305,14 @@ jobs:
       - name: Set Application Key
         run: bun buddy key:generate
 
+      # --force because this database is created from nothing in this job, a
+      # few seconds earlier, so there is nothing a destructive change could
+      # destroy. `migrate` otherwise refuses them non-interactively, which is
+      # exactly the behaviour production should keep: a rebuild there blocks
+      # the deploy and asks a human, and the deploy step deliberately does NOT
+      # pass this flag.
       - name: Migrate the database
-        run: bun buddy migrate
+        run: bun buddy migrate --force
 
       - name: Test Suite
         run: bun test tests/

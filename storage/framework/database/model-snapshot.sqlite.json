@@ -538,7 +538,7 @@
           },
           {
             "name": "properties",
-            "type": "string",
+            "type": "text",
             "isPrimaryKey": false,
             "isUnique": false,
             "isNullable": true,
@@ -546,7 +546,7 @@
           },
           {
             "name": "value",
-            "type": "integer",
+            "type": "float",
             "isPrimaryKey": false,
             "isUnique": false,
             "isNullable": true,
@@ -889,7 +889,7 @@
           },
           {
             "name": "query",
-            "type": "string",
+            "type": "text",
             "isPrimaryKey": false,
             "isUnique": false,
             "isNullable": true,
@@ -897,7 +897,7 @@
           },
           {
             "name": "viz",
-            "type": "string",
+            "type": "text",
             "isPrimaryKey": false,
             "isUnique": false,
             "isNullable": true,
@@ -1112,7 +1112,7 @@
           },
           {
             "name": "snapshot",
-            "type": "string",
+            "type": "text",
             "isPrimaryKey": false,
             "isUnique": false,
             "isNullable": false,
@@ -1769,7 +1769,7 @@
       }
     ]
   },
-  "hash": "0bc12c9a17cda60696c86520f3c5aaada023705d315a98caf2bce0646c657311",
+  "hash": "9f468672b4bfc4d1e5bb1516e62c2ca1b5eb4bae13a7610e61ccaa81a623e446",
   "dialect": "sqlite",
-  "updatedAt": "2026-08-15T04:10:48.893Z"
+  "updatedAt": "2026-08-15T21:25:55.594Z"
 }
