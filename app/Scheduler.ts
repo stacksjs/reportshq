@@ -35,6 +35,16 @@ export default function () {
     .everyTenMinutes()
     .setTimeZone('UTC')
 
+  // Delete raw events past their plan's retention window. Daily and in the
+  // quiet hours: retention is measured in days, so running more often would
+  // remove the same rows a few hours earlier at the cost of a scan per project
+  // per run. Rollups are left alone, so old ranges still total correctly.
+  schedule
+    .job('PruneEvents')
+    .daily()
+    .at('03:20')
+    .setTimeZone('UTC')
+
   // Run a custom action every five minutes
   // schedule.action('CleanupTempFiles').everyFiveMinutes()
 

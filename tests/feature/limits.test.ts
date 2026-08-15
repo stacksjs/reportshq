@@ -24,6 +24,7 @@ import {
 } from '../../app/Billing/limits'
 import { counterFor, ingestAllowanceFor, markNotified, monthKey, recordUsage, secondsUntilNextMonth, usageFor } from '../../app/Billing/usage'
 import { assertCan, LimitReached, limitResponse } from '../../app/Billing/gates'
+import { projectsToPrune, pruneProject } from '../../app/Jobs/PruneEvents'
 import { createReport } from '../../app/Reports/reports'
 import { createProject } from '../../app/Support/projects'
 
@@ -429,5 +430,103 @@ describe('creation gates', () => {
     // And passes where the tier does include it.
     await db.unsafe(`UPDATE users SET plan = 'pro' WHERE id = $1`, [owner.id])
     expect(assertCan(projectId, 'xlsx', 'XLSX export')).resolves.toBeUndefined()
+  })
+})
+
+describe('retention pruning', () => {
+  const day = 86_400_000
+
+  async function seedAged(projectId: number, daysAgo: number, count = 1): Promise<void> {
+    for (let index = 0; index < count; index++) {
+      await db.unsafe(
+        `INSERT INTO events (project_id, name, occurred_at, received_at, properties)
+         VALUES ($1, $2, $3, CURRENT_TIMESTAMP, '{}')`,
+        [projectId, 'user.login', new Date(Date.now() - daysAgo * day).toISOString()],
+      )
+    }
+  }
+
+  test('a dry run counts without deleting anything', async () => {
+    await seedAged(projectId, 400, 3)
+
+    const result = await pruneProject(projectId, 'free', { dryRun: true })
+
+    // The point of a dry run: it is how this gets verified against real data
+    // before being trusted with it.
+    expect(result.deleted).toBe(3)
+    const rows = await db.unsafe(`SELECT COUNT(*) AS n FROM events WHERE project_id = $1`, [projectId]) as Array<{ n: number }>
+    expect(Number(rows[0]?.n)).toBe(3)
+  })
+
+  test('events past the window go and recent ones stay', async () => {
+    await db.unsafe(`DELETE FROM events WHERE project_id = $1`, [projectId])
+    await seedAged(projectId, 400, 2)
+    await seedAged(projectId, 5, 2)
+
+    const result = await pruneProject(projectId, 'free')
+
+    expect(result.deleted).toBe(2)
+    const rows = await db.unsafe(`SELECT COUNT(*) AS n FROM events WHERE project_id = $1`, [projectId]) as Array<{ n: number }>
+    expect(Number(rows[0]?.n)).toBe(2)
+  })
+
+  test('a larger plan keeps what a smaller one would have deleted', async () => {
+    await db.unsafe(`DELETE FROM events WHERE project_id = $1`, [projectId])
+    // 60 days old: past Free's 30, inside Hobby's 90.
+    await seedAged(projectId, 60, 2)
+
+    expect((await pruneProject(projectId, 'hobby', { dryRun: true })).deleted).toBe(0)
+    expect((await pruneProject(projectId, 'free', { dryRun: true })).deleted).toBe(2)
+  })
+
+  test('rollups outlive the events they were built from', async () => {
+    // The promise in docs/limits.md: a report over an old range still shows
+    // correct totals, and only drilling into individual events goes away.
+    await db.unsafe(`DELETE FROM events WHERE project_id = $1`, [projectId])
+    await seedAged(projectId, 400, 2)
+
+    await db.unsafe(
+      `INSERT INTO event_rollups (project_id, name, day, event_count, unique_users, built_at)
+       VALUES ($1, 'user.login', '2025-01-01', 2, 1, CURRENT_TIMESTAMP)`,
+      [projectId],
+    )
+
+    await pruneProject(projectId, 'free')
+
+    const rollups = await db.unsafe(
+      `SELECT COUNT(*) AS n FROM event_rollups WHERE project_id = $1`,
+      [projectId],
+    ) as Array<{ n: number }>
+
+    expect(Number(rollups[0]?.n)).toBe(1)
+
+    await db.unsafe(`DELETE FROM event_rollups WHERE project_id = $1`, [projectId])
+  })
+
+  test('a project with nothing to prune reports zero rather than failing', async () => {
+    await db.unsafe(`DELETE FROM events WHERE project_id = $1`, [projectId])
+
+    const result = await pruneProject(projectId, 'free')
+    expect(result.deleted).toBe(0)
+    expect(result.more).toBeFalse()
+  })
+
+  test('a downgrade prunes on the next run, not retroactively at the moment of change', async () => {
+    // Which is exactly what the downgrade warning in the interface promises.
+    await db.unsafe(`DELETE FROM events WHERE project_id = $1`, [projectId])
+    await seedAged(projectId, 60, 2)
+
+    await db.unsafe(`UPDATE users SET plan = 'hobby' WHERE id = $1`, [owner.id])
+    expect((await pruneProject(projectId, 'hobby')).deleted).toBe(0)
+
+    await db.unsafe(`UPDATE users SET plan = 'free' WHERE id = $1`, [owner.id])
+    expect((await pruneProject(projectId, 'free')).deleted).toBe(2)
+  })
+
+  test('every project is listed with the tier it bills against', async () => {
+    const listed = (await projectsToPrune()).find(entry => entry.id === projectId)
+
+    expect(listed).toBeDefined()
+    expect(['free', 'hobby', 'pro']).toContain(listed!.tier)
   })
 })
