@@ -74,7 +74,7 @@
     "stx": "./buddy"
   },
   "dependencies": {
-    "@stacksjs/buddy": "^0.70.376",
+    "@stacksjs/buddy": "^0.70.378",
     "@stacksjs/dtsx": "^0.11.4",
     "@ts-charts/array": "^0.2.7",
     "@ts-charts/format": "^0.2.7",
@@ -83,7 +83,7 @@
     "bun-plugin-dtsx": "^0.11.4",
     "bun-query-builder": "^0.2.35",
     "pickier": "^0.1.51",
-    "stacks": "^0.70.376",
+    "stacks": "^0.70.378",
     "ts-pantry": "^0.11.21",
     "ts-rate-limiter": "^0.4.6"
   },
