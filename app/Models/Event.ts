@@ -106,7 +106,11 @@ export default defineModel({
      */
     value: {
       fillable: true,
-      validation: { rule: schema.number() },
+      // float, not number: an order total is 99.5 as often as it is 100, and
+      // `number()` maps to an integer column, which stored 99.5 as 100 without
+      // an error at any layer. SQLite does not enforce the declared type, so
+      // this only ever showed up on Postgres.
+      validation: { rule: schema.float() },
     },
 
     /** ISO 4217, present only when `value` is money. */

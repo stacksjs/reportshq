@@ -155,10 +155,7 @@ jobs:
   #
   # A red build therefore means NO deploy, silently and by construction.
   deploy:
-    # test-postgres is deliberately NOT in this list while it is red: a job
-    # marked continue-on-error still does not satisfy `needs`, so leaving it
-    # here skipped every deploy. Put it back when #32 reaches zero.
-    needs: [lint, typecheck, test]
+    needs: [lint, typecheck, test, test-postgres]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
@@ -238,27 +235,29 @@ jobs:
 
           exit $fail
 
-  # The same suite against Postgres.
+  # The same suite against Postgres, and a hard gate on the deploy.
   #
   # Production is Postgres and the suite defaults to SQLite, so every difference
   # between them is a bug that passes CI and fails on the live site. That is not
-  # hypothetical: nine SQL statements wrote booleans as 1 and 0, which SQLite
-  # accepts and Postgres rejects, and all 551 tests passed against it right up
-  # until a project was created on the deployed site.
+  # hypothetical. The first run of this job found 83 failures in code whose
+  # SQLite suite was entirely green:
+  #
+  #   - `?` placeholders, which Postgres rejects with an error naming the NEXT
+  #     token, so `a = ? AND b = ?` complains about "AND"
+  #   - SQLite-only `strftime` and `json_extract` through the query engine
+  #   - booleans written as 1 and 0, in nine statements and two fixtures
+  #   - a literal 'owner' unified with an enum column, which Postgres coerces
+  #     into the enum and refuses
+  #   - JSON blobs in varchar(255), because `schema.text()` produced the same
+  #     column as `schema.string()`
+  #   - `LIMIT -1 OFFSET n`, the SQLite idiom for "everything after n"
+  #   - `schema.number()` mapped to an integer column, silently rounding 99.5
+  #     to 100 with no error anywhere
+  #
+  # Every one of those shipped to a live site that served every page correctly.
+  # Keep this gating.
   test-postgres:
     runs-on: ubuntu-latest
-    # Reporting, not gating, and only for as long as it takes to clear the
-    # backlog it found. The app was written against SQLite, so the first run
-    # against Postgres surfaced 83 failures across four classes: `?`
-    # placeholders, SQLite-only date and JSON functions, integers written into
-    # boolean and enum columns, and integers coming back as strings. Most are
-    # fixed; the remainder are tracked in #32.
-    #
-    # Gating on a suite that is known-red would mean no deploys at all, which
-    # is worse than deploying a site whose SQLite suite is green. Flip this back
-    # to a hard gate the moment the count reaches zero, and do not let it sit
-    # here quietly: a non-blocking check nobody reads is the same as no check.
-    continue-on-error: true
 
     services:
       postgres:

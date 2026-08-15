@@ -238,7 +238,9 @@ export async function acceptInvite(user: { id: number, email?: string }, token: 
     [invite.id],
   )
 
-  return { projectId: invite.project_id, role: invite.role }
+  // Number, because AcceptResult promises one. Postgres returns an integer
+  // column as a string, so the raw value satisfied the type only on SQLite.
+  return { projectId: Number(invite.project_id), role: invite.role }
 }
 
 /**

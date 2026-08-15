@@ -39,7 +39,10 @@ export default defineModel({
     snapshot: {
       fillable: true,
       required: true,
-      validation: { rule: schema.string().required() },
+      // text, not string: this is every block of a report serialised, so it
+      // passes 255 characters with two blocks in it. A plain string becomes
+      // varchar(255), which SQLite ignores and Postgres enforces.
+      validation: { rule: schema.text().required() },
       factory: () => JSON.stringify({ blocks: [] }),
     },
 

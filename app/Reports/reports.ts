@@ -231,18 +231,27 @@ export async function saveRevision(
   if (reason !== 'autosave')
     return
 
-  // Prune by id rather than by timestamp: several autosaves can land in the
-  // same second, and CURRENT_TIMESTAMP would order them arbitrarily.
-  const stale = await db.unsafe(
-    `SELECT id FROM report_revisions
-      WHERE report_id = $1 AND reason = 'autosave'
-      ORDER BY id DESC
-      LIMIT -1 OFFSET $2`,
+  // Keep the newest MAX_AUTOSAVES and delete the rest, in one statement.
+  //
+  // Expressed as "not in the newest N" rather than the `LIMIT -1 OFFSET N`
+  // idiom this used to use: SQLite reads a negative limit as unbounded and
+  // Postgres refuses it outright with "LIMIT must not be negative", so the
+  // prune worked in development and threw on the real database.
+  //
+  // Pruned by id rather than by timestamp because several autosaves can land
+  // in the same second, and CURRENT_TIMESTAMP would order them arbitrarily.
+  await db.unsafe(
+    `DELETE FROM report_revisions
+      WHERE report_id = $1
+        AND reason = 'autosave'
+        AND id NOT IN (
+          SELECT id FROM report_revisions
+           WHERE report_id = $1 AND reason = 'autosave'
+           ORDER BY id DESC
+           LIMIT $2
+        )`,
     [reportId, MAX_AUTOSAVES],
-  ) as Array<{ id: number }>
-
-  for (const row of stale)
-    await db.unsafe(`DELETE FROM report_revisions WHERE id = $1`, [row.id])
+  )
 }
 
 /**

@@ -60,7 +60,7 @@
           },
           {
             "name": "value",
-            "type": "integer",
+            "type": "float",
             "isPrimaryKey": false,
             "isUnique": false,
             "isNullable": true,
@@ -1131,7 +1131,7 @@
           },
           {
             "name": "snapshot",
-            "type": "string",
+            "type": "text",
             "isPrimaryKey": false,
             "isUnique": false,
             "isNullable": false,
@@ -1780,7 +1780,7 @@
       }
     ]
   },
-  "hash": "8ae4658c27bad4fe5f4dc6b2996f4f04454aa460c9b87bcc93f53a5005cda87f",
+  "hash": "127b7c6fe99ebc166bb7dfb8864729a9d7b99cc6c6c86e3162fef9602dfd8190",
   "dialect": "postgres",
-  "updatedAt": "2026-08-15T20:07:01.925Z"
+  "updatedAt": "2026-08-15T21:21:53.381Z"
 }

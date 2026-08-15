@@ -189,7 +189,7 @@ describe('the schedule list', () => {
   beforeAll(async () => {
     await db.unsafe(
       `INSERT INTO report_schedules (report_id, cadence, hour, timezone, recipients, format, is_active, created_by_id, created_at)
-       VALUES ($1, 'daily', 8, 'UTC', $2, 'link', 1, $3, CURRENT_TIMESTAMP)`,
+       VALUES ($1, 'daily', 8, 'UTC', $2, 'link', TRUE, $3, CURRENT_TIMESTAMP)`,
       [reportId, JSON.stringify(['reader@example.com']), owner.id],
     )
     const row = (await db.unsafe(`SELECT id FROM report_schedules WHERE report_id = $1`, [reportId]))?.[0] as { id: number }

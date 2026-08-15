@@ -67,7 +67,9 @@ route.get('/', async (request: EnhancedRequest) => {
   // read most casually and needed least.
   return response.json({
     projects: projects.map(project => ({
-      id: project.id,
+      // Number, because the API contract says id is a number. Postgres returns
+      // an integer column as a string, so a client comparing with === breaks.
+      id: Number(project.id),
       name: project.name,
       slug: project.slug,
       timezone: project.timezone,
@@ -115,7 +117,9 @@ route.get('/{id}', async (request: EnhancedRequest) => {
     return notFound()
 
   const body: Record<string, unknown> = {
-    id: project.id,
+    // Number, because the API contract says id is a number. Postgres returns
+    // an integer column as a string, so a client comparing with === breaks.
+    id: Number(project.id),
     name: project.name,
     slug: project.slug,
     timezone: project.timezone,
