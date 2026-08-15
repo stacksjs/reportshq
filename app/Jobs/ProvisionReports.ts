@@ -35,14 +35,22 @@ export default new Job({
     ) as Array<{ id: number, owner_id: number }>
 
     let created = 0
+    let upgraded = 0
 
     for (const project of projects) {
       try {
         const result = await provisionTemplates(Number(project.id), { id: Number(project.owner_id) })
         created += result.created.length
+        upgraded += result.upgraded.length
 
         if (result.created.length > 0)
           console.log(`[templates] project ${project.id}: created ${result.created.join(', ')}`)
+
+        // Logged separately from creation because it is the riskier half: this
+        // is the engine rewriting a report that already existed, and if it ever
+        // does that to one somebody had arranged, this line is the evidence.
+        if (result.upgraded.length > 0)
+          console.log(`[templates] project ${project.id}: upgraded ${result.upgraded.join(', ')}`)
       }
       catch (error) {
         // One project's failure must not stop the rest, or a single malformed
@@ -53,5 +61,8 @@ export default new Job({
 
     if (created > 0)
       console.log(`[templates] created ${created} report${created === 1 ? '' : 's'}`)
+
+    if (upgraded > 0)
+      console.log(`[templates] upgraded ${upgraded} report${upgraded === 1 ? '' : 's'}`)
   },
 })

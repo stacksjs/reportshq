@@ -1098,7 +1098,8 @@
             "enumValues": [
               "autosave",
               "publish",
-              "restore"
+              "restore",
+              "upgrade"
             ]
           },
           {
@@ -1649,7 +1650,7 @@
       }
     ]
   },
-  "hash": "667aea56f0a64b773a0c70161d93938dac48df1137c0ee9fc93bb5c8f05bf3f3",
+  "hash": "c9e24a9584954ad8115fc8cc12032a64d5a8dcf5f99cda535e014e5ec1b94513",
   "dialect": "sqlite",
-  "updatedAt": "2026-08-14T23:26:58.495Z"
+  "updatedAt": "2026-08-15T01:54:38.214Z"
 }

@@ -47,11 +47,19 @@ export default defineModel({
      * `autosave` is written as edits settle; `publish` marks what was served
      * to viewers at a point in time. Both are restorable, and the distinction
      * is what lets a "restore last published" exist.
+     *
+     * `upgrade` is written by the template engine before it rewrites an
+     * auto-created report onto a newer template. It is deliberately not an
+     * `autosave`: a person's own edits are what make a report theirs, and
+     * "has this been edited by a human" is the question the engine asks before
+     * it touches anything. Filing its own writes under the same reason would
+     * make the engine's first upgrade look like an edit and freeze every
+     * subsequent one.
      */
     reason: {
       fillable: true,
       default: 'autosave',
-      validation: { rule: schema.enum(['autosave', 'publish', 'restore']) },
+      validation: { rule: schema.enum(['autosave', 'publish', 'restore', 'upgrade']) },
       factory: () => 'autosave',
     },
 

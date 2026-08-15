@@ -12,7 +12,7 @@
  */
 import type { BlockInput } from './reports'
 import { db } from '@stacksjs/database'
-import { addBlock, createReport, publishReport } from './reports'
+import { addBlock, createReport, publishReport, saveRevision } from './reports'
 
 export interface ReportTemplate {
   /** Stable identity. Never renamed: it is how a provisioned report is matched. */
@@ -177,6 +177,132 @@ export const TEMPLATES: ReportTemplate[] = [
 export interface ProvisionResult {
   created: string[]
   skipped: string[]
+  /** Template keys whose existing report was rewritten onto a newer version. */
+  upgraded: string[]
+}
+
+/**
+ * Has a person edited this report?
+ *
+ * The engine may only rewrite reports nobody has touched, so this is the
+ * question everything about upgrades turns on, and it is answered from the
+ * revision log rather than from timestamps. `autosave` and `restore` are
+ * written only by the builder, in response to somebody moving, configuring or
+ * reverting something. `publish` is written by provisioning, and `upgrade` by
+ * the engine itself, so neither counts as a human touching the report.
+ *
+ * Counting revisions instead would be wrong the moment the engine wrote its
+ * own: the first upgrade would make the report look edited and every later one
+ * would be refused.
+ */
+async function editedByHand(reportId: number): Promise<boolean> {
+  const rows = await db.unsafe(
+    `SELECT COUNT(*) AS touched FROM report_revisions
+      WHERE report_id = $1 AND reason IN ('autosave', 'restore')`,
+    [reportId],
+  ) as Array<{ touched: number }>
+
+  return Number(rows[0]?.touched ?? 0) > 0
+}
+
+export interface UpgradeCandidate {
+  reportId: number
+  key: string
+  name: string
+  from: number
+  to: number
+  /** False when somebody has edited the report, which makes it theirs. */
+  automatic: boolean
+}
+
+/**
+ * Reports sitting on an older version of their template.
+ *
+ * Read-only, and it reports the edited ones too. A person whose report was
+ * excluded from an improvement should be able to find out that it was, rather
+ * than wondering why their Commerce overview looks different from a colleague's.
+ */
+export async function upgradableReports(projectId: number): Promise<UpgradeCandidate[]> {
+  const rows = await db.unsafe(
+    `SELECT id, name, template_key, template_version FROM reports
+      WHERE project_id = $1 AND template_key IS NOT NULL AND deleted_at IS NULL`,
+    [projectId],
+  ) as Array<{ id: number, name: string, template_key: string, template_version: number | null }>
+
+  const candidates: UpgradeCandidate[] = []
+
+  for (const row of rows) {
+    const template = TEMPLATES.find(entry => entry.key === row.template_key)
+    if (!template)
+      continue
+
+    const from = Number(row.template_version ?? 0)
+    if (from >= template.version)
+      continue
+
+    candidates.push({
+      reportId: Number(row.id),
+      key: template.key,
+      name: row.name,
+      from,
+      to: template.version,
+      automatic: !(await editedByHand(Number(row.id))),
+    })
+  }
+
+  return candidates
+}
+
+/**
+ * Rewrite one report onto the current version of its template.
+ *
+ * A revision is written **before** the blocks are replaced, so the previous
+ * layout stays restorable. That matters even for an untouched report: the
+ * upgrade is the engine's judgement, not the person's, and an automatic change
+ * that cannot be undone is a change nobody asked to be permanent.
+ *
+ * `force` is what an explicit "upgrade anyway" button passes. Without it an
+ * edited report is left alone and the caller is told why, because overwriting
+ * somebody's arrangement to deliver an improvement they did not ask for is the
+ * product arguing with them again.
+ */
+export async function upgradeTemplateReport(
+  reportId: number,
+  user: { id: number },
+  options: { force?: boolean } = {},
+): Promise<{ upgraded: boolean, reason?: 'unknown-template' | 'up-to-date' | 'edited' }> {
+  const row = (await db.unsafe(
+    `SELECT id, template_key, template_version FROM reports WHERE id = $1 AND deleted_at IS NULL`,
+    [reportId],
+  ))?.[0] as { id: number, template_key: string | null, template_version: number | null } | undefined
+
+  const template = TEMPLATES.find(entry => entry.key === row?.template_key)
+  if (!row || !template)
+    return { upgraded: false, reason: 'unknown-template' }
+
+  if (Number(row.template_version ?? 0) >= template.version)
+    return { upgraded: false, reason: 'up-to-date' }
+
+  if (!options.force && await editedByHand(reportId))
+    return { upgraded: false, reason: 'edited' }
+
+  await saveRevision(reportId, user, 'upgrade')
+
+  // Replaced wholesale rather than diffed. A template's blocks are defined as a
+  // set, and matching old blocks to new ones by title or position would guess
+  // at an intent the template never expressed; the revision above is what makes
+  // the destructive version safe.
+  await db.unsafe(`DELETE FROM report_blocks WHERE report_id = $1`, [reportId])
+
+  for (const block of template.blocks)
+    await addBlock(reportId, block)
+
+  await db.unsafe(
+    `UPDATE reports SET template_version = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+    [template.version, reportId],
+  )
+
+  return { upgraded: true }
 }
 
 /**
@@ -197,6 +323,7 @@ export async function provisionTemplates(
 ): Promise<ProvisionResult> {
   const created: string[] = []
   const skipped: string[] = []
+  const upgraded: string[] = []
 
   const settings = (await db.unsafe(
     `SELECT auto_reports_enabled FROM projects WHERE id = $1 AND deleted_at IS NULL`,
@@ -204,12 +331,12 @@ export async function provisionTemplates(
   ))?.[0] as { auto_reports_enabled: number | boolean } | undefined
 
   if (!settings)
-    return { created, skipped }
+    return { created, skipped, upgraded }
 
   // A project can turn this off, and that decision is respected before any
   // work is done rather than after.
   if (!settings.auto_reports_enabled)
-    return { created, skipped: TEMPLATES.map(template => template.key) }
+    return { created, skipped: TEMPLATES.map(template => template.key), upgraded }
 
   const seen = new Set(
     ((await db.unsafe(
@@ -226,6 +353,19 @@ export async function provisionTemplates(
       [projectId],
     )) as Array<{ template_key: string }>).map(row => row.template_key),
   )
+
+  // Reports already provisioned may be sitting on an older template. An
+  // untouched one is brought forward here, which is the only way a template
+  // improvement ever reaches a customer who is not looking for it; an edited
+  // one is left alone and surfaces through upgradableReports() instead.
+  for (const candidate of await upgradableReports(projectId)) {
+    if (!candidate.automatic)
+      continue
+
+    const result = await upgradeTemplateReport(candidate.reportId, user)
+    if (result.upgraded)
+      upgraded.push(candidate.key)
+  }
 
   for (const template of TEMPLATES) {
     if (already.has(template.key)) {
@@ -256,7 +396,7 @@ export async function provisionTemplates(
     created.push(template.key)
   }
 
-  return { created, skipped }
+  return { created, skipped, upgraded }
 }
 
 /** Which templates a project would get, without creating anything. */

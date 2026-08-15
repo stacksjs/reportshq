@@ -193,7 +193,7 @@ function safeParse(value: unknown): Record<string, unknown> {
 export async function saveRevision(
   reportId: number,
   user: { id: number },
-  reason: 'autosave' | 'publish' | 'restore' = 'autosave',
+  reason: 'autosave' | 'publish' | 'restore' | 'upgrade' = 'autosave',
 ): Promise<void> {
   const blocks = await blocksOf(reportId)
 

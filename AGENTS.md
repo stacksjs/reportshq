@@ -114,6 +114,11 @@ one.
 - **Never anchor a test fixture to "today".** Ingest clamps future timestamps, so
   a fixture at "today 08:00" collapses into the wrong bucket when the suite runs
   after UTC midnight. It broke CI once. Anchor to yesterday.
+- **`./buddy lint` only sees files git already tracks**, so a file you just wrote
+  is skipped and the project reports clean without it ever being opened. CI reads
+  it one commit later and fails. Either `git add` before linting, or run
+  `bunx pickier lint .`, which reads the working tree. Fixed upstream in
+  stacksjs/stacks@064e38b; this note can go once that release lands here.
 
 
 - **stx templates take bare variable names, not Blade's `$`.** A server value is

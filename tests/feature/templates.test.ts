@@ -10,8 +10,8 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { db } from '@stacksjs/database'
 import { storeEvents } from '../../app/Events/ingest'
 import { runQuery } from '../../app/Reports/engine'
-import { blocksOf, reportsFor } from '../../app/Reports/reports'
-import { availableTemplates, provisionTemplates, TEMPLATES } from '../../app/Reports/templates'
+import { addBlock, blocksOf, createReport, reportsFor, saveRevision, updateBlocks } from '../../app/Reports/reports'
+import { availableTemplates, provisionTemplates, TEMPLATES, upgradableReports, upgradeTemplateReport } from '../../app/Reports/templates'
 import { validateBlockLayout, validateBlockQuery } from '../../app/Reports/schema'
 import { createProject } from '../../app/Support/projects'
 
@@ -239,5 +239,139 @@ describe('provisioning', () => {
   test('a project that does not exist is a no-op rather than a throw', async () => {
     const result = await provisionTemplates(999_999, owner)
     expect(result.created).toHaveLength(0)
+  })
+})
+
+describe('template versions', () => {
+  /** Pretend the shipped template moved on, without editing the shipped file. */
+  async function pinToOlderVersion(reportId: number): Promise<void> {
+    await db.unsafe(`UPDATE reports SET template_version = 0 WHERE id = $1`, [reportId])
+  }
+
+  async function provisionedOverview(name: string): Promise<{ project: number, report: number }> {
+    const id = await project(name)
+    await storeEvents(id, [{ name: 'commerce.order.created', occurred_at: yesterday, value: 10 }])
+    await provisionTemplates(id, owner)
+    const report = (await reportsFor(id)).find(entry => entry.template_key === 'commerce.overview')!
+    return { project: id, report: Number(report.id) }
+  }
+
+  test('a report on the current version is not a candidate', async () => {
+    const { project: id } = await provisionedOverview('Current')
+    expect(await upgradableReports(id)).toHaveLength(0)
+  })
+
+  test('an older report is offered, and says it can be done automatically', async () => {
+    const { project: id, report } = await provisionedOverview('Older')
+    await pinToOlderVersion(report)
+
+    const candidates = await upgradableReports(id)
+    expect(candidates).toHaveLength(1)
+    expect(candidates[0]!.key).toBe('commerce.overview')
+    expect(candidates[0]!.to).toBe(1)
+    expect(candidates[0]!.automatic).toBeTrue()
+  })
+
+  test('an untouched report is upgraded, and its blocks come back as the template defines them', async () => {
+    const { report } = await provisionedOverview('Untouched')
+    await pinToOlderVersion(report)
+    // Something the template does not define, to prove the rewrite is a
+    // replacement rather than a merge.
+    await addBlock(report, { kind: 'text', layout: { x: 0, y: 20, w: 12, h: 1 }, body: 'stale' })
+
+    const result = await upgradeTemplateReport(report, owner)
+    expect(result.upgraded).toBeTrue()
+
+    const blocks = await blocksOf(report)
+    const template = TEMPLATES.find(entry => entry.key === 'commerce.overview')!
+    expect(blocks).toHaveLength(template.blocks.length)
+    expect(blocks.some(block => block.body === 'stale')).toBeFalse()
+
+    const row = (await db.unsafe(`SELECT template_version FROM reports WHERE id = $1`, [report]))?.[0] as { template_version: number }
+    expect(Number(row.template_version)).toBe(1)
+  })
+
+  test('the layout that was replaced is still restorable', async () => {
+    // An automatic change nobody asked for must not also be irreversible.
+    const { report } = await provisionedOverview('Restorable')
+    await pinToOlderVersion(report)
+    await upgradeTemplateReport(report, owner)
+
+    const revisions = await db.unsafe(
+      `SELECT reason FROM report_revisions WHERE report_id = $1 ORDER BY id`,
+      [report],
+    ) as Array<{ reason: string }>
+
+    expect(revisions.map(revision => revision.reason)).toContain('upgrade')
+  })
+
+  test('an edited report is left alone', async () => {
+    const { project: id, report } = await provisionedOverview('Edited')
+    await pinToOlderVersion(report)
+
+    // What the builder writes the moment somebody moves a block.
+    await saveRevision(report, owner, 'autosave')
+    await updateBlocks(report, [{ id: Number((await blocksOf(report))[0]!.id), title: 'Mine' }])
+
+    const result = await upgradeTemplateReport(report, owner)
+    expect(result.upgraded).toBeFalse()
+    expect(result.reason).toBe('edited')
+
+    // Still listed, so the person can see why theirs differs from a colleague's.
+    const candidates = await upgradableReports(id)
+    expect(candidates[0]!.automatic).toBeFalse()
+
+    expect((await blocksOf(report)).some(block => block.title === 'Mine')).toBeTrue()
+  })
+
+  test('an edited report can be upgraded when it is explicitly asked for', async () => {
+    const { report } = await provisionedOverview('Forced')
+    await pinToOlderVersion(report)
+    await saveRevision(report, owner, 'autosave')
+
+    const result = await upgradeTemplateReport(report, owner, { force: true })
+    expect(result.upgraded).toBeTrue()
+  })
+
+  test('provisioning upgrades untouched reports and skips edited ones', async () => {
+    const { project: id, report } = await provisionedOverview('Sweep')
+    await pinToOlderVersion(report)
+
+    const first = await provisionTemplates(id, owner)
+    expect(first.upgraded).toContain('commerce.overview')
+
+    // And again: the engine's own revision must not make the report look edited.
+    await pinToOlderVersion(report)
+    const second = await provisionTemplates(id, owner)
+    expect(second.upgraded).toContain('commerce.overview')
+  })
+
+  test('upgrading twice in a row is a no-op the second time', async () => {
+    const { report } = await provisionedOverview('Twice upgraded')
+    await pinToOlderVersion(report)
+
+    expect((await upgradeTemplateReport(report, owner)).upgraded).toBeTrue()
+    const again = await upgradeTemplateReport(report, owner)
+    expect(again.upgraded).toBeFalse()
+    expect(again.reason).toBe('up-to-date')
+  })
+
+  test('a report that is not from a template is never upgraded', async () => {
+    const id = await project('Handmade')
+    const report = await createReport(id, owner, { name: 'Mine' })
+
+    const result = await upgradeTemplateReport(Number(report.id), owner)
+    expect(result.upgraded).toBeFalse()
+    expect(result.reason).toBe('unknown-template')
+    expect(await upgradableReports(id)).toHaveLength(0)
+  })
+
+  test('a deleted report is not upgraded', async () => {
+    const { project: id, report } = await provisionedOverview('Deleted upgrade')
+    await pinToOlderVersion(report)
+    await db.unsafe(`UPDATE reports SET deleted_at = CURRENT_TIMESTAMP WHERE id = $1`, [report])
+
+    expect(await upgradableReports(id)).toHaveLength(0)
+    expect((await upgradeTemplateReport(report, owner)).upgraded).toBeFalse()
   })
 })
