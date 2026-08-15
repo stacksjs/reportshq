@@ -58,7 +58,12 @@ const EXPORT_DIR = 'storage/exports'
  */
 function sharedState(seed: boolean) {
   return [
-    { path: 'database', target: `${STATE_DIR}/database`, seed },
+    // The FILE, not the `database` directory. Sharing the directory replaces
+    // the release's own `database/migrations/*.sql` with a directory holding
+    // nothing but the sqlite file, so `migrate` finds no migrations, reports
+    // "already up to date", and creates only the framework's auth tables. The
+    // site then serves perfectly until the first request touches `users`.
+    { path: DB_PATH, target: `${STATE_DIR}/reportshq.sqlite`, seed },
     { path: EXPORT_DIR, target: `${STATE_DIR}/exports`, seed },
   ]
 }
