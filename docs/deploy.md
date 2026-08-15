@@ -118,6 +118,20 @@ delete them at the moment they would be needed.
 **Before every migration.** `buddy deploy` takes one immediately before it
 migrates. That covers a migration that did something nobody meant.
 
+It works by splicing a `db:backup` in front of the preStart step that migrates,
+and by deriving the invocation from that step, so **how the preStart is written
+decides whether the dump happens at all**. It silently did not for a stretch of
+this project: the echo markers between preStart steps meant
+`echo "[reportshq] preStart: migrate"` was found first, a backup could not be
+derived from an echo, and it was skipped. The deploy said so and passed:
+
+> No pre-migration backup for "main": its migrate step (echo "[reportshq]
+> preStart: migrate") is not a buddy invocation this can reuse.
+
+Fixed in Stacks 0.70.378, which ignores quoted text when looking for the migrate
+step. **When a deploy log carries that warning, the dump was not taken**, whatever
+this page or the launch checklist says. Grep for it after changing preStart.
+
 **Nightly at 02:40 UTC**, keeping seven, from `app/Scheduler.ts`. That covers
 the day nobody deployed. It runs before `PruneEvents` at 03:20 so a night's dump
 is taken while the rows retention is about to delete are still in it.
