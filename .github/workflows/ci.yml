@@ -227,15 +227,30 @@ jobs:
         run: |
           set -uo pipefail
           fail=0
+
+          # One helper, so every check retries the same way. The POST below
+          # used to be written out longhand without the retry flags, and a
+          # single connection blip after seven successful requests failed a
+          # deploy that had already succeeded. A verification step that cries
+          # wolf is worse than none: the next red run gets waved through.
+          #
+          # `-w` prints 000 itself when the connection never happened, so there
+          # is no `|| echo` fallback here. Having both printed 000000, which
+          # matches no expected code and reads like a different failure.
+          probe() {
+            curl -sS -o /dev/null -w '%{http_code}' \
+              --retry 5 --retry-delay 5 --retry-all-errors --max-time 30 "$@"
+          }
+
           for path in / /pricing /features /compare/metabase /docs /sitemap.xml /robots.txt; do
-            code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 5 --retry-all-errors "https://reportshq.org${path}" || echo 000)
+            code=$(probe "https://reportshq.org${path}")
             printf '%-24s %s\n' "$path" "$code"
             [ "$code" = "200" ] || fail=1
           done
 
           # An unauthenticated write must be refused rather than accepted or
           # 404'd. 401 is the healthy answer here.
-          code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST https://reportshq.org/ingest || echo 000)
+          code=$(probe -X POST https://reportshq.org/ingest)
           printf '%-24s %s (expect 401)\n' "POST /ingest" "$code"
           [ "$code" = "401" ] || fail=1
 
