@@ -2,6 +2,7 @@ import type { EnhancedRequest } from '@stacksjs/bun-router'
 import { response, route } from '@stacksjs/router'
 import { storeEvents } from '../app/Events/ingest'
 import { checkIngestLimits, clientAddress } from '../app/Events/limits'
+import { ingestAllowanceFor, recordUsage } from '../app/Billing/usage'
 import { LIMITS } from '../app/Events/normalize'
 import { projectForIngestKey } from '../app/Support/access'
 
@@ -56,6 +57,9 @@ route.post('/ingest', async (request: EnhancedRequest) => {
 
   const projectId = Number(project.id)
   const address = clientAddress(request)
+  // The project's own zone decides which month a write counts against, so a
+  // month boundary means the same thing to the customer as to the invoice.
+  const timezone = String(project.timezone ?? 'UTC')
 
   const limit = await checkIngestLimits(projectId, address)
   if (!limit.ok) {
@@ -104,7 +108,46 @@ route.post('/ingest', async (request: EnhancedRequest) => {
   // gets its first 500 events through while it learns.
   const skipped = Math.max(0, incoming.length - LIMITS.BATCH)
 
+  // The plan quota.
+  //
+  // Checked here rather than before the body is parsed, deliberately. Refusing
+  // early would be cheaper, but it would mean refusing an unknown number of
+  // events, and "we dropped some of your data" is a thing a customer is owed a
+  // number for. The parse is bounded by the body cap, and the rate limiter
+  // above already bounds how often a refused project can reach this point.
+  //
+  // Separate from that rate limit on purpose: it says "too fast", this says
+  // "too much this month". Conflating them would tell somebody to slow down
+  // when what they need is a larger plan.
+  const quota = await ingestAllowanceFor(projectId, timezone)
+
+  if (quota.verdict === 'reject') {
+    const refused = Math.min(incoming.length, LIMITS.BATCH)
+    await recordUsage(projectId, timezone, { rejected: refused })
+
+    return response.json(
+      {
+        ok: false,
+        error: 'quota_exceeded',
+        // Actionable rather than just a status: a client that logs this can
+        // tell somebody what to do about it.
+        message: `This project has used its ${quota.allowance.toLocaleString('en-GB')} events for the month, plus its grace allowance. Upgrade to keep collecting.`,
+        plan: quota.tier,
+        used: quota.used,
+        allowance: quota.allowance,
+        rejected: refused,
+        resets_in: quota.resetsIn,
+      },
+      { status: 429, headers: { 'Retry-After': String(quota.resetsIn) } },
+    )
+  }
+
   const { stored, dropped } = await storeEvents(projectId, incoming)
+
+  // Metered after the write, with what was actually stored. Counting the
+  // request's intent rather than its result would bill somebody for events the
+  // validator threw away.
+  await recordUsage(projectId, timezone, { events: stored })
 
   return response.json(
     {
@@ -112,6 +155,15 @@ route.post('/ingest', async (request: EnhancedRequest) => {
       stored,
       dropped: dropped.length,
       skipped,
+      // Announced while it is still true, rather than after the wall. A client
+      // that logs this has a month's warning; one that ignores it is no worse
+      // off than before.
+      ...(quota.verdict === 'grace'
+        ? {
+            warning: 'over_quota',
+            message: `This project is past its ${quota.allowance.toLocaleString('en-GB')} events for the month and is inside its grace allowance. Collection stops when that runs out.`,
+          }
+        : {}),
       // The reasons, not just the count. A client that logs this can fix its
       // own payload without opening a support conversation. Bounded so a
       // pathological batch cannot make the response larger than the request.

@@ -102,8 +102,25 @@ export default defineModel({
       factory: () => 'password1234',
     },
 
-    avatar: {
+    /**
+     * The account's plan.
+     *
+     * Kept on the user rather than derived from Stripe on every check. A
+     * limit decision happens on the ingest path, and asking a payment provider
+     * whether somebody may write an event would put their availability in
+     * front of our customers' data. Stripe's webhooks write here (#17); every
+     * gate reads here.
+     */
+    plan: {
       order: 4,
+      fillable: true,
+      default: 'free',
+      validation: { rule: schema.enum(['free', 'hobby', 'pro']) },
+      factory: () => 'free',
+    },
+
+    avatar: {
+      order: 5,
       fillable: true,
       validation: {
         rule: schema.string().max(2048),

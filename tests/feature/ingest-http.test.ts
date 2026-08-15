@@ -35,6 +35,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.unsafe(`DELETE FROM events WHERE project_id = $1`, [projectId])
+  await db.unsafe(`DELETE FROM usage_counters WHERE project_id = $1`, [projectId])
   await db.unsafe(`DELETE FROM projects WHERE id = $1`, [projectId])
   await db.unsafe(`DELETE FROM users WHERE id = $1`, [owner.id])
 })

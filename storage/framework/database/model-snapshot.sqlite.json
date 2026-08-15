@@ -71,6 +71,20 @@
             "isUnique": true,
             "isNullable": true,
             "hasDefault": false
+          },
+          {
+            "name": "plan",
+            "type": "enum",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": true,
+            "hasDefault": true,
+            "defaultValue": "free",
+            "enumValues": [
+              "free",
+              "hobby",
+              "pro"
+            ]
           }
         ],
         "indexes": [
@@ -1664,10 +1678,98 @@
             "type": "unique"
           }
         ]
+      },
+      {
+        "table": "usage_counters",
+        "columns": [
+          {
+            "name": "id",
+            "type": "bigint",
+            "isPrimaryKey": true,
+            "isUnique": false,
+            "isNullable": false,
+            "hasDefault": false
+          },
+          {
+            "name": "project_id",
+            "type": "bigint",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": false,
+            "hasDefault": false,
+            "references": {
+              "table": "projects",
+              "column": "id"
+            }
+          },
+          {
+            "name": "month",
+            "type": "string",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": false,
+            "hasDefault": false,
+            "maxLength": 7
+          },
+          {
+            "name": "events",
+            "type": "integer",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": true,
+            "hasDefault": true,
+            "defaultValue": 0
+          },
+          {
+            "name": "rejected",
+            "type": "integer",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": true,
+            "hasDefault": true,
+            "defaultValue": 0
+          },
+          {
+            "name": "notified_at_percent",
+            "type": "integer",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": true,
+            "hasDefault": true,
+            "defaultValue": 0
+          },
+          {
+            "name": "created_at",
+            "type": "datetime",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": false,
+            "hasDefault": true,
+            "defaultValue": "CURRENT_TIMESTAMP"
+          },
+          {
+            "name": "updated_at",
+            "type": "datetime",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": true,
+            "hasDefault": false
+          }
+        ],
+        "indexes": [
+          {
+            "name": "usage_counters_project_month_unique",
+            "columns": [
+              "project_id",
+              "month"
+            ],
+            "type": "unique"
+          }
+        ]
       }
     ]
   },
-  "hash": "217f81777b08f9e8642738d20529e6df8ef6d309667999acc930c9b7a0ac7454",
+  "hash": "0bc12c9a17cda60696c86520f3c5aaada023705d315a98caf2bce0646c657311",
   "dialect": "sqlite",
-  "updatedAt": "2026-08-15T01:58:49.872Z"
+  "updatedAt": "2026-08-15T04:10:48.893Z"
 }

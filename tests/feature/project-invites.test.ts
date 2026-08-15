@@ -49,6 +49,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await db.unsafe(`DELETE FROM project_invites WHERE project_id = $1`, [projectId])
   await db.unsafe(`DELETE FROM project_members WHERE project_id = $1`, [projectId])
+  await db.unsafe(`DELETE FROM usage_counters WHERE project_id = $1`, [projectId])
   await db.unsafe(`DELETE FROM projects WHERE id = $1`, [projectId])
   await db.unsafe(`DELETE FROM users WHERE email LIKE $1`, [`%-inv-${stamp}@reportshq.test`])
 })

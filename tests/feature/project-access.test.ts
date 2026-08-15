@@ -76,6 +76,7 @@ beforeAll(async () => {
 afterAll(async () => {
   for (const id of [f.project.id, f.otherProject.id, f.deletedProject.id])
     await db.unsafe(`DELETE FROM project_members WHERE project_id = $1`, [id])
+  await db.unsafe(`DELETE FROM usage_counters WHERE project_id IN (SELECT id FROM projects WHERE name LIKE $1)`, [`%${stamp}`])
   await db.unsafe(`DELETE FROM projects WHERE name LIKE $1`, [`%${stamp}`])
   await db.unsafe(`DELETE FROM users WHERE email LIKE $1`, [`%-${stamp}@reportshq.test`])
 })

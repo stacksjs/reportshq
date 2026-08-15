@@ -68,6 +68,7 @@ declare global {
   const ReportExport: typeof import('../../../app/Models/ReportExport')['default']
   const ReportBlock: typeof import('../../../app/Models/ReportBlock')['default']
   const ReportSchedule: typeof import('../../../app/Models/ReportSchedule')['default']
+  const UsageCounter: typeof import('../../../app/Models/UsageCounter')['default']
   const ReportRevision: typeof import('../../../app/Models/ReportRevision')['default']
   const Event: typeof import('../../../app/Models/Event')['default']
   const User: typeof import('../../../app/Models/User')['default']

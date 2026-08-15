@@ -50,6 +50,7 @@ afterAll(async () => {
     await db.unsafe(`DELETE FROM events WHERE project_id = $1`, [id])
   }
   if (projects.length > 0)
+    await db.unsafe(`DELETE FROM usage_counters WHERE project_id IN (${projects.map((_, i) => `$${i + 1}`).join(', ')})`, projects)
     await db.unsafe(`DELETE FROM projects WHERE id IN (${projects.map((_, i) => `$${i + 1}`).join(', ')})`, projects)
   await db.unsafe(`DELETE FROM users WHERE id = $1`, [owner.id])
 })

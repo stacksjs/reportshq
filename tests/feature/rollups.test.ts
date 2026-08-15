@@ -66,6 +66,7 @@ afterAll(async () => {
   await db.unsafe(`DELETE FROM rollup_states WHERE project_id = $1`, [projectId])
   await db.unsafe(`DELETE FROM event_rollups WHERE project_id = $1`, [projectId])
   await db.unsafe(`DELETE FROM events WHERE project_id = $1`, [projectId])
+  await db.unsafe(`DELETE FROM usage_counters WHERE project_id = $1`, [projectId])
   await db.unsafe(`DELETE FROM projects WHERE id = $1`, [projectId])
   await db.unsafe(`DELETE FROM users WHERE id = $1`, [owner.id])
 })
@@ -271,6 +272,7 @@ describe('coverage', () => {
     expect(result.total).toBe(100)
 
     await db.unsafe(`DELETE FROM events WHERE project_id = $1`, [freshId])
+    await db.unsafe(`DELETE FROM usage_counters WHERE project_id = $1`, [freshId])
     await db.unsafe(`DELETE FROM projects WHERE id = $1`, [freshId])
   })
 

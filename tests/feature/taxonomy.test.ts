@@ -142,6 +142,7 @@ describe('propertyKeysFor', () => {
 
   afterAll(async () => {
     await db.unsafe(`DELETE FROM events WHERE project_id = $1`, [projectId])
+    await db.unsafe(`DELETE FROM usage_counters WHERE project_id = $1`, [projectId])
     await db.unsafe(`DELETE FROM projects WHERE id = $1`, [projectId])
     await db.unsafe(`DELETE FROM users WHERE id = $1`, [owner.id])
   })
@@ -168,6 +169,7 @@ describe('propertyKeysFor', () => {
       expect(await propertyKeysFor(other)).toEqual([])
     }
     finally {
+      await db.unsafe(`DELETE FROM usage_counters WHERE project_id = $1`, [other])
       await db.unsafe(`DELETE FROM projects WHERE id = $1`, [other])
     }
   })
