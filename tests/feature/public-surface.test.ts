@@ -89,6 +89,47 @@ describe('the anonymous share pages', () => {
   }
 })
 
+describe('the ingest key', () => {
+  /**
+   * The key writes events into a project, so it belongs to whoever administers
+   * one and to nobody else - not to a member who can only read reports, and
+   * certainly not to a stranger holding a share link.
+   *
+   * There are only three places it can reach a screen or a payload, and each is
+   * behind an administration check today. This asserts the pairing rather than
+   * the check itself, because the mistake to catch is a fourth place: a
+   * settings panel, a debug payload, an onboarding banner that puts the key
+   * where the gate is not.
+   */
+  const SURFACES = [
+    join(import.meta.dir, '../../routes/projects.ts'),
+    join(VIEWS, 'project.stx'),
+    join(VIEWS, 'project-settings.stx'),
+  ]
+
+  test('appears in the presentation layer only alongside an administration check', () => {
+    const searched = [
+      ...SURFACES,
+      ...PUBLIC_VIEWS.map(view => join(VIEWS, view)),
+    ]
+
+    for (const file of searched) {
+      const src = readFileSync(file, 'utf8')
+      if (!/ingest_?[kK]ey/.test(src))
+        continue
+
+      expect(/canAdminister|mayAdminister/.test(src)).toBeTrue()
+    }
+  })
+
+  test('is not on the anonymous pages at all', () => {
+    // Stronger than the pairing above: a public page has no administrator to
+    // check for, so the key must not be mentioned in any form.
+    for (const view of PUBLIC_VIEWS)
+      expect(/ingest_?[kK]ey/.test(readFileSync(join(VIEWS, view), 'utf8'))).toBeFalse()
+  })
+})
+
 describe('a token that does not resolve', () => {
   // Verified against the rendered pages as well: a revoked link and a token
   // that never existed produce byte-identical HTML. These pin the layer under
