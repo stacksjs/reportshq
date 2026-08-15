@@ -10,7 +10,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { db } from '@stacksjs/database'
 import { storeEvents } from '../../app/Events/ingest'
 import { runQuery } from '../../app/Reports/engine'
-import { addBlock, blocksOf, createReport, reportsFor, saveRevision, updateBlocks } from '../../app/Reports/reports'
+import { addBlock, blocksOf, createReport, publishedBlocks, publishReport, reportsFor, saveRevision, updateBlocks } from '../../app/Reports/reports'
 import { availableTemplates, provisionTemplates, TEMPLATES, upgradableReports, upgradeTemplateReport } from '../../app/Reports/templates'
 import { validateBlockLayout, validateBlockQuery } from '../../app/Reports/schema'
 import { createProject } from '../../app/Support/projects'
@@ -243,9 +243,12 @@ describe('provisioning', () => {
 })
 
 describe('template versions', () => {
+  /** Read from the shipped template, so a future version bump does not fail these. */
+  const overview = TEMPLATES.find(entry => entry.key === 'commerce.overview')!
+
   /** Pretend the shipped template moved on, without editing the shipped file. */
   async function pinToOlderVersion(reportId: number): Promise<void> {
-    await db.unsafe(`UPDATE reports SET template_version = 0 WHERE id = $1`, [reportId])
+    await db.unsafe(`UPDATE reports SET template_version = $1 WHERE id = $2`, [overview.version - 1, reportId])
   }
 
   async function provisionedOverview(name: string): Promise<{ project: number, report: number }> {
@@ -268,7 +271,7 @@ describe('template versions', () => {
     const candidates = await upgradableReports(id)
     expect(candidates).toHaveLength(1)
     expect(candidates[0]!.key).toBe('commerce.overview')
-    expect(candidates[0]!.to).toBe(1)
+    expect(candidates[0]!.to).toBe(overview.version)
     expect(candidates[0]!.automatic).toBeTrue()
   })
 
@@ -283,12 +286,11 @@ describe('template versions', () => {
     expect(result.upgraded).toBeTrue()
 
     const blocks = await blocksOf(report)
-    const template = TEMPLATES.find(entry => entry.key === 'commerce.overview')!
-    expect(blocks).toHaveLength(template.blocks.length)
+    expect(blocks).toHaveLength(overview.blocks.length)
     expect(blocks.some(block => block.body === 'stale')).toBeFalse()
 
     const row = (await db.unsafe(`SELECT template_version FROM reports WHERE id = $1`, [report]))?.[0] as { template_version: number }
-    expect(Number(row.template_version)).toBe(1)
+    expect(Number(row.template_version)).toBe(overview.version)
   })
 
   test('the layout that was replaced is still restorable', async () => {
@@ -364,6 +366,37 @@ describe('template versions', () => {
     expect(result.upgraded).toBeFalse()
     expect(result.reason).toBe('unknown-template')
     expect(await upgradableReports(id)).toHaveLength(0)
+  })
+
+  test('an upgraded report reaches viewers, not just the draft', async () => {
+    // Viewers read the last published snapshot. An upgrade that rewrote only
+    // the draft would leave the report claiming the new version while still
+    // rendering the old one to everyone.
+    const { report } = await provisionedOverview('Republished')
+    await pinToOlderVersion(report)
+    await addBlock(report, { kind: 'text', layout: { x: 0, y: 30, w: 12, h: 1 }, body: 'stale' })
+    await publishReport(report, owner)
+
+    expect((await publishedBlocks(report))!.some(block => block.body === 'stale')).toBeTrue()
+
+    await upgradeTemplateReport(report, owner, { force: true })
+
+    const published = await publishedBlocks(report)
+    expect(published!.some(block => block.body === 'stale')).toBeFalse()
+    expect(published).toHaveLength(overview.blocks.length)
+  })
+
+  test('an unpublished template report is not published by an upgrade', async () => {
+    const { report } = await provisionedOverview('Still draft')
+    await db.unsafe(`UPDATE reports SET status = 'draft' WHERE id = $1`, [report])
+    await pinToOlderVersion(report)
+
+    await upgradeTemplateReport(report, owner)
+
+    const rows = await db.unsafe(`SELECT status FROM reports WHERE id = $1`, [report]) as Array<{ status: string }>
+    // Publishing a draft somebody had not finished would be a louder mistake
+    // than a late upgrade.
+    expect(rows[0]?.status).toBe('draft')
   })
 
   test('a deleted report is not upgraded', async () => {

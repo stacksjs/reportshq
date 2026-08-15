@@ -8,7 +8,8 @@
  */
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { db } from '@stacksjs/database'
-import { addBlock, blocksOf, createReport, MAX_AUTOSAVES, publishReport, reportBySlug, reportsFor, saveRevision } from '../../app/Reports/reports'
+import { hasOverlap } from '../../app/Reports/layout'
+import { addBlock, blocksOf, createReport, MAX_AUTOSAVES, publishedBlocks, publishReport, removeBlock, reportBySlug, reportsFor, saveRevision, settleLayout, updateBlocks } from '../../app/Reports/reports'
 import { GRID_COLUMNS, isAllowedField, MAX_SERIES, validateBlockLayout, validateBlockQuery } from '../../app/Reports/schema'
 import { createProject } from '../../app/Support/projects'
 
@@ -359,5 +360,175 @@ describe('listing reports', () => {
 
     const ids = (await reportsFor(projectId)).map(entry => Number(entry.id))
     expect(ids).not.toContain(Number(report.id))
+  })
+})
+
+describe('draft and published are different things', () => {
+  let reportId: number
+
+  async function flag(): Promise<boolean> {
+    const rows = await db.unsafe(
+      `SELECT unpublished_changes FROM reports WHERE id = $1`,
+      [reportId],
+    ) as Array<{ unpublished_changes: number | boolean }>
+
+    return Boolean(rows[0]?.unpublished_changes)
+  }
+
+  beforeAll(async () => {
+    reportId = Number((await createReport(projectId, owner, { name: `Draft split ${stamp}` })).id)
+  })
+
+  test('a report nobody has published serves nothing to viewers', async () => {
+    await addBlock(reportId, {
+      kind: 'big_number',
+      title: 'First',
+      layout: { x: 0, y: 0, w: 3, h: 2 },
+      query: { events: [], measure: 'count', filters: [] },
+    })
+
+    // Null, not []. "Never published" and "published an empty grid" are
+    // different answers and the viewer says something different for each.
+    expect(await publishedBlocks(reportId)).toBeNull()
+  })
+
+  test('adding a block marks the draft as ahead', async () => {
+    expect(await flag()).toBeTrue()
+  })
+
+  test('publishing serves the draft and clears the flag', async () => {
+    await publishReport(reportId, owner)
+
+    const published = await publishedBlocks(reportId)
+    expect(published).toHaveLength(1)
+    expect(published![0]!.title).toBe('First')
+    expect(await flag()).toBeFalse()
+  })
+
+  test('publishing stamps when it happened', async () => {
+    const rows = await db.unsafe(`SELECT published_at FROM reports WHERE id = $1`, [reportId]) as Array<{ published_at: string | null }>
+    expect(rows[0]?.published_at).toBeTruthy()
+  })
+
+  test('editing after publishing does not change what viewers see', async () => {
+    const blocks = await blocksOf(reportId)
+    await updateBlocks(reportId, [{ id: Number(blocks[0]!.id), title: 'Renamed mid-edit' }])
+
+    // The draft moved. The published snapshot did not, which is the entire
+    // reason a draft exists: a teammate opening this mid-edit gets the last
+    // thing that was deliberately published.
+    expect((await blocksOf(reportId))[0]!.title).toBe('Renamed mid-edit')
+    expect((await publishedBlocks(reportId))![0]!.title).toBe('First')
+    expect(await flag()).toBeTrue()
+  })
+
+  test('publishing again catches viewers up', async () => {
+    await publishReport(reportId, owner)
+
+    expect((await publishedBlocks(reportId))![0]!.title).toBe('Renamed mid-edit')
+    expect(await flag()).toBeFalse()
+  })
+
+  test('deleting every block does not empty the published report', async () => {
+    for (const block of await blocksOf(reportId))
+      await removeBlock(reportId, Number(block.id))
+
+    expect(await blocksOf(reportId)).toHaveLength(0)
+    // Snapshots are read, not replayed, so what was published survives the
+    // draft being emptied out from under it.
+    expect(await publishedBlocks(reportId)).toHaveLength(1)
+    expect(await flag()).toBeTrue()
+  })
+
+  test('an empty grid can be published, and reads as empty rather than absent', async () => {
+    await publishReport(reportId, owner)
+    expect(await publishedBlocks(reportId)).toEqual([])
+  })
+})
+
+describe('the stored layout can never overlap', () => {
+  let reportId: number
+
+  async function layout(): Promise<Array<{ id: number, x: number, y: number, w: number, h: number }>> {
+    return (await blocksOf(reportId)).map(block => ({
+      id: Number(block.id),
+      x: Number(block.x),
+      y: Number(block.y),
+      w: Number(block.w),
+      h: Number(block.h),
+    }))
+  }
+
+  beforeAll(async () => {
+    reportId = Number((await createReport(projectId, owner, { name: `Packing ${stamp}` })).id)
+  })
+
+  test('a block added at coordinates that collide is moved, not stacked', async () => {
+    await addBlock(reportId, {
+      kind: 'line',
+      layout: { x: 0, y: 0, w: 12, h: 4 },
+      query: { events: [], measure: 'count', filters: [] },
+    })
+
+    // Exactly on top of the first. A client could send this, and the API is
+    // reachable without one.
+    await addBlock(reportId, {
+      kind: 'bar',
+      layout: { x: 0, y: 0, w: 12, h: 4 },
+      query: { events: [], measure: 'count', filters: [] },
+    })
+
+    expect(hasOverlap(await layout())).toBeFalse()
+  })
+
+  test('addBlock reports the position the block ended up at', async () => {
+    const added = await addBlock(reportId, {
+      kind: 'donut',
+      layout: { x: 0, y: 0, w: 12, h: 2 },
+      query: { events: [], measure: 'count', filters: [] },
+    })
+
+    // A caller trusting the coordinates it asked for would draw the block
+    // somewhere it is not.
+    const stored = (await layout()).find(block => block.id === Number(added.id))!
+    expect({ x: Number(added.x), y: Number(added.y) }).toEqual({ x: stored.x, y: stored.y })
+  })
+
+  test('dragging a block onto another pushes the other one down', async () => {
+    const blocks = await layout()
+    const [first, second] = [blocks[0]!, blocks[1]!]
+
+    const settled = await updateBlocks(
+      reportId,
+      [{ id: second.id, layout: { x: first.x, y: first.y, w: second.w, h: second.h } }],
+      { moved: second.id },
+    )
+
+    expect(hasOverlap(settled)).toBeFalse()
+    // The one being held keeps where it was dropped; the other gives way.
+    expect(settled.find(entry => entry.id === second.id)!.y).toBe(first.y)
+    expect(settled.find(entry => entry.id === first.id)!.y).toBeGreaterThan(first.y)
+  })
+
+  test('what updateBlocks returns is what was stored', async () => {
+    const settled = await updateBlocks(reportId, [])
+    expect(settled).toEqual(await layout())
+  })
+
+  test('a save that only renames does not move anything', async () => {
+    const before = await layout()
+    await updateBlocks(reportId, [{ id: before[0]!.id, title: 'Renamed' }])
+
+    expect(await layout()).toEqual(before)
+  })
+
+  test('removing a block leaves the rest where they were', async () => {
+    const before = await layout()
+    await removeBlock(reportId, before[0]!.id)
+    const after = await settleLayout(reportId)
+
+    // No compaction: a gap is a decision somebody is allowed to make.
+    for (const block of after)
+      expect(block.y).toBe(before.find(entry => entry.id === block.id)!.y)
   })
 })

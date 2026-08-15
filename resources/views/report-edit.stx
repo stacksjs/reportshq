@@ -65,7 +65,7 @@ for (const block of blocks) {
 
 /** The palette, in the order someone reaches for them. */
 const kinds = [
-  { kind: 'big_number', label: 'Big number', w: 3, h: 2, icon: 'i-hugeicons-chart-average' },
+  { kind: 'big_number', label: 'Big number', w: 3, h: 3, icon: 'i-hugeicons-chart-average' },
   { kind: 'line', label: 'Line', w: 6, h: 4, icon: 'i-hugeicons-chart-line-data-01' },
   { kind: 'area', label: 'Area', w: 6, h: 4, icon: 'i-hugeicons-chart-histogram' },
   { kind: 'bar', label: 'Bar', w: 6, h: 4, icon: 'i-hugeicons-chart-bar-line' },
@@ -77,6 +77,10 @@ const kinds = [
 ]
 
 const isPublished = String(report?.status ?? 'draft') === 'published'
+
+// Whether viewers are currently behind the draft. Rendered on the server so the
+// state is right on first paint rather than after the first save.
+const hasUnpublished = Boolean(report?.unpublished_changes)
 const viewHref = `/report?project=${projectId}&slug=${slug}`
 </script>
 
@@ -122,6 +126,37 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
             {{-- The save state is a word, not a spinner. "Saved" is the thing a
                  person needs to know before closing a tab. --}}
             <span id="save-state" class="text-sm text-subtle" aria-live="polite">Saved</span>
+
+            {{-- Saved and published are different promises, so they get
+                 different words. Work is safe as soon as it is saved; nobody
+                 else sees it until it is published, and conflating the two is
+                 how somebody spends a week sure their team was looking at a
+                 dashboard nobody could see. --}}
+            <span
+              id="publish-state"
+              class="text-sm text-warn"
+              aria-live="polite"
+              @if (!hasUnpublished) hidden @endif
+            >Not published</span>
+            <div class="flex overflow-hidden rounded-lg border border-line">
+              <button
+                id="undo"
+                type="button"
+                class="px-2.5 py-2 text-sm text-ink disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Undo (Cmd+Z)"
+                aria-label="Undo"
+                disabled
+              ><i class="block w-4 h-4 i-hugeicons-arrow-turn-backward"></i></button>
+              <button
+                id="redo"
+                type="button"
+                class="px-2.5 py-2 text-sm border-l border-line text-ink disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Redo (Shift+Cmd+Z)"
+                aria-label="Redo"
+                disabled
+              ><i class="block w-4 h-4 i-hugeicons-arrow-turn-forward"></i></button>
+            </div>
+
             <a href="{{ viewHref }}" class="px-3 py-2 text-sm no-underline rounded-lg border border-line text-ink">View</a>
             <button id="publish" type="button" class="px-4 py-2 text-sm font-medium rounded-lg bg-accent text-accent-ink">
               @if (isPublished) Republish @else Publish @endif
@@ -151,7 +186,7 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
 
             <p class="mt-4 text-xs leading-relaxed text-subtle">
               Drag a block to move it, drag its bottom right corner to resize. Arrow keys move the
-              selected block, and Delete removes it.
+              selected block, Delete removes it, and Cmd+Z takes back the last change.
             </p>
           </aside>
 
@@ -242,15 +277,64 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
   var project = params.get('project')
   var slug = params.get('slug')
   var state = document.getElementById('save-state')
+  var publishState = document.getElementById('publish-state')
   var COLUMNS = 12
   var ROW = 56
   var GAP = 12
 
   var selected = null
   var pending = null
+  var lastMoved = null
+
+  // Undo history. In memory and bounded: the point is to take back the last few
+  // things you did in this session, and a stack that grows all afternoon is a
+  // memory leak pretending to be a feature. Deeper history already exists as
+  // revisions on the server.
+  var HISTORY = 50
+  var past = []
+  var future = []
+
+  function snapshot() {
+    return tiles().map(function (tile) {
+      return {
+        id: Number(tile.dataset.id),
+        x: Number(tile.dataset.x),
+        y: Number(tile.dataset.y),
+        w: Number(tile.dataset.w),
+        h: Number(tile.dataset.h),
+      }
+    })
+  }
+
+  function sameLayout(a, b) {
+    if (!a || !b || a.length !== b.length) return false
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].id !== b[i].id || a[i].x !== b[i].x || a[i].y !== b[i].y || a[i].w !== b[i].w || a[i].h !== b[i].h) return false
+    }
+    return true
+  }
+
+  // Recorded before a change, not after, so undo restores what was on screen
+  // when you started rather than what you ended up with.
+  function remember() {
+    var now = snapshot()
+    if (sameLayout(past[past.length - 1], now)) return
+    past.push(now)
+    if (past.length > HISTORY) past.shift()
+    // A new edit invalidates anything that was undone: there is no coherent
+    // "redo" for a branch that was abandoned.
+    future = []
+    refreshHistoryButtons()
+  }
 
   function say(text) {
     if (state) state.textContent = text
+  }
+
+  // Every successful write moves the draft ahead of what viewers see, and the
+  // page has to say so without waiting for a reload.
+  function drafted(ahead) {
+    if (publishState) publishState.hidden = !ahead
   }
 
   function tiles() {
@@ -279,6 +363,88 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
     return (grid.clientWidth - GAP * (COLUMNS - 1)) / COLUMNS
   }
 
+  function hits(a, b) {
+    return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+  }
+
+  // The same push-down the server runs, so the grid moves under your hand
+  // instead of jumping when the response lands. The server's answer still wins:
+  // this is the preview, /blocks/save returns the layout that was stored, and
+  // adopt() below applies it. See app/Reports/layout.ts for why it only ever
+  // pushes down and never pulls up.
+  function pack(held) {
+    var boxes = tiles().map(function (tile) {
+      return {
+        tile: tile,
+        id: Number(tile.dataset.id),
+        x: Number(tile.dataset.x),
+        y: Number(tile.dataset.y),
+        w: Number(tile.dataset.w),
+        h: Number(tile.dataset.h),
+      }
+    })
+
+    boxes.sort(function (a, b) {
+      if (a.id === held) return -1
+      if (b.id === held) return 1
+      if (a.y !== b.y) return a.y - b.y
+      if (a.x !== b.x) return a.x - b.x
+      return a.id - b.id
+    })
+
+    var settled = []
+    boxes.forEach(function (box) {
+      while (settled.some(function (other) { return hits(box, other) })) box.y += 1
+      settled.push(box)
+      place(box.tile, box.x, box.y, box.w, box.h)
+    })
+  }
+
+  // The server's layout, applied verbatim. Two implementations of the same
+  // rule will eventually disagree, and when they do, the stored one is the one
+  // that matters.
+  function adopt(layout) {
+    if (!layout || !layout.length) return
+
+    var byId = {}
+    tiles().forEach(function (tile) { byId[tile.dataset.id] = tile })
+
+    layout.forEach(function (block) {
+      var tile = byId[String(block.id)]
+      if (tile) place(tile, block.x, block.y, block.w, block.h)
+    })
+  }
+
+  function apply(layout) {
+    adopt(layout)
+    save()
+  }
+
+  function undo() {
+    if (!past.length) return
+    future.push(snapshot())
+    apply(past.pop())
+    refreshHistoryButtons()
+    say('Undone')
+  }
+
+  function redo() {
+    if (!future.length) return
+    past.push(snapshot())
+    apply(future.pop())
+    refreshHistoryButtons()
+    say('Redone')
+  }
+
+  function refreshHistoryButtons() {
+    var undoButton = document.getElementById('undo')
+    var redoButton = document.getElementById('redo')
+    // Disabled rather than hidden: a control that vanishes moves everything
+    // beside it, and the two of them sit next to Publish.
+    if (undoButton) undoButton.disabled = past.length === 0
+    if (redoButton) redoButton.disabled = future.length === 0
+  }
+
   function save() {
     // Debounced: a drag ends in one commit, and dropping three blocks in quick
     // succession should be one request rather than three racing ones.
@@ -300,9 +466,15 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
       fetch('/api/reports/blocks/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: project, slug: slug, blocks: blocks }),
+        body: JSON.stringify({ project: project, slug: slug, blocks: blocks, moved: lastMoved }),
       }).then(function (res) {
         say(res.ok ? 'Saved' : 'Not saved')
+        if (!res.ok) return
+        drafted(true)
+        // The server settles the layout on write, so what it returns can differ
+        // from what was sent. Adopting it is what keeps the screen and the
+        // database from quietly disagreeing.
+        return res.json().then(function (data) { adopt(data && data.layout) }).catch(function () {})
       }).catch(function () {
         // Says so rather than pretending. A builder that reports "Saved" when
         // the request failed is how a session's work disappears silently.
@@ -322,6 +494,31 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
     if (!tile) return
 
     select(tile)
+    remember()
+    lastMoved = Number(tile.dataset.id)
+
+    // The layout as it was when the drag began. Every frame re-packs from this
+    // rather than from the previous frame's result: packing the already-pushed
+    // positions again pushes them again, so blocks drift further down the
+    // longer you hold the pointer, and a drag out and back leaves everything
+    // lower than it started.
+    var baseline = {}
+    tiles().forEach(function (other) {
+      baseline[other.dataset.id] = {
+        x: Number(other.dataset.x),
+        y: Number(other.dataset.y),
+        w: Number(other.dataset.w),
+        h: Number(other.dataset.h),
+      }
+    })
+
+    function rewind() {
+      tiles().forEach(function (other) {
+        if (Number(other.dataset.id) === lastMoved) return
+        var was = baseline[other.dataset.id]
+        if (was) place(other, was.x, was.y, was.w, was.h)
+      })
+    }
 
     var resizing = event.target.classList && event.target.classList.contains('resize-handle')
     var startX = event.clientX
@@ -340,10 +537,13 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
       var dx = Math.round((moveEvent.clientX - startX) / (unit + GAP))
       var dy = Math.round((moveEvent.clientY - startY) / (ROW + GAP))
 
+      rewind()
+
       if (resizing) {
         var w = Math.max(1, Math.min(COLUMNS - originX, originW + dx))
         var h = Math.max(1, originH + dy)
         place(tile, originX, originY, w, h)
+        pack(lastMoved)
       }
       else {
         // Clamped to the grid: a block that starts inside and ends outside is
@@ -352,6 +552,10 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
         var x = Math.max(0, Math.min(COLUMNS - originW, originX + dx))
         var y = Math.max(0, originY + dy)
         place(tile, x, y, originW, originH)
+        // Push the others out of the way as it moves, rather than at the drop.
+        // Seeing where a block will land while still holding it is the whole
+        // difference between arranging a grid and guessing at one.
+        pack(lastMoved)
       }
     }
 
@@ -373,14 +577,35 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
   // Keyboard equivalents, because a grid that can only be arranged by dragging
   // cannot be arranged at all by someone who does not use a mouse.
   document.addEventListener('keydown', function (event) {
+    if (event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.tagName === 'SELECT')) return
+
+    // Undo and redo work whether or not a block is selected, because the thing
+    // being undone may well be the deletion of the block that was.
+    var accel = event.metaKey || event.ctrlKey
+    if (accel && (event.key === 'z' || event.key === 'Z')) {
+      event.preventDefault()
+      if (event.shiftKey) redo()
+      else undo()
+      return
+    }
+    if (accel && (event.key === 'y' || event.key === 'Y')) {
+      event.preventDefault()
+      redo()
+      return
+    }
+
     if (!selected) return
-    if (event.target && event.target.tagName === 'INPUT') return
 
     var x = Number(selected.dataset.x)
     var y = Number(selected.dataset.y)
     var w = Number(selected.dataset.w)
     var h = Number(selected.dataset.h)
     var handled = true
+
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+      remember()
+      lastMoved = Number(selected.dataset.id)
+    }
 
     if (event.key === 'ArrowLeft') place(selected, Math.max(0, x - 1), y, w, h)
     else if (event.key === 'ArrowRight') place(selected, Math.min(COLUMNS - w, x + 1), y, w, h)
@@ -399,6 +624,7 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
 
     if (handled) {
       event.preventDefault()
+      pack(lastMoved)
       save()
     }
   })
@@ -425,6 +651,14 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
     })
   })
 
+  var undoButton = document.getElementById('undo')
+  if (undoButton) undoButton.addEventListener('click', undo)
+
+  var redoButton = document.getElementById('redo')
+  if (redoButton) redoButton.addEventListener('click', redo)
+
+  refreshHistoryButtons()
+
   var publish = document.getElementById('publish')
   if (publish) {
     publish.addEventListener('click', function () {
@@ -434,7 +668,8 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ project: project, slug: slug }),
       }).then(function (res) {
-        say(res.ok ? 'Published' : 'Not published')
+        say(res.ok ? 'Published' : 'Could not publish')
+        if (res.ok) drafted(false)
       })
     })
   }

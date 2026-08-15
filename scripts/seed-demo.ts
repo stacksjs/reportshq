@@ -168,49 +168,49 @@ async function seed(): Promise<void> {
   await addBlock(revenueId, {
     kind: 'big_number',
     title: 'Revenue',
-    layout: { x: 0, y: 0, w: 3, h: 2 },
+    layout: { x: 0, y: 0, w: 3, h: 3 },
     query: { events: ['commerce.order.created'], measure: 'sum', field: 'value', filters: [], compare: true },
   })
 
   await addBlock(revenueId, {
     kind: 'big_number',
     title: 'Orders',
-    layout: { x: 3, y: 0, w: 3, h: 2 },
+    layout: { x: 3, y: 0, w: 3, h: 3 },
     query: { events: ['commerce.order.created'], measure: 'count', filters: [], compare: true },
   })
 
   await addBlock(revenueId, {
     kind: 'big_number',
     title: 'Average order value',
-    layout: { x: 6, y: 0, w: 3, h: 2 },
+    layout: { x: 6, y: 0, w: 3, h: 3 },
     query: { events: ['commerce.order.created'], measure: 'avg', field: 'value', filters: [] },
   })
 
   await addBlock(revenueId, {
     kind: 'big_number',
     title: 'Refunded',
-    layout: { x: 9, y: 0, w: 3, h: 2 },
+    layout: { x: 9, y: 0, w: 3, h: 3 },
     query: { events: ['commerce.order.refunded'], measure: 'sum', field: 'value', filters: [] },
   })
 
   await addBlock(revenueId, {
     kind: 'line',
     title: 'Revenue per day',
-    layout: { x: 0, y: 2, w: 8, h: 5 },
+    layout: { x: 0, y: 3, w: 8, h: 5 },
     query: { events: ['commerce.order.created'], measure: 'sum', field: 'value', filters: [], grain: 'day', compare: true },
   })
 
   await addBlock(revenueId, {
     kind: 'donut',
     title: 'Orders by plan',
-    layout: { x: 8, y: 2, w: 4, h: 5 },
+    layout: { x: 8, y: 3, w: 4, h: 5 },
     query: { events: ['commerce.order.created'], measure: 'count', dimension: 'properties.plan', filters: [], limit: 5 },
   })
 
   await addBlock(revenueId, {
     kind: 'funnel',
     title: 'Browse to order',
-    layout: { x: 0, y: 7, w: 12, h: 4 },
+    layout: { x: 0, y: 8, w: 12, h: 4 },
     query: {
       events: [],
       measure: 'count',
@@ -230,34 +230,34 @@ async function seed(): Promise<void> {
   await addBlock(usersId, {
     kind: 'big_number',
     title: 'New customers',
-    layout: { x: 0, y: 0, w: 4, h: 2 },
+    layout: { x: 0, y: 0, w: 4, h: 3 },
     query: { events: ['user.registered'], measure: 'count', filters: [], compare: true },
   })
 
   await addBlock(usersId, {
     kind: 'big_number',
     title: 'Buying customers',
-    layout: { x: 4, y: 0, w: 4, h: 2 },
+    layout: { x: 4, y: 0, w: 4, h: 3 },
     query: { events: ['commerce.order.created'], measure: 'count_unique', filters: [] },
   })
 
   await addBlock(usersId, {
     kind: 'bar',
     title: 'Signups per day',
-    layout: { x: 0, y: 2, w: 8, h: 5 },
+    layout: { x: 0, y: 3, w: 8, h: 5 },
     query: { events: ['user.registered'], measure: 'count', filters: [], grain: 'day' },
   })
 
   await addBlock(usersId, {
     kind: 'table',
     title: 'Signups by source',
-    layout: { x: 8, y: 2, w: 4, h: 5 },
+    layout: { x: 8, y: 3, w: 4, h: 5 },
     query: { events: ['user.registered'], measure: 'count', dimension: 'properties.source', filters: [], limit: 5 },
   })
 
   await addBlock(usersId, {
     kind: 'text',
-    layout: { x: 0, y: 7, w: 12, h: 1 },
+    layout: { x: 0, y: 8, w: 12, h: 1 },
     body: 'Buying customers counts distinct user keys, so one person ordering twice counts once.',
   })
 

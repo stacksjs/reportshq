@@ -741,6 +741,23 @@
             "isUnique": true,
             "isNullable": true,
             "hasDefault": false
+          },
+          {
+            "name": "unpublished_changes",
+            "type": "boolean",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": true,
+            "hasDefault": true,
+            "defaultValue": false
+          },
+          {
+            "name": "published_at",
+            "type": "string",
+            "isPrimaryKey": false,
+            "isUnique": false,
+            "isNullable": true,
+            "hasDefault": false
           }
         ],
         "indexes": [
@@ -1650,7 +1667,7 @@
       }
     ]
   },
-  "hash": "c9e24a9584954ad8115fc8cc12032a64d5a8dcf5f99cda535e014e5ec1b94513",
+  "hash": "217f81777b08f9e8642738d20529e6df8ef6d309667999acc930c9b7a0ac7454",
   "dialect": "sqlite",
-  "updatedAt": "2026-08-15T01:54:38.214Z"
+  "updatedAt": "2026-08-15T01:58:49.872Z"
 }

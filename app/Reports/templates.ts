@@ -31,12 +31,17 @@ export interface ReportTemplate {
   blocks: BlockInput[]
 }
 
-/** A big number, since every template opens with a row of them. */
+/**
+ * A big number, since every template opens with a row of them.
+ *
+ * Three rows, not two. A big number carries a label, the value and a comparison
+ * line, and at two rows the comparison was clipped mid-word in a 3-column tile.
+ */
 function metric(title: string, x: number, query: BlockInput['query'], compare = true): BlockInput {
   return {
     kind: 'big_number',
     title,
-    layout: { x, y: 0, w: 3, h: 2 },
+    layout: { x, y: 0, w: 3, h: 3 },
     query: { ...query!, compare },
   }
 }
@@ -44,7 +49,7 @@ function metric(title: string, x: number, query: BlockInput['query'], compare = 
 export const TEMPLATES: ReportTemplate[] = [
   {
     key: 'commerce.overview',
-    version: 1,
+    version: 2,
     name: 'Commerce overview',
     description: 'Revenue, orders and refunds across the period, and where checkout leaks.',
     requires: ['commerce.order.created'],
@@ -54,26 +59,26 @@ export const TEMPLATES: ReportTemplate[] = [
       {
         kind: 'big_number',
         title: 'Average order',
-        layout: { x: 6, y: 0, w: 3, h: 2 },
+        layout: { x: 6, y: 0, w: 3, h: 3 },
         query: { events: ['commerce.order.created'], measure: 'avg', field: 'value', filters: [] },
       },
       metric('Refunded', 9, { events: ['commerce.order.refunded'], measure: 'sum', field: 'value', filters: [] }),
       {
         kind: 'area',
         title: 'Revenue per day',
-        layout: { x: 0, y: 2, w: 8, h: 5 },
+        layout: { x: 0, y: 3, w: 8, h: 5 },
         query: { events: ['commerce.order.created'], measure: 'sum', field: 'value', filters: [], grain: 'day', compare: true },
       },
       {
         kind: 'donut',
         title: 'Orders by plan',
-        layout: { x: 8, y: 2, w: 4, h: 5 },
+        layout: { x: 8, y: 3, w: 4, h: 5 },
         query: { events: ['commerce.order.created'], measure: 'count', dimension: 'properties.plan', filters: [], limit: 4 },
       },
       {
         kind: 'funnel',
         title: 'Browse to order',
-        layout: { x: 0, y: 7, w: 12, h: 4 },
+        layout: { x: 0, y: 8, w: 12, h: 4 },
         query: {
           events: [],
           measure: 'count',
@@ -83,7 +88,7 @@ export const TEMPLATES: ReportTemplate[] = [
       },
       {
         kind: 'text',
-        layout: { x: 0, y: 11, w: 12, h: 1 },
+        layout: { x: 0, y: 12, w: 12, h: 1 },
         // The one sentence that stops the most misreadings of this report.
         body: 'Revenue counts orders created. Refunds are shown separately rather than netted off, so a refunded order still appears on the day it was placed.',
       },
@@ -92,7 +97,7 @@ export const TEMPLATES: ReportTemplate[] = [
 
   {
     key: 'customers',
-    version: 1,
+    version: 2,
     name: 'Customers',
     description: 'Who is buying, how many come back, and where they came from.',
     requires: ['commerce.order.created'],
@@ -102,19 +107,19 @@ export const TEMPLATES: ReportTemplate[] = [
       {
         kind: 'big_number',
         title: 'Revenue per customer',
-        layout: { x: 6, y: 0, w: 3, h: 2 },
+        layout: { x: 6, y: 0, w: 3, h: 3 },
         query: { events: ['commerce.order.created'], measure: 'avg', field: 'value', filters: [] },
       },
       {
         kind: 'bar',
         title: 'Buying customers per day',
-        layout: { x: 0, y: 2, w: 8, h: 5 },
+        layout: { x: 0, y: 3, w: 8, h: 5 },
         query: { events: ['commerce.order.created'], measure: 'count_unique', filters: [], grain: 'day' },
       },
       {
         kind: 'table',
         title: 'Orders by plan',
-        layout: { x: 8, y: 2, w: 4, h: 5 },
+        layout: { x: 8, y: 3, w: 4, h: 5 },
         query: { events: ['commerce.order.created'], measure: 'count', dimension: 'properties.plan', filters: [], limit: 5 },
       },
     ],
@@ -122,7 +127,7 @@ export const TEMPLATES: ReportTemplate[] = [
 
   {
     key: 'users',
-    version: 1,
+    version: 2,
     name: 'Users',
     description: 'Signups, active users and how they arrive.',
     requires: ['user.registered'],
@@ -132,18 +137,18 @@ export const TEMPLATES: ReportTemplate[] = [
       {
         kind: 'bar',
         title: 'Signups per day',
-        layout: { x: 0, y: 2, w: 8, h: 5 },
+        layout: { x: 0, y: 3, w: 8, h: 5 },
         query: { events: ['user.registered'], measure: 'count', filters: [], grain: 'day', compare: true },
       },
       {
         kind: 'table',
         title: 'Signups by source',
-        layout: { x: 8, y: 2, w: 4, h: 5 },
+        layout: { x: 8, y: 3, w: 4, h: 5 },
         query: { events: ['user.registered'], measure: 'count', dimension: 'properties.source', filters: [], limit: 5 },
       },
       {
         kind: 'text',
-        layout: { x: 0, y: 7, w: 12, h: 1 },
+        layout: { x: 0, y: 8, w: 12, h: 1 },
         body: 'Active users counts distinct user keys, so one person signing in twice counts once. Send a stable internal id as user_key for this to mean anything.',
       },
     ],
@@ -151,7 +156,7 @@ export const TEMPLATES: ReportTemplate[] = [
 
   {
     key: 'content',
-    version: 1,
+    version: 2,
     name: 'Content',
     description: 'What was published, and what was read.',
     requires: ['cms.post.published'],
@@ -161,13 +166,13 @@ export const TEMPLATES: ReportTemplate[] = [
       {
         kind: 'line',
         title: 'Views per day',
-        layout: { x: 0, y: 2, w: 8, h: 5 },
+        layout: { x: 0, y: 3, w: 8, h: 5 },
         query: { events: ['cms.post.viewed'], measure: 'count', filters: [], grain: 'day' },
       },
       {
         kind: 'table',
         title: 'Most read',
-        layout: { x: 8, y: 2, w: 4, h: 5 },
+        layout: { x: 8, y: 3, w: 4, h: 5 },
         query: { events: ['cms.post.viewed'], measure: 'count', dimension: 'properties.post_id', filters: [], limit: 5 },
       },
     ],
@@ -272,9 +277,9 @@ export async function upgradeTemplateReport(
   options: { force?: boolean } = {},
 ): Promise<{ upgraded: boolean, reason?: 'unknown-template' | 'up-to-date' | 'edited' }> {
   const row = (await db.unsafe(
-    `SELECT id, template_key, template_version FROM reports WHERE id = $1 AND deleted_at IS NULL`,
+    `SELECT id, status, template_key, template_version FROM reports WHERE id = $1 AND deleted_at IS NULL`,
     [reportId],
-  ))?.[0] as { id: number, template_key: string | null, template_version: number | null } | undefined
+  ))?.[0] as { id: number, status: string, template_key: string | null, template_version: number | null } | undefined
 
   const template = TEMPLATES.find(entry => entry.key === row?.template_key)
   if (!row || !template)
@@ -301,6 +306,17 @@ export async function upgradeTemplateReport(
     `UPDATE reports SET template_version = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
     [template.version, reportId],
   )
+
+  // Republished, because viewers read the last published snapshot rather than
+  // the draft. Without this an upgrade would rewrite the draft and change
+  // nothing anybody can see, which is the worst of both: the report claims to
+  // be on the new version and still renders the old one.
+  //
+  // Only for reports that were already published. Silently publishing a draft
+  // somebody had not finished would be a much louder mistake than a late
+  // upgrade.
+  if (String(row.status ?? '') === 'published')
+    await publishReport(reportId, user)
 
   return { upgraded: true }
 }

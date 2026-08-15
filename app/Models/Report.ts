@@ -74,6 +74,34 @@ export default defineModel({
       factory: () => 'draft',
     },
 
+    /**
+     * When the current published snapshot was taken.
+     *
+     * Shown to viewers, because a report's numbers and the moment its layout was
+     * frozen are different facts, and somebody looking at a stale dashboard
+     * deserves to be told which one they are reading.
+     */
+    published_at: {
+      fillable: true,
+      validation: { rule: schema.string() },
+    },
+
+    /**
+     * Whether the draft has moved on since the last publish.
+     *
+     * A flag rather than a timestamp comparison. The obvious version is "is any
+     * block newer than the last publish revision", but both sides are stored to
+     * the second, and a publish that lands in the same second as the edit it
+     * captures then reads as stale forever. This is set by every write to a
+     * block and cleared by publishing, so it cannot disagree with itself.
+     */
+    unpublished_changes: {
+      fillable: true,
+      default: false,
+      validation: { rule: schema.boolean() },
+      factory: () => false,
+    },
+
     origin: {
       fillable: true,
       default: 'user',

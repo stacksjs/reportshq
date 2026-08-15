@@ -7,7 +7,9 @@
  * a second place that decides access is how two surfaces end up disagreeing.
  */
 import type { BlockKind, BlockLayout, BlockQuery } from './schema'
+import type { Placement } from './layout'
 import { db } from '@stacksjs/database'
+import { packBlocks } from './layout'
 import { needsQuery, validateBlockLayout, validateBlockQuery } from './schema'
 
 /**
@@ -148,12 +150,23 @@ export async function addBlock(reportId: number, input: BlockInput): Promise<Rec
     ],
   )
 
+  await markDraftChanged(reportId)
+
   const rows = await db.unsafe(
     `SELECT * FROM report_blocks WHERE report_id = $1 ORDER BY id DESC LIMIT 1`,
     [reportId],
   ) as Array<Record<string, unknown>>
 
-  return rows[0] as Record<string, unknown>
+  // Settled after insert as well: a block added through the API at somebody
+  // else's coordinates must not be able to land on top of existing work.
+  const added = rows[0] as Record<string, unknown>
+  const settled = await settleLayout(reportId, Number(added.id))
+  const placed = settled.find(block => block.id === Number(added.id))
+
+  // Returned with the position it ended up at rather than the one it was asked
+  // for. A caller that trusted the request's coordinates would draw the block
+  // somewhere it is not.
+  return placed ? { ...added, x: placed.x, y: placed.y, w: placed.w, h: placed.h } : added
 }
 
 export async function blocksOf(reportId: number): Promise<Array<Record<string, unknown>>> {
@@ -221,23 +234,67 @@ export async function saveRevision(
 }
 
 /**
+ * Record that the draft has moved ahead of what viewers see.
+ *
+ * Called by every write to a block. Cheap enough to do unconditionally: one
+ * indexed update against a row the caller has already located.
+ */
+async function markDraftChanged(reportId: number): Promise<void> {
+  await db.unsafe(
+    `UPDATE reports SET unpublished_changes = 1, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+    [reportId],
+  )
+}
+
+/**
  * Publish the draft.
  *
- * Records a `publish` revision as it goes, so what viewers saw at a given time
- * is recoverable rather than only inferable from the current state.
+ * Records a `publish` revision as it goes, and that revision is not merely an
+ * audit trail: it *is* what viewers are served. Reading live blocks instead
+ * would mean every keystroke in the builder was public the moment it was typed,
+ * which is the opposite of what a draft is for.
  */
 export async function publishReport(reportId: number, user: { id: number }): Promise<void> {
   await saveRevision(reportId, user, 'publish')
   await db.unsafe(
-    `UPDATE reports SET status = 'published', updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+    `UPDATE reports SET status = 'published', unpublished_changes = 0, published_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
     [reportId],
   )
+}
+
+/**
+ * The blocks viewers see: the most recent published snapshot.
+ *
+ * Null when a report has never been published, which is a different thing from
+ * a published report with no blocks and has to stay distinguishable — one is
+ * "not ready yet", the other is "somebody published an empty grid".
+ *
+ * Snapshots are read rather than replayed. A published report keeps rendering
+ * exactly as it did even while the draft is being rearranged, and it survives
+ * the draft's blocks being deleted outright.
+ */
+export async function publishedBlocks(reportId: number): Promise<Array<Record<string, unknown>> | null> {
+  const row = (await db.unsafe(
+    `SELECT snapshot FROM report_revisions
+      WHERE report_id = $1 AND reason = 'publish'
+      ORDER BY id DESC
+      LIMIT 1`,
+    [reportId],
+  ))?.[0] as { snapshot: string } | undefined
+
+  if (!row)
+    return null
+
+  const parsed = safeParse(row.snapshot)
+  const blocks = (parsed as { blocks?: unknown }).blocks
+
+  return Array.isArray(blocks) ? blocks as Array<Record<string, unknown>> : []
 }
 
 /** Reports in a project, newest first. Soft-deleted ones are gone. */
 export async function reportsFor(projectId: number): Promise<Array<Record<string, unknown>>> {
   return await db.unsafe(
-    `SELECT id, uuid, name, slug, description, status, origin, template_key, default_range, created_at, updated_at
+    `SELECT id, uuid, name, slug, description, status, origin, template_key, default_range, unpublished_changes, published_at, created_at, updated_at
        FROM reports
       WHERE project_id = $1 AND deleted_at IS NULL
       ORDER BY created_at DESC`,
@@ -279,7 +336,11 @@ export interface BlockUpdate {
  * Validated before anything is written, and written in one transaction, so a
  * rejected block leaves the grid exactly as it was rather than half-moved.
  */
-export async function updateBlocks(reportId: number, updates: BlockUpdate[]): Promise<void> {
+export async function updateBlocks(
+  reportId: number,
+  updates: BlockUpdate[],
+  options: { moved?: number } = {},
+): Promise<Placement[]> {
   const errors: string[] = []
 
   for (const update of updates) {
@@ -338,25 +399,56 @@ export async function updateBlocks(reportId: number, updates: BlockUpdate[]): Pr
       params,
     )
   }
+
+  await markDraftChanged(reportId)
+
+  return await settleLayout(reportId, options.moved)
+}
+
+/**
+ * Push any overlaps out of the stored layout and return what was settled on.
+ *
+ * Runs after every write, not only after a drag. The client's push-down is a
+ * preview and the API is public, so this is the only place that can promise two
+ * blocks never share a cell; CSS grid will happily draw one on top of the other
+ * and let a viewer discover it later.
+ *
+ * Only genuinely moved rows are written, so a save that changes a title does
+ * not rewrite every position and inflate the next revision's diff.
+ */
+export async function settleLayout(reportId: number, moved?: number): Promise<Placement[]> {
+  const rows = await db.unsafe(
+    `SELECT id, x, y, w, h FROM report_blocks WHERE report_id = $1`,
+    [reportId],
+  ) as Array<{ id: number, x: number, y: number, w: number, h: number }>
+
+  const current = rows.map(row => ({
+    id: Number(row.id),
+    x: Number(row.x) || 0,
+    y: Number(row.y) || 0,
+    w: Number(row.w) || 1,
+    h: Number(row.h) || 1,
+  }))
+
+  const settled = packBlocks(current, moved)
+  const before = new Map(current.map(block => [block.id, block]))
+
+  for (const block of settled) {
+    const previous = before.get(block.id)
+    if (previous && previous.x === block.x && previous.y === block.y && previous.w === block.w && previous.h === block.h)
+      continue
+
+    await db.unsafe(
+      `UPDATE report_blocks SET x = $1, y = $2, w = $3, h = $4 WHERE report_id = $5 AND id = $6`,
+      [block.x, block.y, block.w, block.h, reportId, block.id],
+    )
+  }
+
+  return settled
 }
 
 /** Remove a block. Scoped by report for the same reason as updateBlocks. */
 export async function removeBlock(reportId: number, blockId: number): Promise<void> {
   await db.unsafe(`DELETE FROM report_blocks WHERE report_id = $1 AND id = $2`, [reportId, blockId])
-}
-
-/**
- * The first free row on the grid, so a new block lands under the others.
- *
- * Dropping it at 0,0 would put it on top of whatever is already there, and a
- * builder that hides your work the moment you add to it teaches people not to
- * add to it.
- */
-export async function nextFreeRow(reportId: number): Promise<number> {
-  const rows = await db.unsafe(
-    `SELECT MAX(y + h) AS bottom FROM report_blocks WHERE report_id = $1`,
-    [reportId],
-  ) as Array<{ bottom: number | null }>
-
-  return Number(rows[0]?.bottom ?? 0)
+  await markDraftChanged(reportId)
 }

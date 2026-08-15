@@ -1,14 +1,15 @@
 import type { EnhancedRequest } from '@stacksjs/bun-router'
 import { response, route } from '@stacksjs/router'
+import { firstFreeRow } from '../app/Reports/layout'
 import {
   addBlock,
   blocksOf,
   createReport,
-  nextFreeRow,
   publishReport,
   removeBlock,
   reportBySlug,
   saveRevision,
+  settleLayout,
   updateBlocks,
 } from '../app/Reports/reports'
 import { accessFor } from '../app/Support/access'
@@ -87,14 +88,23 @@ route.post('/blocks', async (request: EnhancedRequest) => {
   const width = Number(payload.w ?? 6)
   const height = Number(payload.h ?? 4)
 
+  // The first gap it actually fits in, rather than always the bottom. Adding a
+  // big number to a report whose top row has space should put it in that space;
+  // sending it to the end means every new block starts with a drag.
+  const existing = (await blocksOf(context.reportId)).map(block => ({
+    id: Number(block.id),
+    x: Number(block.x) || 0,
+    y: Number(block.y) || 0,
+    w: Number(block.w) || 1,
+    h: Number(block.h) || 1,
+  }))
+  const spot = firstFreeRow(existing, width, height)
+
   try {
     const block = await addBlock(context.reportId, {
       kind: kind as never,
       title: payload.title ? String(payload.title) : undefined,
-      // Placed under whatever is already there. Dropping a new block at 0,0
-      // covers existing work, and a builder that hides what you have made the
-      // moment you add to it teaches people not to add to it.
-      layout: { x: 0, y: await nextFreeRow(context.reportId), w: width, h: height },
+      layout: { x: spot.x, y: spot.y, w: width, h: height },
       query: (payload.query as never) ?? { events: [], measure: 'count', filters: [], grain: 'day' },
       body: payload.body ? String(payload.body) : undefined,
     })
@@ -127,10 +137,18 @@ route.post('/blocks/save', async (request: EnhancedRequest) => {
     return response.json({ message: 'Expected a blocks array.' }, 422)
 
   try {
-    await updateBlocks(context.reportId, updates as never)
+    // `moved` is the block the person was holding, so it keeps the position
+    // they chose and everything else gives way. Without it the dragged block is
+    // as likely to be pushed as to push, and it does not end up where it was
+    // dropped.
+    const layout = await updateBlocks(context.reportId, updates as never, {
+      moved: payload.moved ? Number(payload.moved) : undefined,
+    })
     await saveRevision(context.reportId, context.user)
 
-    return response.json({ blocks: await blocksOf(context.reportId) })
+    // The settled layout goes back with the response. The client's push-down is
+    // a preview; this is the answer, and it adopts it.
+    return response.json({ layout, blocks: await blocksOf(context.reportId) })
   }
   catch (error) {
     return response.json({ message: (error as Error).message }, 422)
@@ -151,7 +169,7 @@ route.post('/blocks/remove', async (request: EnhancedRequest) => {
   await saveRevision(context.reportId, context.user)
   await removeBlock(context.reportId, blockId)
 
-  return response.json({ removed: true })
+  return response.json({ removed: true, layout: await settleLayout(context.reportId) })
 }).skipCsrf()
 
 route.post('/publish', async (request: EnhancedRequest) => {

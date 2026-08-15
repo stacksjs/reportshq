@@ -144,6 +144,7 @@ declare global {
   const Post: typeof import('../defaults/app/Models/Content/Post')['default']
   const Websocket: typeof import('../defaults/app/Models/realtime/Websocket')['default']
   const RebuildRollups: typeof import('../../../app/Jobs/RebuildRollups')['default']
+  const ProvisionReports: typeof import('../../../app/Jobs/ProvisionReports')['default']
   const SendWelcomeEmail: typeof import('../../../app/Jobs/SendWelcomeEmail')['default']
   const Inspire: typeof import('../../../app/Jobs/Inspire')['default']
   const QueryController: typeof import('../defaults/app/Controllers/QueryController')['default']

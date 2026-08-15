@@ -5,7 +5,7 @@
 // view is linkable. Someone pasting a link into a conversation is sharing what
 // they are looking at, not a page that will resolve differently for the reader.
 import { runQuery } from '../../app/Reports/engine'
-import { blocksOf, reportBySlug } from '../../app/Reports/reports'
+import { publishedBlocks, reportBySlug } from '../../app/Reports/reports'
 import { accessFor } from '../../app/Support/access'
 import { param, sessionCookieName, sessionFrom } from '../../app/Support/session'
 
@@ -40,7 +40,50 @@ const activeRange = RANGES.find(entry => entry.key === requested)?.key
 
 const timezone = String(report?.timezone ?? 'UTC')
 
-const blocks = found ? await blocksOf(Number(report!.id)) : []
+// The published snapshot, never the draft. A teammate opening this while
+// somebody is mid-drag in the builder sees the last thing that was deliberately
+// published, which is the whole point of having a draft at all.
+//
+// Null and empty are different answers: null is "never published", empty is
+// "somebody published an empty grid". Collapsing them would tell a person their
+// report is broken when it is merely unfinished.
+const snapshot = found ? await publishedBlocks(Number(report!.id)) : null
+const neverPublished = found && snapshot === null
+const blocks = snapshot ?? []
+
+// The draft being ahead is only worth mentioning to somebody who can act on it.
+const mayEdit = access?.role === 'owner' || access?.role === 'admin'
+const draftAhead = mayEdit && Boolean(report?.unpublished_changes)
+const editHref = `/report-edit?project=${projectId}&slug=${slug}`
+/**
+ * "Published 14 Aug 2026, 01:59".
+ *
+ * The numbers in a report and the moment its layout was frozen are different
+ * facts, and only one of them is on screen. Saying when it was published is
+ * what stops somebody reading a six-month-old arrangement as current.
+ */
+function publishedLabel(value: unknown): string {
+  const raw = String(value ?? '').trim()
+  if (!raw)
+    return ''
+
+  // SQLite hands back "YYYY-MM-DD HH:MM:SS" in UTC, which Date only parses
+  // reliably once it looks like an ISO instant.
+  const parsed = new Date(raw.includes('T') ? raw : `${raw.replace(' ', 'T')}Z`)
+  if (Number.isNaN(parsed.getTime()))
+    return ''
+
+  return parsed.toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: timezone,
+  })
+}
+
+const publishedAt = publishedLabel(report?.published_at)
 
 // Every block runs against the same range. Sequential rather than parallel on
 // purpose: the engine reads one SQLite file, and a report of eight blocks
@@ -129,6 +172,9 @@ const rangeLinks = RANGES.map(entry => ({
             @if (report.description)
               <p class="mt-1 max-w-[65ch] text-sm text-muted">{{ report.description }}</p>
             @endif
+            @if (publishedAt)
+              <p class="mt-1 text-xs text-subtle">Published {{ publishedAt }}</p>
+            @endif
           </div>
 
           {{-- Plain links, so the range survives a reload, a back button and a
@@ -144,10 +190,32 @@ const rangeLinks = RANGES.map(entry => ({
           </div>
         </div>
 
-        @if (rendered.length === 0)
+        @if (draftAhead)
+          {{-- A line rather than a banner. It matters to the one person who can
+               publish, and it must not make a report look broken to everyone
+               else looking over their shoulder. --}}
+          <p class="flex flex-wrap gap-2 items-center px-4 py-3 mb-6 text-sm rounded-lg border border-line bg-panel text-muted">
+            <i class="w-4 h-4 i-hugeicons-edit-02 text-subtle"></i>
+            This report has changes that have not been published. Everyone else is seeing the version below.
+            <a href="{{ editHref }}" class="text-accent">Open the builder</a>
+          </p>
+        @endif
+
+        @if (neverPublished)
+          <div class="px-6 py-16 text-center rounded-xl border border-dashed border-line">
+            <h2 class="text-base font-medium">Not published yet</h2>
+            <p class="mx-auto mt-1 max-w-sm text-sm text-muted">
+              Nobody outside the builder can see this report until it is published. Its blocks and
+              numbers are all in place, waiting.
+            </p>
+            @if (mayEdit)
+              <a href="{{ editHref }}" class="inline-block mt-5 text-sm text-accent">Open the builder</a>
+            @endif
+          </div>
+        @elseif (rendered.length === 0)
           <div class="px-6 py-16 text-center rounded-xl border border-line bg-panel">
-            <h2 class="text-base font-medium">This report has no blocks yet</h2>
-            <p class="mt-1 text-sm text-muted">Open it in the builder to add one.</p>
+            <h2 class="text-base font-medium">This report was published with no blocks</h2>
+            <p class="mt-1 text-sm text-muted">Open it in the builder to add one, then publish again.</p>
           </div>
         @else
           <div class="grid grid-cols-12 gap-4">
