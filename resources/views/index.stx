@@ -161,7 +161,7 @@ const docLinks = [
   {
     title: 'The event taxonomy',
     body: 'The names that make a report create itself, and how to send something the standard set does not cover.',
-    href: '/docs/taxonomy',
+    href: '/docs/events',
   },
   {
     title: 'Limits and retention',
