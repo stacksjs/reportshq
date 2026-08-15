@@ -200,8 +200,13 @@ export const tsCloud: TsCloudConfig = {
       domain: APP_DOMAIN,
       deploy: 'server',
       // The installed CLI directly, not the ./buddy wrapper: the wrapper
-      // bootstraps pantry, which the box neither has nor needs.
-      build: 'bun node_modules/@stacksjs/buddy/dist/cli.js build docs && test -d dist/docs/.bunpress',
+      // bootstraps pantry, which the deploy runner neither has nor needs.
+      //
+      // `node_modules/.bin` is put on PATH because the docs build spawns
+      // `bunpress` by name. It resolves locally only because pantry puts a copy
+      // on PATH, so without this the build fails on a clean runner with
+      // "Executable not found in $PATH" while working on every laptop.
+      build: 'PATH="$PWD/node_modules/.bin:$PATH" bun node_modules/@stacksjs/buddy/dist/cli.js build docs && test -d dist/docs/.bunpress',
     },
 
     // www redirects rather than serving a second copy. One canonical origin
