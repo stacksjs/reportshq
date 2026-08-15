@@ -230,9 +230,15 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
               @endforeach
             </ul>
 
-            <p class="mt-4 text-xs leading-relaxed text-subtle">
+            <p class="hidden mt-4 text-xs leading-relaxed lg:block text-subtle">
               Drag a block to move it, drag its bottom right corner to resize. Arrow keys move the
               selected block, Delete removes it, and Cmd+Z takes back the last change.
+            </p>
+
+            {{-- Said plainly, on the screens where it is true. --}}
+            <p class="mt-4 text-xs leading-relaxed lg:hidden text-subtle">
+              Arranging blocks needs a wider screen. Below is the report as it stands, and you can
+              still add and publish from here.
             </p>
           </aside>
 
@@ -248,10 +254,16 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
             @else
               {{-- 12 columns, matching the stored layout exactly, so what is
                    dragged here is what the viewer renders. --}}
-              <div id="grid" class="grid grid-cols-12 gap-3 auto-rows-[56px]">
+              {{-- One column until there is room for twelve. A 12-column grid
+                   on a phone gives each block about 80px, which turns every
+                   title into three clipped letters. The blocks stack in reading
+                   order instead and the builder goes read-only, which is
+                   stated above rather than left to be discovered. --}}
+              <div id="grid" class="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:auto-rows-[56px]">
                 @foreach (rendered as block)
                   <article
-                    class="block-tile relative rounded-xl border border-line bg-panel p-4 col-start-[{{ block.x + 1 }}] col-span-{{ block.w }} row-span-{{ block.h }}"
+                    class="block-tile relative rounded-xl border border-line bg-panel p-4 lg:col-start-[{{ block.x + 1 }}] lg:col-span-{{ block.w }} lg:row-span-{{ block.h }}"
+                    style="min-height: {{ block.h * 56 }}px"
                     data-id="{{ block.id }}"
                     data-kind="{{ block.kind }}"
                     data-title="{{ block.title }}"
@@ -432,6 +444,12 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
   var pending = null
   var lastMoved = null
 
+  // Arranging is a pointer gesture against a twelve-column grid, and below the
+  // lg breakpoint there is no such grid: the blocks stack. Everything that
+  // moves or measures one is skipped rather than left to compute nonsense
+  // against a single-column layout.
+  var arrangeable = window.matchMedia('(min-width: 1024px)').matches
+
   // Undo history. In memory and bounded: the point is to take back the last few
   // things you did in this session, and a stack that grows all afternoon is a
   // memory leak pretending to be a feature. Deeper history already exists as
@@ -516,9 +534,11 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
 
   // Read the stored layout back onto the grid, so the server's ordering and the
   // client's agree from the first frame rather than after the first drag.
-  tiles().forEach(function (tile) {
-    place(tile, Number(tile.dataset.x), Number(tile.dataset.y), Number(tile.dataset.w), Number(tile.dataset.h))
-  })
+  if (arrangeable) {
+    tiles().forEach(function (tile) {
+      place(tile, Number(tile.dataset.x), Number(tile.dataset.y), Number(tile.dataset.w), Number(tile.dataset.h))
+    })
+  }
 
   function cellWidth() {
     return (grid.clientWidth - GAP * (COLUMNS - 1)) / COLUMNS
@@ -660,6 +680,11 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
     if (!tile) return
 
     select(tile)
+
+    // Selecting still works on a narrow screen, so the settings panel is
+    // reachable; only the dragging is off.
+    if (!arrangeable) return
+
     lastMoved = Number(tile.dataset.id)
 
     // Captured, not yet recorded. A click is a drag of zero distance, and
