@@ -115,7 +115,9 @@ export const tsCloud: TsCloudConfig = {
         // Before migrating, so the first deploy has somewhere to migrate into.
         `mkdir -p ${STATE_DIR} ${EXPORT_DIR}`,
         'echo "[reportshq] preStart 3/3: migrate"',
-        'bun node_modules/@stacksjs/buddy/dist/cli.js migrate',
+        'ls -la storage | head -8',
+        'ls -la node_modules/@stacksjs/buddy/dist/cli.js || echo "[reportshq] buddy cli MISSING"',
+        'bun node_modules/@stacksjs/buddy/dist/cli.js migrate 2>&1 | sed "s/^/[migrate] /"',
         'echo "[reportshq] preStart complete"',
       ],
       env: {
