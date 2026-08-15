@@ -4,6 +4,7 @@
 // The range lives in the URL rather than in a cookie or component state, so a
 // view is linkable. Someone pasting a link into a conversation is sharing what
 // they are looking at, not a page that will resolve differently for the reader.
+import { describeCaveat, describeQuery } from '../../app/Reports/describe'
 import { runQuery } from '../../app/Reports/engine'
 import { publishedBlocks, reportBySlug } from '../../app/Reports/reports'
 import { accessFor } from '../../app/Support/access'
@@ -95,6 +96,11 @@ for (const block of blocks) {
     kind,
     title: block.title ? String(block.title) : '',
     body: block.body ? String(block.body) : '',
+    // Every chart is an answer to a question nobody can see. Two blocks titled
+    // "Revenue" can count different things, and a viewer cannot open the
+    // builder to find out which.
+    explains: kind === 'text' ? '' : describeQuery(block.query as never),
+    caveat: kind === 'text' ? '' : describeCaveat(block.query as never),
     // 12 columns, so a block's width becomes a span the grid understands.
     span: Math.max(1, Math.min(12, Number(block.w) || 6)),
     height: Math.max(120, (Number(block.h) || 4) * 56),
@@ -225,8 +231,19 @@ const rangeLinks = RANGES.map(entry => ({
         @else
           <div class="grid grid-cols-12 gap-4">
             @foreach (rendered as block)
+              {{-- The reserved height belongs to the chart, not to the card.
+
+                   It used to sit on the card as `h-full` plus a min-height,
+                   which meant the card's height came from the grid row and its
+                   own content could not lengthen it: expanding a block's
+                   explanation spilled the text over the block below. Flex
+                   variants of the same idea fail the same way from the other
+                   direction, because a flex child under-reports its intrinsic
+                   height to the row. Reserving the space on the chart instead
+                   makes the card simply as tall as what is in it. --}}
               <div class="col-span-12 md:col-span-{{ block.span }}">
-                <div class="p-5 h-full rounded-xl border border-line bg-panel" style="min-height: {{ block.height }}px">
+                <div class="p-5 rounded-xl border border-line bg-panel">
+                  <div style="min-height: {{ block.height }}px">
                   @if (block.error)
                     <p class="text-sm font-medium text-ink">{{ block.title }}</p>
                     <p class="mt-2 text-sm text-warn">{{ block.error }}</p>
@@ -248,6 +265,20 @@ const rangeLinks = RANGES.map(entry => ({
                     <LineChart :result="block.result" title="{{ block.title }}" variant="area" />
                   @else
                     <LineChart :result="block.result" title="{{ block.title }}" />
+                  @endif
+                  </div>
+
+                  @if (block.explains)
+                    {{-- A details element rather than a hover popover: it works
+                         with a keyboard and a finger, it survives being read
+                         aloud, and it does not cover the chart it describes. --}}
+                    <details class="mt-3 explain">
+                      <summary class="text-xs cursor-pointer text-subtle">What is this?</summary>
+                      <p class="mt-2 text-xs leading-relaxed text-muted">{{ block.explains }}</p>
+                      @if (block.caveat)
+                        <p class="mt-1 text-xs leading-relaxed text-subtle">{{ block.caveat }}</p>
+                      @endif
+                    </details>
                   @endif
                 </div>
               </div>
