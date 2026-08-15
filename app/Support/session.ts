@@ -104,3 +104,31 @@ export function param(query: unknown, name: string): string | undefined {
 
   return first === undefined || first === '' ? undefined : String(first)
 }
+
+/**
+ * The authenticated user on an API request.
+ *
+ * The `auth` middleware stamps `request._authenticatedUser`, not `request.user`,
+ * so a handler reading the latter sees nothing and answers 401 or 404 for a
+ * request that authenticated perfectly. That cost an afternoon: the middleware
+ * passed, the route refused, and the two facts looked unrelated.
+ *
+ * Both are checked here, in one place, so a change on either side does not send
+ * every route hunting for it again. The id is coerced once, because the
+ * framework types it as `string | number` and everything downstream compares it
+ * against an integer column.
+ */
+export function requestUser(request: unknown): SessionUser | null {
+  const candidate = request as { _authenticatedUser?: { id?: number | string, name?: string, email?: string }, user?: { id?: number | string, name?: string, email?: string } }
+  const found = candidate?._authenticatedUser ?? candidate?.user
+
+  const id = Number(found?.id ?? 0)
+  if (!Number.isFinite(id) || id <= 0)
+    return null
+
+  return {
+    id,
+    name: found?.name ? String(found.name) : undefined,
+    email: found?.email ? String(found.email) : undefined,
+  }
+}

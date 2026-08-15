@@ -4,6 +4,7 @@ import { eventNamesFor, eventsFor } from '../app/Events/query'
 import { cached } from '../app/Reports/cache'
 import { runQuery } from '../app/Reports/engine'
 import { accessFor, canAdminister, isOwner, projectsFor } from '../app/Support/access'
+import { requestUser } from '../app/Support/session'
 import {
   acceptInvite,
   createProject,
@@ -34,17 +35,14 @@ import {
  */
 
 /**
- * The signed-in account, normalised.
+ * The signed-in account.
  *
- * The framework types `user.id` as `string | number` because different drivers
- * hand it back differently; everything downstream compares it against an
- * integer column, so the coercion happens once, here, rather than at each call
- * site where it would eventually be forgotten.
+ * Resolved through app/Support/session.ts, because the `auth` middleware stamps
+ * `request._authenticatedUser` rather than `request.user`: reading the latter
+ * makes an authenticated request look anonymous.
  */
 function currentUser(request: EnhancedRequest): { id: number, email?: string } | null {
-  const user = request.user
-  const id = Number(user?.id ?? 0)
-  return Number.isFinite(id) && id > 0 ? { id, email: user?.email ? String(user.email) : undefined } : null
+  return requestUser(request)
 }
 
 /** The same answer for "no such project" and "not yours". */

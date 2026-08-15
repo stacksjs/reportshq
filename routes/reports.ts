@@ -12,6 +12,7 @@ import {
   updateBlocks,
 } from '../app/Reports/reports'
 import { accessFor } from '../app/Support/access'
+import { requestUser } from '../app/Support/session'
 
 /**
  * The builder's write surface.
@@ -44,9 +45,9 @@ async function body(request: EnhancedRequest): Promise<Record<string, unknown>> 
   }
 }
 
+/** See app/Support/session.ts: the middleware stamps `_authenticatedUser`. */
 function currentUser(request: EnhancedRequest): { id: number } | null {
-  const id = Number(request.user?.id ?? 0)
-  return Number.isFinite(id) && id > 0 ? { id } : null
+  return requestUser(request)
 }
 
 function notFound(): ReturnType<typeof response.json> {
