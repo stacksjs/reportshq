@@ -26,18 +26,42 @@ const PORT_API = 3158
 /**
  * State that must outlive a release.
  *
- * Deploys are atomic: each one activates a NEW directory and the old one goes
- * away. Anything written inside it is therefore destroyed on the next deploy,
- * so the database would be wiped every time somebody pushed to main, and the
- * only symptom would be that all the customer data was gone. It lives here
- * instead, and the deploy creates the directory before migrating into it.
+ * Deploys are atomic: each activates a NEW release directory and the old one
+ * goes away, so anything written inside it is destroyed by the next deploy.
+ * Left at the framework default the database would be wiped on every push to
+ * main, and the only symptom would be that all the customer data was gone.
  *
- * Generated exports sit beside it for a smaller version of the same reason: a
- * download link handed out minutes before a deploy should still resolve.
+ * ts-cloud's shared paths are the mechanism for this: it keeps the real
+ * directory outside the releases and symlinks it into each one, so it creates
+ * them itself and a rollback finds the same data rather than an empty dir.
+ *
+ * The paths below stay release-relative because that is where the symlink
+ * lands; the `target` is where the bytes actually live.
  */
 const STATE_DIR = '/var/lib/reportshq'
-const DB_PATH = `${STATE_DIR}/reportshq.sqlite`
-const EXPORT_DIR = `${STATE_DIR}/exports`
+const DB_PATH = 'database/reportshq.sqlite'
+const EXPORT_DIR = 'storage/exports'
+
+/**
+ * Shared paths, with an EXPLICIT absolute target.
+ *
+ * `main` and `api` are two sites of one project, and each site gets its own
+ * `/var/www/reportshq-<site>/shared`. Listing `database` as a plain string
+ * would therefore give them two separate databases that drift apart forever:
+ * the API would write an event the page could not read, which looks like the
+ * app losing data rather than a config mistake. Naming one absolute target
+ * makes them the same file.
+ *
+ * `seed` decides which site may create and populate the target. Exactly one
+ * should, or whichever site happens to deploy first creates it and the site
+ * that actually holds the data never seeds it.
+ */
+function sharedState(seed: boolean) {
+  return [
+    { path: 'database', target: `${STATE_DIR}/database`, seed },
+    { path: EXPORT_DIR, target: `${STATE_DIR}/exports`, seed },
+  ]
+}
 
 /**
  * Deploy configuration.
@@ -102,22 +126,14 @@ export const tsCloud: TsCloudConfig = {
       domain: APP_DOMAIN,
       start: 'bun node_modules/@stacksjs/buddy/dist/serve-entry.js',
       port: PORT_MAIN,
-      // Each step announces itself. The remote log interleaves every command's
-      // output with no markers, so when a step fails the error arrives with no
-      // indication of which command produced it: the first deploy died on
-      // `Module not found "storage/framework/core/buddy/src/cli.ts"` directly
-      // beneath the output of `bun install`, which is not the command that
-      // raised it.
+      // The main site owns the state: it runs the migration that creates the
+      // database, so it is the one that may seed the target.
+      sharedPaths: sharedState(true),
       preStart: [
-        'echo "[reportshq] preStart 1/3: install"',
+        'echo "[reportshq] preStart 1/2: install"',
         'bun install --frozen-lockfile',
-        'echo "[reportshq] preStart 2/3: state dirs"',
-        // Before migrating, so the first deploy has somewhere to migrate into.
-        `mkdir -p ${STATE_DIR} ${EXPORT_DIR}`,
-        'echo "[reportshq] preStart 3/3: migrate"',
-        'ls -la storage | head -8',
-        'ls -la node_modules/@stacksjs/buddy/dist/cli.js || echo "[reportshq] buddy cli MISSING"',
-        'bun node_modules/@stacksjs/buddy/dist/cli.js migrate 2>&1 | sed "s/^/[migrate] /"',
+        'echo "[reportshq] preStart 2/2: migrate"',
+        'bun node_modules/@stacksjs/buddy/dist/cli.js migrate',
         'echo "[reportshq] preStart complete"',
       ],
       env: {
@@ -135,7 +151,9 @@ export const tsCloud: TsCloudConfig = {
       root: '.',
       start: 'bun node_modules/@stacksjs/actions/dist/serve/api.js',
       port: PORT_API,
-      preStart: ['echo "[reportshq] api preStart: install"', 'bun install --frozen-lockfile'],
+      // Same files as main, and explicitly NOT the seeder.
+      sharedPaths: sharedState(false),
+      preStart: ['bun install --frozen-lockfile'],
       env: {
         HOST: '127.0.0.1',
         APP_ENV: 'production',
