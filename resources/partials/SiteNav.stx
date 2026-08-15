@@ -1,0 +1,26 @@
+{{-- The public site's top bar.
+
+     A partial rather than a component, for the reason the whole app uses
+     partials: stx drops props passed component to component, and shared chrome
+     that silently loses its links is worse than no chrome. --}}
+<header class="border-b border-line bg-canvas">
+  <div class="flex gap-4 justify-between items-center px-6 py-4 mx-auto max-w-6xl">
+    <a href="/" class="flex gap-2 items-center no-underline">
+      <i class="w-5 h-5 i-hugeicons-chart-histogram text-accent"></i>
+      <span class="font-semibold tracking-tight text-ink">ReportsHQ</span>
+    </a>
+
+    {{-- Below sm there is not room for four links beside the wordmark, and a
+         nav that overflows the viewport gives the whole page a horizontal
+         scrollbar. The two that go are the two the footer also carries, so
+         nothing becomes unreachable on a phone. --}}
+    <nav class="flex gap-1 items-center">
+      <a href="/pricing" class="hidden px-3 py-1.5 text-sm no-underline rounded-lg sm:inline-block text-muted hover:text-ink">Pricing</a>
+      <a href="/docs" class="hidden px-3 py-1.5 text-sm no-underline rounded-lg sm:inline-block text-muted hover:text-ink">Docs</a>
+      <a href="/login" class="px-3 py-1.5 text-sm no-underline rounded-lg text-muted hover:text-ink">Sign in</a>
+      <a href="/register" class="px-3 py-1.5 ml-1 text-sm font-medium no-underline rounded-lg bg-accent text-accent-ink">
+        Start free
+      </a>
+    </nav>
+  </div>
+</header>
