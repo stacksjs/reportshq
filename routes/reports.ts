@@ -15,7 +15,9 @@ import {
   settleLayout,
   updateBlocks,
 } from '../app/Reports/reports'
-import { LimitReached, limitResponse } from '../app/Billing/gates'
+import { assertCan, LimitReached, limitResponse } from '../app/Billing/gates'
+import { db } from '@stacksjs/database'
+import { assertRecipientsAllowed, parseRecipients } from '../app/Reports/schedules'
 import { createShare, revokeShare, rotateShare, sharesFor } from '../app/Reports/shares'
 import { accessFor } from '../app/Support/access'
 import { requestUser } from '../app/Support/session'
@@ -316,6 +318,121 @@ route.post('/shares/rotate', async (request: EnhancedRequest) => {
 
   // The old URL stops working immediately, which is the point of rotating.
   return response.json({ token })
+}).skipCsrf()
+
+/**
+ * Scheduled delivery for a report.
+ *
+ * Recipients are checked against project membership on every write, not only
+ * on create: an address added by editing a schedule would otherwise skip the
+ * check entirely, which is the whole of the open-relay problem.
+ */
+route.post('/schedules', async (request: EnhancedRequest) => {
+  const payload = await body(request)
+  const context = await editableReport(request, payload)
+  if (!context)
+    return notFound()
+
+  const rows = await db.unsafe(
+    `SELECT id, cadence, hour, day_of_week, day_of_month, timezone, recipients, format,
+            is_active, last_run_at, last_status
+       FROM report_schedules WHERE report_id = $1 ORDER BY created_at DESC`,
+    [context.reportId],
+  )
+
+  return response.json({ schedules: rows })
+}).skipCsrf()
+
+route.post('/schedules/create', async (request: EnhancedRequest) => {
+  const payload = await body(request)
+  const context = await editableReport(request, payload)
+  if (!context)
+    return notFound()
+
+  const cadence = String(payload.cadence ?? 'weekly')
+  if (!['daily', 'weekly', 'monthly'].includes(cadence))
+    return response.json({ message: 'Cadence must be daily, weekly or monthly.' }, 422)
+
+  const hour = Math.max(0, Math.min(23, Math.trunc(Number(payload.hour ?? 8)) || 0))
+  const format = String(payload.format ?? 'link')
+  if (!['link', 'csv', 'xlsx'].includes(format))
+    return response.json({ message: 'Format must be link, csv or xlsx.' }, 422)
+
+  const recipients = parseRecipients(payload.recipients)
+
+  try {
+    await assertCan(context.projectId, 'schedules', 'Scheduled delivery')
+    await assertRecipientsAllowed(context.projectId, recipients)
+  }
+  catch (error) {
+    if (error instanceof LimitReached) {
+      const { body: limitBody, status } = limitResponse(error)
+      return response.json(limitBody, status)
+    }
+
+    return response.json({ message: (error as Error).message }, 422)
+  }
+
+  // The project's zone, not the browser's. A schedule means eight o'clock
+  // where the project lives, and a laptop in another country should not
+  // silently reschedule everybody else's report.
+  const project = (await db.unsafe(`SELECT timezone FROM projects WHERE id = $1`, [context.projectId]))?.[0] as { timezone?: string } | undefined
+
+  await db.unsafe(
+    `INSERT INTO report_schedules (report_id, cadence, hour, day_of_week, day_of_month, timezone, recipients, format, is_active, created_by_id, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1, $9, CURRENT_TIMESTAMP)`,
+    [
+      context.reportId,
+      cadence,
+      hour,
+      cadence === 'weekly' ? Math.max(0, Math.min(6, Math.trunc(Number(payload.day_of_week ?? 1)) || 0)) : null,
+      // Capped at 28 so a monthly schedule cannot pick a day February does not
+      // have and silently never run.
+      cadence === 'monthly' ? Math.max(1, Math.min(28, Math.trunc(Number(payload.day_of_month ?? 1)) || 1)) : null,
+      String(project?.timezone ?? 'UTC'),
+      JSON.stringify(recipients),
+      format,
+      context.user.id,
+    ],
+  )
+
+  return response.json({ created: true }, 201)
+}).skipCsrf()
+
+route.post('/schedules/toggle', async (request: EnhancedRequest) => {
+  const payload = await body(request)
+  const context = await editableReport(request, payload)
+  if (!context)
+    return notFound()
+
+  const scheduleId = Number(payload.id ?? 0)
+  if (!scheduleId)
+    return response.json({ message: 'Which schedule?' }, 422)
+
+  // Scoped by report as well as by id, so a schedule from another tenant is
+  // not reachable by guessing a number.
+  await db.unsafe(
+    `UPDATE report_schedules SET is_active = CASE WHEN is_active = 1 THEN 0 ELSE 1 END, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND report_id = $2`,
+    [scheduleId, context.reportId],
+  )
+
+  return response.json({ toggled: true })
+}).skipCsrf()
+
+route.post('/schedules/remove', async (request: EnhancedRequest) => {
+  const payload = await body(request)
+  const context = await editableReport(request, payload)
+  if (!context)
+    return notFound()
+
+  const scheduleId = Number(payload.id ?? 0)
+  if (!scheduleId)
+    return response.json({ message: 'Which schedule?' }, 422)
+
+  await db.unsafe(`DELETE FROM report_schedules WHERE id = $1 AND report_id = $2`, [scheduleId, context.reportId])
+
+  return response.json({ removed: true })
 }).skipCsrf()
 
 route.post('/create', async (request: EnhancedRequest) => {

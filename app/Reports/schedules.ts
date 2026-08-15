@@ -198,3 +198,50 @@ export async function recordRun(scheduleId: number, status: string, at: Date = n
     [at.toISOString(), status.slice(0, 200), scheduleId],
   )
 }
+
+/**
+ * The addresses a project may send a report to.
+ *
+ * Membership, and nothing else. A scheduled report is us sending mail to an
+ * arbitrary address on somebody's instruction, which is the definition of an
+ * open relay if the address is unconstrained: anyone with a free account could
+ * point a daily schedule at a stranger and have our server deliver it, with our
+ * domain's reputation behind it.
+ *
+ * Members are already people who can open the report in the app, so mailing it
+ * to them tells them nothing they could not already read.
+ */
+export async function allowedRecipients(projectId: number): Promise<Set<string>> {
+  const rows = await db.unsafe(
+    `SELECT u.email AS email
+       FROM projects p JOIN users u ON u.id = p.owner_id
+      WHERE p.id = $1
+      UNION
+     SELECT m.email AS email
+       FROM project_members m
+      WHERE m.project_id = $1`,
+    [projectId],
+  ) as Array<{ email: string }>
+
+  return new Set(rows.map(row => String(row.email ?? '').trim().toLowerCase()).filter(Boolean))
+}
+
+/**
+ * Refuse a recipient list containing anybody who is not on the project.
+ *
+ * Names the addresses it refused. "Some recipients are not allowed" leaves
+ * somebody guessing which of six addresses to remove.
+ */
+export async function assertRecipientsAllowed(projectId: number, recipients: string[]): Promise<void> {
+  if (recipients.length === 0)
+    throw new Error('A schedule needs at least one recipient.')
+
+  const allowed = await allowedRecipients(projectId)
+  const strangers = recipients.filter(address => !allowed.has(address.trim().toLowerCase()))
+
+  if (strangers.length > 0) {
+    throw new Error(
+      `Only people on this project can receive it. Invite them first, or remove ${strangers.join(', ')}.`,
+    )
+  }
+}

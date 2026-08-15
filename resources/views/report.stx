@@ -7,7 +7,10 @@
 import { describeCaveat, describeQuery } from '../../app/Reports/describe'
 import { db as __db } from '@stacksjs/database'
 import { runQuery } from '../../app/Reports/engine'
+import { config } from '@stacksjs/config'
 import { publishedBlocks, reportBySlug } from '../../app/Reports/reports'
+import { allowedRecipients, parseRecipients } from '../../app/Reports/schedules'
+import { sharesFor } from '../../app/Reports/shares'
 import { accessFor } from '../../app/Support/access'
 import { param, sessionCookieName, sessionFrom } from '../../app/Support/session'
 
@@ -68,6 +71,43 @@ const blocks = snapshot ?? []
 const mayEdit = access?.role === 'owner' || access?.role === 'admin'
 const draftAhead = mayEdit && Boolean(report?.unpublished_changes)
 const editHref = `/report-edit?project=${projectId}&slug=${slug}`
+
+// Sharing and scheduling, for somebody who can administer the project. Both
+// read from the same domain modules the jobs and public pages use, so what is
+// listed here is what actually exists rather than a second view of it.
+const shares = mayEdit && found ? await sharesFor(Number(report!.id)) : []
+const schedules = mayEdit && found
+  ? await __db.unsafe(
+      `SELECT id, cadence, hour, timezone, recipients, format, is_active, last_run_at, last_status
+         FROM report_schedules WHERE report_id = $1 ORDER BY created_at DESC`,
+      [Number(report!.id)],
+    ) as Array<Record<string, unknown>>
+  : []
+
+const shareLinks = shares.map(share => ({
+  id: Number(share.id),
+  label: share.label ? String(share.label) : 'Untitled link',
+  url: `${String(config.app.url ?? '').startsWith('http') ? config.app.url : `https://${config.app.url ?? 'reportshq.org'}`}/s?t=${String(share.token)}`,
+  views: Number(share.view_count ?? 0),
+  revoked: Boolean(share.revoked_at),
+  expires: share.expires_at ? String(share.expires_at).slice(0, 10) : '',
+}))
+
+const scheduleRows = schedules.map(schedule => ({
+  id: Number(schedule.id),
+  // "Weekly at 08:00 Europe/Lisbon" reads as a sentence; "weekly / 8 / tz"
+  // reads as a database row.
+  summary: `${String(schedule.cadence)} at ${String(schedule.hour).padStart(2, '0')}:00 ${String(schedule.timezone)}`,
+  recipients: parseRecipients(schedule.recipients).join(', '),
+  format: String(schedule.format ?? 'link'),
+  active: Boolean(schedule.is_active),
+  lastRun: schedule.last_run_at ? String(schedule.last_run_at).slice(0, 16).replace('T', ' ') : 'never',
+  lastStatus: schedule.last_status ? String(schedule.last_status) : '',
+}))
+
+const memberEmails = mayEdit && found
+  ? [...(await allowedRecipients(projectId))].sort()
+  : []
 /**
  * "Published 14 Aug 2026, 01:59".
  *
@@ -297,7 +337,268 @@ const rangeLinks = RANGES.map(entry => ({
             @endforeach
           </div>
         @endif
+
+        @if (mayEdit)
+          {{-- Sharing and scheduling, below the report rather than above it.
+               Somebody opening a report came to read it; distribution is what
+               they do afterwards, and putting it first would push the numbers
+               under the fold. --}}
+          <section class="grid gap-6 mt-12 lg:grid-cols-2">
+            <div class="p-5 rounded-xl border border-line bg-panel">
+              <h2 class="text-sm font-medium">Share links</h2>
+              <p class="mt-1 mb-4 text-sm text-muted">
+                A link shows this report's published version to anyone who opens it, with no account.
+              </p>
+
+              @if (shareLinks.length === 0)
+                <p class="mb-4 text-sm text-subtle">No links yet.</p>
+              @else
+                <ul class="grid gap-2 mb-4 list-none">
+                  @foreach (shareLinks as link)
+                    <li class="p-3 rounded-lg border border-line bg-canvas">
+                      <div class="flex flex-wrap gap-2 justify-between items-baseline">
+                        <span class="text-sm text-ink">{{ link.label }}</span>
+                        @if (link.revoked)
+                          <span class="text-xs text-subtle">revoked</span>
+                        @else
+                          <span class="text-xs text-subtle">{{ link.views }} views</span>
+                        @endif
+                      </div>
+                      @if (!link.revoked)
+                        <code class="block mt-1 text-xs break-all text-muted">{{ link.url }}</code>
+                        <div class="flex gap-3 mt-2">
+                          <button type="button" class="text-xs copy-share text-accent" data-url="{{ link.url }}">Copy</button>
+                          <button type="button" class="text-xs rotate-share text-muted hover:text-ink" data-id="{{ link.id }}">Rotate</button>
+                          <button type="button" class="text-xs revoke-share text-subtle hover:text-neg" data-id="{{ link.id }}">Revoke</button>
+                        </div>
+                      @endif
+                    </li>
+                  @endforeach
+                </ul>
+              @endif
+
+              <button id="new-share" type="button" class="px-3 py-2 text-sm font-medium rounded-lg bg-accent text-accent-ink">
+                Create a link
+              </button>
+            </div>
+
+            <div class="p-5 rounded-xl border border-line bg-panel">
+              <h2 class="text-sm font-medium">Scheduled delivery</h2>
+              <p class="mt-1 mb-4 text-sm text-muted">
+                The headline numbers by email, on a cadence, to people on this project.
+              </p>
+
+              @if (scheduleRows.length === 0)
+                <p class="mb-4 text-sm text-subtle">Nothing scheduled.</p>
+              @else
+                <ul class="grid gap-2 mb-4 list-none">
+                  @foreach (scheduleRows as row)
+                    <li class="p-3 rounded-lg border border-line bg-canvas">
+                      <div class="flex flex-wrap gap-2 justify-between items-baseline">
+                        <span class="text-sm text-ink">{{ row.summary }}</span>
+                        <span class="text-xs {{ row.active ? 'text-subtle' : 'text-warn' }}">
+                          {{ row.active ? row.format : 'paused' }}
+                        </span>
+                      </div>
+                      <p class="mt-1 text-xs text-muted">{{ row.recipients }}</p>
+                      {{-- The outcome of the last run, said plainly. A schedule
+                           that is failing should say so where somebody looks,
+                           not only in a log. --}}
+                      <p class="mt-1 text-xs text-subtle">Last run: {{ row.lastRun }}{{ row.lastStatus ? ' - ' + row.lastStatus : '' }}</p>
+                      <div class="flex gap-3 mt-2">
+                        <button type="button" class="text-xs toggle-schedule text-muted hover:text-ink" data-id="{{ row.id }}">
+                          {{ row.active ? 'Pause' : 'Resume' }}
+                        </button>
+                        <button type="button" class="text-xs remove-schedule text-subtle hover:text-neg" data-id="{{ row.id }}">Remove</button>
+                      </div>
+                    </li>
+                  @endforeach
+                </ul>
+              @endif
+
+              <form id="new-schedule" class="grid gap-2">
+                <div class="grid grid-cols-2 gap-2">
+                  <label class="block">
+                    <span class="block mb-1 text-xs text-subtle">Cadence</span>
+                    <select id="cadence" class="px-2 py-1.5 w-full text-sm rounded-lg border border-line bg-canvas text-ink">
+                      <option value="weekly">Weekly</option>
+                      <option value="daily">Daily</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                  </label>
+                  <label class="block">
+                    <span class="block mb-1 text-xs text-subtle">Hour</span>
+                    <input id="hour" type="number" min="0" max="23" value="8" class="px-2 py-1.5 w-full text-sm rounded-lg border border-line bg-canvas text-ink" />
+                  </label>
+                </div>
+
+                <label class="block">
+                  <span class="block mb-1 text-xs text-subtle">Recipients</span>
+                  {{-- Chosen from the project, not typed. Only members may
+                       receive a report, and a picker makes that a fact rather
+                       than a validation error somebody meets afterwards. --}}
+                  <select id="recipients" multiple size="3" class="px-2 py-1.5 w-full text-sm rounded-lg border border-line bg-canvas text-ink">
+                    @foreach (memberEmails as address)
+                      <option value="{{ address }}">{{ address }}</option>
+                    @endforeach
+                  </select>
+                </label>
+
+                <label class="block">
+                  <span class="block mb-1 text-xs text-subtle">Attach</span>
+                  <select id="format" class="px-2 py-1.5 w-full text-sm rounded-lg border border-line bg-canvas text-ink">
+                    <option value="link">Nothing, just the link</option>
+                    <option value="csv">CSV</option>
+                    <option value="xlsx">XLSX</option>
+                  </select>
+                </label>
+
+                <button type="submit" class="px-3 py-2 mt-1 text-sm font-medium rounded-lg bg-accent text-accent-ink">
+                  Schedule it
+                </button>
+              </form>
+            </div>
+          </section>
+
+          <p id="dist-error" class="mt-4 text-sm text-warn" hidden></p>
+        @endif
       @endif
     </main>
   </div>
+
+{{-- Sharing and scheduling.
+
+     A plain script, like the rest of this app's interactive surfaces: it runs
+     before the runtime and touches the DOM directly. Every call goes to the
+     builder's write surface, which is CSRF-exempt by design and scoped to a
+     report the caller already reached through its project. --}}
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search)
+  var currentProject = params.get('project')
+  var currentSlug = params.get('slug')
+  if (!currentProject || !currentSlug) return
+
+  var error = document.getElementById('dist-error')
+
+  function fail(message) {
+    if (!error) return
+    error.textContent = message || ''
+    error.hidden = !message
+  }
+
+  function post(path, extra) {
+    var payload = { project: Number(currentProject), slug: currentSlug }
+    for (var key in extra) payload[key] = extra[key]
+
+    return fetch('/api/reports/' + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload),
+    })
+  }
+
+  function reloadOr(res, message) {
+    if (res.ok) {
+      window.location.reload()
+      return
+    }
+    return res.json().then(function (data) {
+      // The server's own message, which for a plan limit names the tier that
+      // would lift it and for a recipient names the address to remove.
+      fail((data && data.message) || message)
+    }).catch(function () { fail(message) })
+  }
+
+  var newShare = document.getElementById('new-share')
+  if (newShare) {
+    newShare.addEventListener('click', function () {
+      fail('')
+      post('shares/create', { label: 'Shared link' })
+        .then(function (res) { return reloadOr(res, 'Could not create that link.') })
+        .catch(function () { fail('Could not reach the server.') })
+    })
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.copy-share'), function (button) {
+    button.addEventListener('click', function () {
+      var url = button.dataset.url
+      // The clipboard API needs a secure context, which a local install over
+      // plain HTTP is not. Saying so beats a button that silently does nothing.
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(url).then(function () {
+          button.textContent = 'Copied'
+          setTimeout(function () { button.textContent = 'Copy' }, 1500)
+        })
+        return
+      }
+      window.prompt('Copy this link', url)
+    })
+  })
+
+  Array.prototype.forEach.call(document.querySelectorAll('.rotate-share'), function (button) {
+    button.addEventListener('click', function () {
+      fail('')
+      // No confirmation: the list says what happened and a new link is one
+      // click away. The old URL stops working, which is the point.
+      post('shares/rotate', { id: Number(button.dataset.id) })
+        .then(function (res) { return reloadOr(res, 'Could not rotate that link.') })
+        .catch(function () { fail('Could not reach the server.') })
+    })
+  })
+
+  Array.prototype.forEach.call(document.querySelectorAll('.revoke-share'), function (button) {
+    button.addEventListener('click', function () {
+      fail('')
+      post('shares/revoke', { id: Number(button.dataset.id) })
+        .then(function (res) { return reloadOr(res, 'Could not revoke that link.') })
+        .catch(function () { fail('Could not reach the server.') })
+    })
+  })
+
+  Array.prototype.forEach.call(document.querySelectorAll('.toggle-schedule'), function (button) {
+    button.addEventListener('click', function () {
+      fail('')
+      post('schedules/toggle', { id: Number(button.dataset.id) })
+        .then(function (res) { return reloadOr(res, 'Could not change that schedule.') })
+        .catch(function () { fail('Could not reach the server.') })
+    })
+  })
+
+  Array.prototype.forEach.call(document.querySelectorAll('.remove-schedule'), function (button) {
+    button.addEventListener('click', function () {
+      fail('')
+      post('schedules/remove', { id: Number(button.dataset.id) })
+        .then(function (res) { return reloadOr(res, 'Could not remove that schedule.') })
+        .catch(function () { fail('Could not reach the server.') })
+    })
+  })
+
+  var scheduleForm = document.getElementById('new-schedule')
+  if (scheduleForm) {
+    scheduleForm.addEventListener('submit', function (event) {
+      event.preventDefault()
+      fail('')
+
+      var chosen = Array.prototype.slice.call(document.getElementById('recipients').selectedOptions)
+        .map(function (option) { return option.value })
+
+      if (chosen.length === 0) {
+        fail('Choose at least one person to send it to.')
+        return
+      }
+
+      post('schedules/create', {
+        cadence: document.getElementById('cadence').value,
+        hour: Number(document.getElementById('hour').value),
+        format: document.getElementById('format').value,
+        recipients: chosen,
+      })
+        .then(function (res) { return reloadOr(res, 'Could not create that schedule.') })
+        .catch(function () { fail('Could not reach the server.') })
+    })
+  }
+}())
+</script>
 </template>

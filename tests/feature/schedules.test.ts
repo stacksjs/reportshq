@@ -15,7 +15,7 @@ import { rangeFor } from '../../app/Jobs/DeliverReports'
 import { storeEvents } from '../../app/Events/ingest'
 import { EXPORT_HEADINGS, exportContent, exportCsv, exportFilename, exportXlsx } from '../../app/Reports/exports'
 import { addBlock, createReport, publishReport } from '../../app/Reports/reports'
-import { activeSchedules, isDue, localParts, parseRecipients, recordRun } from '../../app/Reports/schedules'
+import { activeSchedules, allowedRecipients, assertRecipientsAllowed, isDue, localParts, parseRecipients, recordRun } from '../../app/Reports/schedules'
 import { createProject } from '../../app/Support/projects'
 
 const stamp = Date.now()
@@ -302,5 +302,55 @@ describe('exports', () => {
 
   test('a report with no name still produces a usable filename', () => {
     expect(exportFilename('', 'csv', new Date('2026-08-15T00:00:00.000Z'))).toBe('report-2026-08-15.csv')
+  })
+})
+
+describe('who may receive a scheduled report', () => {
+  test('project members are allowed', async () => {
+    const allowed = await allowedRecipients(projectId)
+    const ownerEmail = (await db.unsafe(`SELECT email FROM users WHERE id = $1`, [owner.id]))?.[0] as { email: string }
+
+    expect(allowed.has(String(ownerEmail.email).toLowerCase())).toBeTrue()
+  })
+
+  test('a stranger is refused, and named', async () => {
+    // The whole open-relay problem: without this, anyone with a free account
+    // could point a daily schedule at somebody who never asked for it and have
+    // our server deliver it, with our domain's reputation behind it.
+    expect(assertRecipientsAllowed(projectId, ['stranger@example.com']))
+      .rejects.toThrow(/stranger@example\.com/)
+  })
+
+  test('one stranger among members refuses the whole list', async () => {
+    const ownerEmail = String(((await db.unsafe(`SELECT email FROM users WHERE id = $1`, [owner.id]))?.[0] as { email: string }).email)
+
+    expect(assertRecipientsAllowed(projectId, [ownerEmail, 'stranger@example.com']))
+      .rejects.toThrow(/stranger@example\.com/)
+  })
+
+  test('an empty list is refused rather than silently delivering to nobody', async () => {
+    expect(assertRecipientsAllowed(projectId, [])).rejects.toThrow(/at least one recipient/)
+  })
+
+  test('the check is case insensitive', async () => {
+    const ownerEmail = String(((await db.unsafe(`SELECT email FROM users WHERE id = $1`, [owner.id]))?.[0] as { email: string }).email)
+
+    // Somebody's phone capitalises the first letter. That is the same person.
+    expect(assertRecipientsAllowed(projectId, [ownerEmail.toUpperCase()])).resolves.toBeUndefined()
+  })
+
+  test('a project cannot send to another project\'s members', async () => {
+    const other = Number((await createProject(owner, { name: `Other recipients ${stamp}`, timezone: 'UTC' })).id)
+
+    try {
+      // Membership is per project, so the allowed set must be too.
+      const allowed = await allowedRecipients(other)
+      expect(allowed.size).toBeGreaterThan(0)
+      expect(assertRecipientsAllowed(other, ['nobody@example.com'])).rejects.toThrow()
+    }
+    finally {
+      await db.unsafe(`DELETE FROM usage_counters WHERE project_id = $1`, [other])
+      await db.unsafe(`DELETE FROM projects WHERE id = $1`, [other])
+    }
   })
 })
