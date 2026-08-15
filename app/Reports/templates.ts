@@ -194,7 +194,6 @@ export interface ProvisionResult {
 export async function provisionTemplates(
   projectId: number,
   user: { id: number },
-  options: { now?: Date } = {},
 ): Promise<ProvisionResult> {
   const created: string[] = []
   const skipped: string[] = []
