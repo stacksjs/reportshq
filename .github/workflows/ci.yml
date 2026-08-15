@@ -144,3 +144,93 @@ jobs:
       # without anything failing. This asserts both.
       - name: Design tokens
         run: bun scripts/verify-tokens.ts
+
+  # Push to deploy.
+  #
+  # This job lives in CI rather than in a workflow of its own so the gates are
+  # `needs`, not a copy of the same steps. The first attempt was a separate
+  # deploy.yml that re-ran lint, typecheck and test itself; it failed on the
+  # first push because it had not copied the `key:generate` and `migrate` steps
+  # the test job needs, which is exactly the drift duplication produces.
+  #
+  # A red build therefore means NO deploy, silently and by construction.
+  deploy:
+    needs: [lint, typecheck, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    # Queue deploys rather than cancelling them. Two runs racing to write the
+    # same systemd unit and rpx fragment on a box shared with a dozen tenants is
+    # worse than one slow deploy: the loser can leave the gateway parsing a
+    # half-written fragment and drop a host until the next reload.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+
+    environment:
+      name: production
+      url: https://reportshq.org
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Pantry
+        uses: pantry-pm/pantry/packages/action@c1417d98f5613290bc3b1f96d35086b834684659 # v0.10.47 + the socket-hang-up retry fix
+        with:
+          install: 'false'
+
+      - name: Install Dependencies
+        run: bun install
+
+      # ts-cloud reads the PUBLIC key off disk to register it, so it is derived
+      # from the private one rather than stored as a second secret. Two secrets
+      # that have to agree eventually stop agreeing.
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keygen -y -f ~/.ssh/id_ed25519 > ~/.ssh/id_ed25519.pub
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      # The release is built from this clean checkout rather than from a laptop,
+      # and that is the point rather than a convenience: `buddy deploy` tars the
+      # WORKING DIRECTORY, not the commit, so a local deploy ships whatever
+      # happens to be checked out.
+      - name: Deploy
+        env:
+          # Decrypts .env.production, which is committed encrypted and carries
+          # every application secret. The private key exists only here.
+          DOTENV_PRIVATE_KEY_PRODUCTION: ${{ secrets.DOTENV_PRIVATE_KEY_PRODUCTION }}
+          # Needed even though this attaches to an existing box: ts-cloud still
+          # resolves the server through the Hetzner API.
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+          # DNS reconcile for reportshq.org, whose zone lives on Porkbun.
+          PORKBUN_API_KEY: ${{ secrets.PORKBUN_API_KEY }}
+          PORKBUN_SECRET_KEY: ${{ secrets.PORKBUN_SECRET_KEY }}
+          APP_ENV: production
+          APP_URL: https://reportshq.org
+          APP_DOMAIN: reportshq.org
+        run: ./buddy deploy --prod --yes
+
+      # A deploy exiting 0 does not mean the site works: a release can ship, the
+      # unit can start, and every request can still 500. These are the pages a
+      # stranger actually lands on.
+      - name: Verify the site is serving
+        run: |
+          set -uo pipefail
+          fail=0
+          for path in / /pricing /features /compare/metabase /docs /sitemap.xml /robots.txt; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --retry 5 --retry-delay 5 --retry-all-errors "https://reportshq.org${path}" || echo 000)
+            printf '%-24s %s\n' "$path" "$code"
+            [ "$code" = "200" ] || fail=1
+          done
+
+          # An unauthenticated write must be refused rather than accepted or
+          # 404'd. 401 is the healthy answer here.
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST https://reportshq.org/ingest || echo 000)
+          printf '%-24s %s (expect 401)\n' "POST /ingest" "$code"
+          [ "$code" = "401" ] || fail=1
+
+          exit $fail
