@@ -6,6 +6,8 @@
 // selection on top of markup that already reads properly. That ordering is the
 // point: a builder whose blocks only appear after hydration shows an empty grid
 // to anyone on a slow connection, which is exactly when they are least patient.
+import { eventNamesFor, propertyKeysFor } from '../../app/Events/query'
+import { eventLabel, fieldLabel, GRAIN_LABELS, MEASURE_LABELS, OPERATOR_LABELS } from '../../app/Events/taxonomy'
 import { runQuery } from '../../app/Reports/engine'
 import { blocksOf, reportBySlug } from '../../app/Reports/reports'
 import { GRID_COLUMNS } from '../../app/Reports/schema'
@@ -36,6 +38,10 @@ for (const block of blocks) {
   const entry = {
     id: Number(block.id),
     kind,
+    // The panel populates from this rather than fetching the block again: it is
+    // already on the page, and a round trip on every selection makes clicking
+    // through a report feel like using a website from 2004.
+    config: JSON.stringify(block.query ?? {}),
     title: block.title ? String(block.title) : '',
     body: block.body ? String(block.body) : '',
     x: Number(block.x) || 0,
@@ -63,6 +69,36 @@ for (const block of blocks) {
   rendered.push(entry)
 }
 
+// What the config panel offers to choose from. Read from the project rather
+// than hardcoded: the events and property keys a customer actually sends are
+// the only ones worth offering, and typing `properties.plan` from memory is how
+// somebody groups by a key that does not exist and gets one silent bucket.
+const eventOptions = found
+  ? (await eventNamesFor(projectId, 60)).map(entry => ({ name: entry.name, label: eventLabel(entry.name), count: entry.count }))
+  : []
+
+const propertyOptions = found
+  ? (await propertyKeysFor(projectId)).map(entry => ({ field: `properties.${entry.key}`, label: entry.key }))
+  : []
+
+const measureOptions = Object.entries(MEASURE_LABELS).map(([value, label]) => ({ value, label }))
+const grainOptions = Object.entries(GRAIN_LABELS).map(([value, label]) => ({ value, label }))
+const operatorOptions = Object.entries(OPERATOR_LABELS).map(([value, label]) => ({ value, label }))
+
+// Filterable and groupable fields: the allowlisted columns, plus whatever
+// property keys have arrived.
+const fieldOptions = [
+  ...['name', 'user_key', 'session_key', 'value', 'currency'].map(field => ({ field, label: fieldLabel(field) })),
+  ...propertyOptions,
+]
+
+// Numeric fields only, for the measures that need something to add up. Offering
+// `name` to a sum is offering a guaranteed zero.
+const numericFieldOptions = [
+  { field: 'value', label: 'Value' },
+  ...propertyOptions,
+]
+
 /** The palette, in the order someone reaches for them. */
 const kinds = [
   { kind: 'big_number', label: 'Big number', w: 3, h: 3, icon: 'i-hugeicons-chart-average' },
@@ -75,6 +111,12 @@ const kinds = [
   { kind: 'heatmap', label: 'Heatmap', w: 12, h: 3, icon: 'i-hugeicons-grid' },
   { kind: 'text', label: 'Note', w: 12, h: 1, icon: 'i-hugeicons-text' },
 ]
+
+// Handed to the script as JSON strings and parsed there. stx encodes an
+// interpolation in a script block as a JS literal, so a string round-trips
+// predictably where an object's encoding would be an assumption.
+const fieldChoicesJson = JSON.stringify(fieldOptions)
+const operatorChoicesJson = JSON.stringify(operatorOptions)
 
 const isPublished = String(report?.status ?? 'draft') === 'published'
 
@@ -164,7 +206,11 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
           </div>
         </div>
 
-        <div class="grid gap-6 lg:grid-cols-[200px_1fr]">
+        {{-- Three columns once a block is selected. The panel is a column
+             rather than an overlay: it is edited while watching the block it
+             changes, and a drawer covering the grid would hide the one thing
+             the person is looking at. --}}
+        <div id="workspace" class="grid gap-6 lg:grid-cols-[200px_1fr]">
           <aside>
             <h2 class="mb-2 text-xs font-medium tracking-wide uppercase text-subtle">Add a block</h2>
             <ul class="grid grid-cols-2 gap-2 list-none lg:grid-cols-1">
@@ -207,6 +253,10 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
                   <article
                     class="block-tile relative rounded-xl border border-line bg-panel p-4 col-start-[{{ block.x + 1 }}] col-span-{{ block.w }} row-span-{{ block.h }}"
                     data-id="{{ block.id }}"
+                    data-kind="{{ block.kind }}"
+                    data-title="{{ block.title }}"
+                    data-body="{{ block.body }}"
+                    data-query="{{ block.config }}"
                     data-x="{{ block.x }}"
                     data-y="{{ block.y }}"
                     data-w="{{ block.w }}"
@@ -249,6 +299,100 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
               </div>
             @endif
           </section>
+
+          {{-- The config panel. Server-rendered empty and filled in on
+               selection, so the option lists are already here and choosing a
+               block does not wait on a request. --}}
+          <aside id="config" class="hidden" aria-label="Block settings">
+            <div class="sticky top-6 p-4 rounded-xl border border-line bg-panel">
+              <div class="flex justify-between items-start mb-4">
+                <h2 class="text-sm font-medium">Block</h2>
+                <button id="cfg-close" type="button" class="text-subtle hover:text-ink" aria-label="Close settings">
+                  <i class="block w-4 h-4 i-hugeicons-cancel-01"></i>
+                </button>
+              </div>
+
+              <label class="block mb-3">
+                <span class="block mb-1 text-xs text-subtle">Title</span>
+                <input id="cfg-title" type="text" class="px-2 py-1.5 w-full text-sm rounded-lg border border-line bg-canvas text-ink" />
+              </label>
+
+              <div id="cfg-query">
+                <label class="block mb-3">
+                  <span class="block mb-1 text-xs text-subtle">Events</span>
+                  {{-- A multi-select rather than a tag editor: it is one
+                       control, it is keyboard-navigable for free, and nothing
+                       selected honestly means every event. --}}
+                  <select id="cfg-events" multiple size="5" class="px-2 py-1.5 w-full text-sm rounded-lg border border-line bg-canvas text-ink">
+                    @foreach (eventOptions as option)
+                      <option value="{{ option.name }}">{{ option.label }}</option>
+                    @endforeach
+                  </select>
+                  <span class="block mt-1 text-xs text-subtle">Nothing selected counts every event.</span>
+                </label>
+
+                <label class="block mb-3">
+                  <span class="block mb-1 text-xs text-subtle">Measure</span>
+                  <select id="cfg-measure" class="px-2 py-1.5 w-full text-sm rounded-lg border border-line bg-canvas text-ink">
+                    @foreach (measureOptions as option)
+                      <option value="{{ option.value }}">{{ option.label }}</option>
+                    @endforeach
+                  </select>
+                </label>
+
+                <label id="cfg-field-row" class="block mb-3">
+                  <span class="block mb-1 text-xs text-subtle">Field</span>
+                  <select id="cfg-field" class="px-2 py-1.5 w-full text-sm rounded-lg border border-line bg-canvas text-ink">
+                    @foreach (numericFieldOptions as option)
+                      <option value="{{ option.field }}">{{ option.label }}</option>
+                    @endforeach
+                  </select>
+                </label>
+
+                <label class="block mb-3">
+                  <span class="block mb-1 text-xs text-subtle">Group by</span>
+                  <select id="cfg-dimension" class="px-2 py-1.5 w-full text-sm rounded-lg border border-line bg-canvas text-ink">
+                    <option value="">Nothing</option>
+                    @foreach (fieldOptions as option)
+                      <option value="{{ option.field }}">{{ option.label }}</option>
+                    @endforeach
+                  </select>
+                </label>
+
+                <label id="cfg-grain-row" class="block mb-3">
+                  <span class="block mb-1 text-xs text-subtle">Over time</span>
+                  <select id="cfg-grain" class="px-2 py-1.5 w-full text-sm rounded-lg border border-line bg-canvas text-ink">
+                    @foreach (grainOptions as option)
+                      <option value="{{ option.value }}">{{ option.label }}</option>
+                    @endforeach
+                  </select>
+                </label>
+
+                <label class="flex gap-2 items-center mb-4 text-sm">
+                  <input id="cfg-compare" type="checkbox" class="rounded border-line" />
+                  <span>Compare with the previous period</span>
+                </label>
+
+                <div class="mb-3">
+                  <span class="block mb-1 text-xs text-subtle">Filters</span>
+                  <div id="cfg-filters" class="grid gap-2"></div>
+                  <button id="cfg-add-filter" type="button" class="mt-2 text-xs text-accent">Add a filter</button>
+                </div>
+              </div>
+
+              <label id="cfg-body-row" class="block mb-3">
+                <span class="block mb-1 text-xs text-subtle">Text</span>
+                <textarea id="cfg-body" rows="4" class="px-2 py-1.5 w-full text-sm rounded-lg border border-line bg-canvas text-ink"></textarea>
+              </label>
+
+              {{-- Errors land here and in the block itself. A message only in a
+                   toast is gone by the time somebody looks up from the field
+                   that caused it. --}}
+              <p id="cfg-error" class="mt-3 text-sm text-warn" hidden></p>
+
+              <button id="cfg-remove" type="button" class="mt-4 text-xs text-neg">Remove this block</button>
+            </div>
+          </aside>
         </div>
       @endif
     </main>
@@ -281,6 +425,8 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
   var COLUMNS = 12
   var ROW = 56
   var GAP = 12
+  var FIELD_CHOICES = JSON.parse({{ fieldChoicesJson }})
+  var OPERATOR_CHOICES = JSON.parse({{ operatorChoicesJson }})
 
   var selected = null
   var pending = null
@@ -316,8 +462,8 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
 
   // Recorded before a change, not after, so undo restores what was on screen
   // when you started rather than what you ended up with.
-  function remember() {
-    var now = snapshot()
+  function remember(state) {
+    var now = state || snapshot()
     if (sameLayout(past[past.length - 1], now)) return
     past.push(now)
     if (past.length > HISTORY) past.shift()
@@ -329,6 +475,21 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
 
   function say(text) {
     if (state) state.textContent = text
+  }
+
+  // One removal path for the keyboard and the panel button. A reload rather
+  // than an optimistic splice: removing a block re-packs the grid on the
+  // server, and the server already knows how to draw the result.
+  function removeBlock(id) {
+    say('Removing')
+    fetch('/api/reports/blocks/remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ project: project, slug: slug, id: id }),
+    }).then(function (res) {
+      if (res.ok) window.location.reload()
+      else say('Could not remove that')
+    }).catch(function () { say('Could not remove that') })
   }
 
   // Every successful write moves the draft ahead of what viewers see, and the
@@ -487,6 +648,11 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
     tiles().forEach(function (other) { other.classList.remove('is-selected') })
     if (tile) tile.classList.add('is-selected')
     selected = tile
+
+    // Selecting a block opens its settings. Making that a second, separate
+    // gesture means most people never find them.
+    if (tile) fillPanel(tile)
+    else showPanel(false)
   }
 
   grid.addEventListener('pointerdown', function (event) {
@@ -494,8 +660,12 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
     if (!tile) return
 
     select(tile)
-    remember()
     lastMoved = Number(tile.dataset.id)
+
+    // Captured, not yet recorded. A click is a drag of zero distance, and
+    // recording one would arm undo and mark the report as having unpublished
+    // changes for the crime of selecting a block to look at it.
+    var before = snapshot()
 
     // The layout as it was when the drag began. Every frame re-packs from this
     // rather than from the previous frame's result: packing the already-pushed
@@ -566,6 +736,12 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
       tile.removeEventListener('pointermove', move)
       tile.removeEventListener('pointerup', end)
       tile.removeEventListener('pointercancel', end)
+
+      // Nothing moved, so nothing is written. Otherwise every click on a block
+      // costs a request, a revision and a "Not published" badge.
+      if (sameLayout(before, snapshot())) return
+
+      remember(before)
       save()
     }
 
@@ -603,7 +779,7 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
     var handled = true
 
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' || event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-      remember()
+      remember(snapshot())
       lastMoved = Number(selected.dataset.id)
     }
 
@@ -612,12 +788,7 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
     else if (event.key === 'ArrowUp') place(selected, x, Math.max(0, y - 1), w, h)
     else if (event.key === 'ArrowDown') place(selected, x, y + 1, w, h)
     else if (event.key === 'Delete' || event.key === 'Backspace') {
-      var id = Number(selected.dataset.id)
-      fetch('/api/reports/blocks/remove', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ project: project, slug: slug, id: id }),
-      }).then(function () { window.location.reload() })
+      removeBlock(Number(selected.dataset.id))
       return
     }
     else handled = false
@@ -650,6 +821,296 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
       })
     })
   })
+
+
+  // ---- Block settings -------------------------------------------------
+  //
+  // The panel edits one block's config and query. Saving goes through the same
+  // /blocks/save endpoint as a drag, because a title and a position are both
+  // just fields on a block, and a second write path is a second set of rules to
+  // keep in step.
+  //
+  // The block redraws by asking the server for this page again and swapping in
+  // the one tile. That is deliberate: charts are server-rendered SVG, and a
+  // client-side redraw would mean a second implementation of every chart in
+  // JavaScript, which is precisely how a builder ends up previewing something
+  // the viewer will not render.
+
+  var workspace = document.getElementById('workspace')
+  var panel = document.getElementById('config')
+  var cfgError = document.getElementById('cfg-error')
+  var configPending = null
+  var loading = false
+
+  function el(id) { return document.getElementById(id) }
+
+  function readQuery(tile) {
+    try { return JSON.parse(tile.dataset.query || '{}') || {} }
+    catch { return {} }
+  }
+
+  function showPanel(open) {
+    if (!panel || !workspace) return
+    panel.classList.toggle('hidden', !open)
+    // The grid gains a third column only while the panel is open, so an
+    // unselected report uses the full width for the report.
+    workspace.style.gridTemplateColumns = open ? '' : ''
+    workspace.classList.toggle('lg:grid-cols-[200px_1fr]', !open)
+    workspace.classList.toggle('lg:grid-cols-[200px_1fr_300px]', open)
+  }
+
+  function fail(message) {
+    if (cfgError) {
+      cfgError.textContent = message || ''
+      cfgError.hidden = !message
+    }
+
+    // Also on the block itself: the panel is on the right and the block being
+    // broken is what the person is actually looking at.
+    if (selected) selected.classList.toggle('is-broken', Boolean(message))
+  }
+
+  var FIELD_MEASURES = ['sum', 'avg', 'min', 'max']
+  var TIME_KINDS = ['line', 'area', 'bar', 'heatmap']
+
+  function syncPanelShape(kind) {
+    var measure = el('cfg-measure') ? el('cfg-measure').value : 'count'
+    var isText = kind === 'text'
+
+    // Only the controls that mean something for this block. A grain picker on a
+    // big number is a control that silently does nothing, which teaches people
+    // the panel is lying.
+    if (el('cfg-query')) el('cfg-query').hidden = isText
+    if (el('cfg-body-row')) el('cfg-body-row').hidden = !isText
+    if (el('cfg-field-row')) el('cfg-field-row').hidden = FIELD_MEASURES.indexOf(measure) === -1
+    if (el('cfg-grain-row')) el('cfg-grain-row').hidden = TIME_KINDS.indexOf(kind) === -1
+  }
+
+  function filterRow(filter) {
+    var row = document.createElement('div')
+    row.className = 'cfg-filter grid grid-cols-[1fr_auto] gap-1'
+
+    var field = document.createElement('select')
+    field.className = 'cfg-filter-field px-2 py-1 text-xs rounded-lg border border-line bg-canvas text-ink'
+    FIELD_CHOICES.forEach(function (choice) {
+      var option = document.createElement('option')
+      option.value = choice.field
+      option.textContent = choice.label
+      field.appendChild(option)
+    })
+    field.value = filter.field || 'name'
+
+    var remove = document.createElement('button')
+    remove.type = 'button'
+    remove.className = 'px-1 text-xs text-subtle hover:text-neg'
+    remove.setAttribute('aria-label', 'Remove filter')
+    remove.textContent = '\u00d7'
+    remove.addEventListener('click', function () {
+      row.remove()
+      commit()
+    })
+
+    var operator = document.createElement('select')
+    operator.className = 'cfg-filter-operator px-2 py-1 text-xs rounded-lg border border-line bg-canvas text-ink'
+    OPERATOR_CHOICES.forEach(function (choice) {
+      var option = document.createElement('option')
+      option.value = choice.value
+      option.textContent = choice.label
+      operator.appendChild(option)
+    })
+    operator.value = filter.operator || 'is'
+
+    var value = document.createElement('input')
+    value.type = 'text'
+    value.className = 'cfg-filter-value px-2 py-1 text-xs rounded-lg border border-line bg-canvas text-ink'
+    value.value = filter.value === undefined || filter.value === null ? '' : String(filter.value)
+
+    function syncValue() {
+      // `is present` and `is missing` take no value, so the input goes away
+      // rather than sitting there being ignored.
+      value.hidden = operator.value === 'exists' || operator.value === 'not_exists'
+    }
+    syncValue()
+    operator.addEventListener('change', function () { syncValue(); commit() })
+    field.addEventListener('change', commit)
+    value.addEventListener('input', commit)
+
+    row.appendChild(field)
+    row.appendChild(remove)
+    row.appendChild(operator)
+    row.appendChild(value)
+
+    return row
+  }
+
+  function readFilters() {
+    return Array.prototype.slice.call(document.querySelectorAll('.cfg-filter')).map(function (row) {
+      var operator = row.querySelector('.cfg-filter-operator').value
+      var filter = {
+        field: row.querySelector('.cfg-filter-field').value,
+        operator: operator,
+      }
+      if (operator !== 'exists' && operator !== 'not_exists')
+        filter.value = row.querySelector('.cfg-filter-value').value
+      return filter
+    })
+  }
+
+  function fillPanel(tile) {
+    if (!panel) return
+
+    var kind = tile.dataset.kind
+    var query = readQuery(tile)
+
+    el('cfg-title').value = tile.dataset.title || ''
+    el('cfg-body').value = tile.dataset.body || ''
+
+    var events = query.events || []
+    Array.prototype.forEach.call(el('cfg-events').options, function (option) {
+      option.selected = events.indexOf(option.value) !== -1
+    })
+
+    el('cfg-measure').value = query.measure || 'count'
+    el('cfg-field').value = query.field || 'value'
+    el('cfg-dimension').value = query.dimension || ''
+    el('cfg-grain').value = query.grain || 'day'
+    el('cfg-compare').checked = Boolean(query.compare)
+
+    var filters = el('cfg-filters')
+    filters.innerHTML = ''
+    ;(query.filters || []).forEach(function (filter) { filters.appendChild(filterRow(filter)) })
+
+    fail('')
+    syncPanelShape(kind)
+    showPanel(true)
+  }
+
+  function panelQuery(tile) {
+    var events = Array.prototype.slice.call(el('cfg-events').selectedOptions).map(function (option) { return option.value })
+    var measure = el('cfg-measure').value
+
+    // Built on top of the stored query, not from nothing. The panel does not
+    // render every field a block can carry - a funnel's steps and a donut's
+    // series limit have no control here - and replacing the query wholesale
+    // would delete them the first time somebody renamed the block.
+    var query = readQuery(tile)
+
+    query.events = events
+    query.measure = measure
+    query.filters = readFilters()
+
+    if (FIELD_MEASURES.indexOf(measure) !== -1) query.field = el('cfg-field').value
+    else delete query.field
+
+    if (el('cfg-dimension').value) query.dimension = el('cfg-dimension').value
+    else delete query.dimension
+
+    if (!el('cfg-grain-row').hidden) query.grain = el('cfg-grain').value
+
+    if (el('cfg-compare').checked) query.compare = true
+    else delete query.compare
+
+    return query
+  }
+
+  // Redraw one tile from the server's own rendering of this page.
+  function refreshTile(id) {
+    if (loading) return
+    loading = true
+
+    var tile = grid.querySelector('.block-tile[data-id="' + id + '"]')
+    if (tile) tile.classList.add('is-loading')
+
+    fetch(window.location.href, { credentials: 'same-origin' })
+      .then(function (res) { return res.text() })
+      .then(function (html) {
+        var parsed = new DOMParser().parseFromString(html, 'text/html')
+        var fresh = parsed.querySelector('.block-tile[data-id="' + id + '"]')
+        var current = grid.querySelector('.block-tile[data-id="' + id + '"]')
+        if (!fresh || !current) return
+
+        current.innerHTML = fresh.innerHTML
+        current.dataset.query = fresh.dataset.query
+        current.dataset.title = fresh.dataset.title
+      })
+      .catch(function () { /* the tile keeps its previous drawing */ })
+      .then(function () {
+        loading = false
+        var settled = grid.querySelector('.block-tile[data-id="' + id + '"]')
+        if (settled) settled.classList.remove('is-loading')
+      })
+  }
+
+  function commit() {
+    if (!selected) return
+    if (configPending) clearTimeout(configPending)
+
+    // Debounced, because this fires on every keystroke in the title field and
+    // each commit is a write plus a re-render.
+    say('Saving')
+    configPending = setTimeout(function () {
+      var tile = selected
+      var id = Number(tile.dataset.id)
+      var kind = tile.dataset.kind
+      var update = { id: id, title: el('cfg-title').value }
+
+      if (kind === 'text') update.body = el('cfg-body').value
+      else update.query = panelQuery(tile)
+
+      fetch('/api/reports/blocks/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project: project, slug: slug, blocks: [update] }),
+      }).then(function (res) {
+        if (res.ok) {
+          say('Saved')
+          drafted(true)
+          fail('')
+          tile.dataset.title = update.title
+          if (update.body !== undefined) tile.dataset.body = update.body
+          refreshTile(id)
+          return
+        }
+
+        say('Not saved')
+        // The server's message names the part of the query it rejected, which
+        // is the only thing that makes an invalid config fixable.
+        return res.json().then(function (data) {
+          fail((data && data.message) || 'That configuration was rejected.')
+        }).catch(function () { fail('That configuration was rejected.') })
+      }).catch(function () {
+        say('Not saved')
+        fail('Could not reach the server.')
+      })
+    }, 350)
+  }
+
+  if (panel) {
+    ;['cfg-title', 'cfg-body', 'cfg-events', 'cfg-measure', 'cfg-field', 'cfg-dimension', 'cfg-grain', 'cfg-compare'].forEach(function (id) {
+      var control = el(id)
+      if (!control) return
+      control.addEventListener('change', function () {
+        if (id === 'cfg-measure') syncPanelShape(selected ? selected.dataset.kind : '')
+        commit()
+      })
+      if (control.tagName === 'INPUT' || control.tagName === 'TEXTAREA')
+        control.addEventListener('input', commit)
+    })
+
+    el('cfg-add-filter').addEventListener('click', function () {
+      el('cfg-filters').appendChild(filterRow({ field: 'name', operator: 'is', value: '' }))
+    })
+
+    el('cfg-close').addEventListener('click', function () {
+      select(null)
+      showPanel(false)
+    })
+
+    el('cfg-remove').addEventListener('click', function () {
+      if (!selected) return
+      removeBlock(Number(selected.dataset.id))
+    })
+  }
 
   var undoButton = document.getElementById('undo')
   if (undoButton) undoButton.addEventListener('click', undo)
@@ -721,9 +1182,24 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
   transition: transform 0.12s ease;
 }
 
+/* A block whose config the server rejected. Marked on the block as well as in
+ * the panel, because the block is what the person is looking at. */
+.block-tile.is-broken {
+  border-color: var(--warn);
+}
+
+/* Waiting for the server's redraw. A dimmed tile rather than a skeleton: the
+ * previous drawing is still meaningful and still the right shape, and
+ * replacing it with grey boxes loses information for no gain. */
+.block-tile.is-loading {
+  opacity: 0.55;
+  transition: opacity 0.12s ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .block-tile,
   .resize-handle,
+  .block-tile.is-loading,
   #grid.is-arranging .block-tile:not(.is-dragging) {
     transition: none;
   }

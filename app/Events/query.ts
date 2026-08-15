@@ -124,3 +124,47 @@ export async function eventNamesFor(projectId: number, limit = 100): Promise<Arr
 
   return rows.map(row => ({ name: String(row.name), count: Number(row.count) }))
 }
+
+/**
+ * Distinct `properties` keys seen in a project, most frequent first.
+ *
+ * The property bag is the customer's own vocabulary, so the only way the
+ * builder can offer a dimension worth grouping by is to look at what has
+ * actually arrived. Typing `properties.plan` from memory is how somebody
+ * groups by a key that does not exist and gets one silent "other" bucket.
+ *
+ * Reads a bounded sample rather than the whole table. A project with ten
+ * million events has the same handful of keys as its first thousand, and this
+ * runs while somebody waits for a dropdown to open.
+ */
+export async function propertyKeysFor(projectId: number, limit = 50): Promise<Array<{ key: string, count: number }>> {
+  const rows = await db.unsafe(
+    `SELECT properties FROM events
+      WHERE project_id = $1 AND properties IS NOT NULL AND properties != '{}'
+      ORDER BY id DESC
+      LIMIT 2000`,
+    [projectId],
+  ) as Array<{ properties: string }>
+
+  const counts = new Map<string, number>()
+
+  for (const row of rows) {
+    try {
+      const parsed = JSON.parse(String(row.properties))
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+        continue
+
+      for (const key of Object.keys(parsed))
+        counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    catch {
+      // A row whose bag will not parse is not worth failing a dropdown over.
+      continue
+    }
+  }
+
+  return [...counts.entries()]
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key))
+    .slice(0, Math.min(Math.max(limit, 1), 200))
+}
