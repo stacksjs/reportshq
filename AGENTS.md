@@ -83,6 +83,29 @@ one.
    For UI work, add the design pre-flight. Report honestly when something fails.
 
 ## 4. Traps that have already cost time here
+- **stx drops every prop passed from one component to another** (stacksjs/stx#1937):
+  an array, a boolean and a plain string attribute all arrive as their defaults,
+  silently. Page-to-component passing works fine, which is what makes it easy to
+  miss. Shared chrome goes in a **partial**, which is included into the page's
+  own scope; chart components inline their frame for the same reason.
+- **`@include` resolves against `partialsDir`**, so it is `@include('AppNav')`.
+  The `@include('partials/AppNav')` form renders **nothing at all**, with no
+  warning, which is how three pages briefly shipped without their auth guard.
+- **stx ships components of its own** (`<Heatmap>` among them) and an app
+  component of the same name loses the resolution, silently. Chart components
+  here are suffixed `Chart` for that reason.
+- **Never name a cookie value `token` in a view.** stx publishes top-level server
+  bindings into the HTML as bridge data as soon as the name appears in a client
+  script, comments included, so that ships the session credential in the page
+  source. Read sessions through `app/Support/session.ts`.
+- **Run the dev server through your harness's background mechanism**, not a
+  shell `( ... &)`, which is killed when the call returns. `PORT` is pinned in
+  `.env`; another project on the same port makes the views server exit without a
+  word.
+- **Never anchor a test fixture to "today".** Ingest clamps future timestamps, so
+  a fixture at "today 08:00" collapses into the wrong bucket when the suite runs
+  after UTC midnight. It broke CI once. Anchor to yesterday.
+
 
 - **stx templates take bare variable names, not Blade's `$`.** A server value is
   read as `@foreach (surfaces as surface)` and `{{ surface.note }}`, never
