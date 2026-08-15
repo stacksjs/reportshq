@@ -41,6 +41,7 @@ const PORT_API = 3158
 const STATE_DIR = '/var/lib/reportshq'
 const DB_PATH = 'database/reportshq.sqlite'
 const EXPORT_DIR = 'storage/exports'
+const BACKUP_DIR = 'storage/backups/database'
 
 /**
  * Shared paths, with an EXPLICIT absolute target.
@@ -65,6 +66,10 @@ function sharedState(seed: boolean) {
     // site then serves perfectly until the first request touches `users`.
     { path: DB_PATH, target: `${STATE_DIR}/reportshq.sqlite`, seed },
     { path: EXPORT_DIR, target: `${STATE_DIR}/exports`, seed },
+    // Nightly dumps. A backup written inside a release is deleted by the
+    // release pruner, so it would disappear at exactly the moment the release
+    // it could have been restored alongside did.
+    { path: BACKUP_DIR, target: `${STATE_DIR}/backups`, seed },
   ]
 }
 
@@ -157,6 +162,7 @@ export const tsCloud: TsCloudConfig = {
         DB_CONNECTION: 'sqlite',
         DB_DATABASE_PATH: DB_PATH,
         EXPORT_DIR,
+        BACKUP_DIR,
       },
     },
 

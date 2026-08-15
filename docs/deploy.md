@@ -96,12 +96,22 @@ since it is the site that runs the migration.
 
 ## Backups
 
-`buddy deploy` dumps the database immediately before it migrates, into a
-project-level directory outside every release tree. That covers the case this is
-most likely to need: a migration that did something nobody meant.
+Two dumps, both kept outside every release tree so the release pruner cannot
+delete them at the moment they would be needed.
 
-It is deliberately **not** offsite. It survives a bad migration; it does not
-survive losing the box.
+**Before every migration.** `buddy deploy` takes one immediately before it
+migrates. That covers a migration that did something nobody meant.
+
+**Nightly at 02:40 UTC**, keeping seven, from `app/Scheduler.ts`. That covers
+the day nobody deployed. It runs before `PruneEvents` at 03:20 so a night's dump
+is taken while the rows retention is about to delete are still in it.
+
+Both are deliberately **not** offsite. They survive a bad migration or a bad
+query; they do not survive losing the box, and saying otherwise would be worse
+than having no backup, because somebody would rely on it.
+
+To restore, stop the service, replace the sqlite file at
+`/var/lib/reportshq/reportshq.sqlite` with a dump, and start it again.
 
 ## Rolling back
 

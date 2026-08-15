@@ -61,11 +61,24 @@ export default function () {
     .at('03:20')
     .setTimeZone('UTC')
 
-  // Run a custom action every five minutes
-  // schedule.action('CleanupTempFiles').everyFiveMinutes()
-
-  // Run a shell command daily at midnight
-  // schedule.command('echo "Daily maintenance complete"').daily()
+  // Dump the database nightly, keeping a week.
+  //
+  // `buddy deploy` already takes one immediately before it migrates, which
+  // covers a migration that did something nobody meant. It does not cover the
+  // day nobody deployed, and this is an analytics product: the event stream is
+  // the thing customers cannot reconstruct.
+  //
+  // 02:40 rather than on the hour, and before PruneEvents at 03:20, so a night's
+  // dump is taken while the rows retention is about to delete are still there.
+  //
+  // Deliberately not offsite. It survives a bad migration or a bad query; it
+  // does not survive losing the box, and pretending otherwise would be worse
+  // than having no backup, because somebody would rely on it.
+  schedule
+    .command(`bun node_modules/@stacksjs/buddy/dist/cli.js db:backup --out ${process.env.BACKUP_DIR || 'storage/backups/database'} --retain 7`)
+    .daily()
+    .at('02:40')
+    .setTimeZone('UTC')
 }
 
 process.on('SIGINT', () => {
