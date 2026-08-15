@@ -146,7 +146,20 @@ curl "https://reportshq.org/api/projects/42/events?name=commerce.order.created&l
 ```
 
 ```json
-{ "events": [ ... ], "next_cursor": 8817 }
+{
+  "events": [
+    {
+      "id": 8818,
+      "name": "commerce.order.created",
+      "occurred_at": "2026-08-14T10:15:00Z",
+      "value": 4250,
+      "currency": "USD",
+      "user_key": "cust_8812",
+      "properties": { "plan": "pro" }
+    }
+  ],
+  "next_cursor": 8817
+}
 ```
 
 Pagination is keyset, not offset: pass `next_cursor` back as `before`. An

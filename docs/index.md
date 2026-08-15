@@ -1,73 +1,47 @@
 ---
 layout: home
-title: Stacks Framework
-description: Build full-stack TypeScript applications, APIs, libraries, and cloud infrastructure with Stacks.
-titleTemplate: Modern TypeScript Fullstack Development.
+title: ReportsHQ Documentation
+description: Send the events your application already emits and the reports build themselves. Integration guides, the ingestion contract, the event taxonomy and the report builder.
 hero:
-  name: Stacks.js
-  text: Build. Ship. Faster.
-  tagline: "Rapid application, cloud & library development framework. For the best full-stack teams."
-  image: /images/logos/logo-white.png
+  name: ReportsHQ
+  text: Reports that build themselves
+  tagline: "Send the events your application already emits. The Commerce, Users and Content reports appear with real numbers in them."
   actions:
     - theme: brand
-      text: Coming Soon
-      link: /docs/guide/get-started
+      text: Quickstart
+      link: /quickstart
+    - theme: alt
+      text: Ingestion API
+      link: /ingest
     - theme: alt
       text: View on GitHub
-      link: https://github.com/stacksjs/stacks
+      link: https://github.com/stacksjs/reportshq
 features:
-  - title: Best-in-Class DX
-    icon: 🦋
-    details: One framework that does it all. Building TypeScript apps & libraries has never been simpler.
-  - title: App Development
-    icon: 🖥️
-    details: Performant web and Craft desktop applications with one TypeScript codebase.
-  - title: Library Development
-    icon: 📚
-    details: "Automagically builds & distributes your component & function libraries, via npm."
-  - title: Cloud Development
-    icon: ☁️
-    details: Automatic zero-downtime deployments of production-ready serverless clouds. Self-hosted.
-  - title: Modern Administration
-    icon: 📊
-    details: "A sleek admin dashboard, out-of-the-box. For devs & your clients. Our product is your product."
-  - title: Scalable APIs
-    icon: 📡
-    details: "Building serverless APIs has never been simpler. Focus on your business logic, not your infrastructure."
-  - title: Secure Authentication
-    icon: 🔐
-    details: "Robust API & web authentication, ensuring the security of your user data. User-friendly, zero-config & ready-to-go."
-  - title: Built-in CI / CD
-    icon: 🤖
-    details: "Focus on coding, not publishing. Automates linting, version tagging, changelog generation, test execution, and more."
-  - title: Global CDN
-    icon: 🌐
-    details: "\"Securely deliver content with low latency and high transfer speeds,\" AWS. Your assets, zero-config."
-  - title: Queues & Jobs
-    icon: 📦
-    details: Leverage the power of queues. Defer time-consuming tasks using managed serverless queues.
-  - title: Notifications
-    icon: 📨
-    details: "Send notifications to your users via email, SMS, Slack, Discord, Push and more."
-  - title: Billing & Payments
-    icon: 💳
-    details: "Accept payments from your users using Stripe. One-off payments, subscriptions, and more."
-  - title: Search Engine
-    icon: 🔍
-    details: "Powerful & fast. \"Build an intuitive search experience in a snap,\" Meilisearch."
-  - title: Progressive UI Engine
-    icon: ⚙️
-    details: "An approachable, performant and versatile framework for building web UIs."
-  - title: Atomic CSS Engine
-    icon: 🎨
-    details: "\"Blazingly fast utility-first CSS framework,\" Headwind. Easily create & manage your styles."
-  - title: Streamlined Testing
-    icon: 🧪
-    details: A fast built-in testing framework. Enjoyable support for both unit & feature tests.
-  - title: Commerce
-    icon: 💴
-    details: A fast built-in testing framework. Enjoyable support for both unit & feature tests.
-  - title: Realtime
-    icon: 🏃🏻
-    details: "Build real-time features with WebSockets. Add live updates, chat, notifications & collaborative features with ease."
+  - title: One endpoint
+    details: Post JSON with a project key, or install the package for your framework and write no tracking calls at all.
+  - title: Reports create themselves
+    details: Send an event the taxonomy recognises and the matching report is created and published, with real numbers already in it.
+  - title: Every block explains itself
+    details: One sentence derived from the query the block actually runs, so two charts called Revenue are never confused.
+  - title: Honest about its numbers
+    details: No previous period is said rather than guessed at, bounded dimensions state what went into Other, and sampling keeps whole people.
+  - title: Share without an account
+    details: A link shows one published report and nothing else. Revoke it and it stops working on the next request.
+  - title: Yours to host
+    details: A Stacks application with public source. Run it yourself and every tier limit falls away.
 ---
+
+## Start here
+
+| You want to | Read |
+|---|---|
+| Get from nothing to a report | [Quickstart](/quickstart) |
+| Send events over HTTP | [Ingestion API](/ingest) |
+| Know which names build which reports | [Event taxonomy](/events) |
+| Integrate a Stacks application | [Stacks package](/stacks) |
+| Integrate a Laravel application | [Laravel package](/laravel) |
+| Build a report of your own | [Report builder](/builder) |
+| Send a report to somebody outside | [Sharing and embeds](/sharing) |
+| Get the numbers as a file or an email | [Schedules and exports](/schedules-exports) |
+| Know what each plan carries | [Limits](/limits) |
+| Run it on your own machines | [Self-hosting](/self-hosting) |

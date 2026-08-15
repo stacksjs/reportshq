@@ -1,35 +1,34 @@
 import type { BunPressOptions } from '@stacksjs/bunpress'
 
+/**
+ * The documentation site.
+ *
+ * This replaced the framework scaffold's config, which described Stacks.js and
+ * carried a sidebar for the framework's own documentation. That is a different
+ * product: a reader arriving at reportshq.org/docs from the landing page was
+ * shown a bootcamp for building Stacks applications.
+ *
+ * The sidebar below lists every page in `docs/`. Adding a page means adding a
+ * line here, and `tests/feature/docs-site.test.ts` fails when the two disagree,
+ * so a page cannot exist unreachable and a link cannot point at nothing.
+ */
 const config: BunPressOptions = {
   verbose: false,
   docsDir: './docs',
   outDir: './dist/docs',
 
-  // Navigation
   nav: [
-    {
-      text: 'Changelog',
-      link: 'https://github.com/stacksjs/stacks/blob/main/CHANGELOG.md',
-    },
-    {
-      text: 'Resources',
-      items: [
-        { text: 'Team', link: '/team' },
-        { text: 'Sponsors', link: '/sponsors' },
-        { text: 'Partners', link: '/partners' },
-        { text: 'Postcardware', link: '/postcardware' },
-        { text: 'Awesome Stacks', link: 'https://github.com/stacksjs/awesome-stacks' },
-        { text: 'Contributing', link: 'https://github.com/stacksjs/stacks/blob/main/.github/CONTRIBUTING.md' },
-      ],
-    },
+    { text: 'Quickstart', link: '/quickstart' },
+    { text: 'Ingestion API', link: '/ingest' },
+    { text: 'Pricing', link: 'https://reportshq.org/pricing' },
+    { text: 'GitHub', link: 'https://github.com/stacksjs/reportshq' },
   ],
 
-  // Markdown configuration
   markdown: {
-    title: 'Stacks Documentation',
+    title: 'ReportsHQ Documentation',
     meta: {
-      description: 'Rapid application, cloud & library development framework.',
-      author: 'Stacks.js',
+      description: 'Send the events your application already emits and the reports build themselves.',
+      author: 'ReportsHQ',
     },
     syntaxHighlightTheme: 'github-dark',
     toc: {
@@ -40,142 +39,59 @@ const config: BunPressOptions = {
     sidebar: {
       '/': [
         {
-          text: 'Prologue',
-          collapsed: true,
+          text: 'Getting started',
           items: [
-            { text: 'Release Notes', link: '/release-notes' },
-            { text: 'Upgrade Guide', link: '/upgrade-guide' },
-            { text: 'Contribution Guide', link: '/contribution-guide' },
-            { text: 'Sponsors', link: '/sponsors' },
+            { text: 'Quickstart', link: '/quickstart' },
+            { text: 'Limits', link: '/limits' },
           ],
         },
         {
-          text: 'Getting Started',
-          collapsed: true,
+          text: 'Sending events',
           items: [
-            { text: 'Introduction', link: '/guide/intro' },
-            { text: 'Quick Start', link: '/guide/get-started' },
-            { text: 'StackBlitz', link: '/guide/stackblitz' },
+            { text: 'Ingestion API', link: '/ingest' },
+            { text: 'Event taxonomy', link: '/events' },
+            { text: 'Stacks package', link: '/stacks' },
+            { text: 'Laravel package', link: '/laravel' },
           ],
         },
         {
-          text: 'Basics',
-          collapsed: true,
+          text: 'Reporting',
           items: [
-            { text: 'Routing', link: '/basics/routing' },
-            { text: 'Middleware', link: '/basics/middleware' },
-            { text: 'Models', link: '/basics/models' },
-            { text: 'Views', link: '/basics/views' },
-            { text: 'Actions', link: '/basics/actions' },
-            { text: 'Commands', link: '/basics/commands' },
-            { text: 'Jobs', link: '/basics/jobs' },
-            { text: 'Components', link: '/basics/components' },
-            { text: 'Functions', link: '/basics/functions' },
-            { text: 'Validation', link: '/packages/validation' },
-            { text: 'Error Handling', link: '/basics/error-handling' },
-            { text: 'Logging', link: '/basics/logging' },
+            { text: 'Report builder', link: '/builder' },
+            { text: 'Sharing and embeds', link: '/sharing' },
+            { text: 'Schedules and exports', link: '/schedules-exports' },
           ],
         },
         {
-          text: 'Digging Deeper',
-          collapsed: true,
+          text: 'Running it',
           items: [
-            { text: 'Authentication', link: '/guide/auth' },
-            { text: 'Database', link: '/packages/database' },
-            { text: 'Scaling the Database', link: '/guide/database-scaling' },
-            { text: 'Cache', link: '/packages/cache' },
-            { text: 'Events', link: '/packages/events' },
-            { text: 'Queue', link: '/packages/queue' },
-            { text: 'Notifications', link: '/packages/notifications' },
-            { text: 'Payments', link: '/packages/payments' },
-            { text: 'Realtime', link: '/packages/realtime' },
-            { text: 'Search Engine', link: '/packages/search-engine' },
-            { text: 'Storage', link: '/packages/storage' },
+            { text: 'Self-hosting', link: '/self-hosting' },
+            { text: 'API', link: '/api' },
           ],
         },
         {
-          text: 'Cloud',
-          collapsed: true,
+          text: 'Reference',
           items: [
-            { text: 'Deploy', link: '/guide/cloud/deployment' },
-            { text: 'Extend Cloud', link: '/guide/cloud/extend' },
+            { text: 'Design brief', link: '/design-brief' },
           ],
         },
-        {
-          text: 'CLI (Buddy)',
-          collapsed: true,
-          items: [
-            { text: 'Introduction', link: '/guide/buddy/intro' },
-            { text: 'Command Reference', link: '/guide/buddy/commands' },
-            { text: 'Add Stacks', link: '/guide/buddy/add' },
-            { text: 'Dev', link: '/guide/buddy/dev' },
-            { text: 'Build', link: '/guide/buddy/build' },
-            { text: 'Deploy', link: '/guide/buddy/deploy' },
-            { text: 'Make', link: '/guide/buddy/make' },
-            { text: 'Migrate', link: '/guide/buddy/migrate' },
-            { text: 'Database Backups', link: '/guide/buddy/db' },
-            { text: 'Test', link: '/guide/buddy/test' },
-          ],
-        },
-        {
-          text: 'Packages',
-          collapsed: true,
-          items: [
-            { text: 'STX', link: '/packages/stx' },
-            { text: 'Actions', link: '/packages/actions' },
-            { text: 'AI', link: '/packages/ai' },
-            { text: 'Auth', link: '/packages/auth' },
-            { text: 'Cache', link: '/packages/cache' },
-            { text: 'CLI', link: '/packages/cli' },
-            { text: 'Cloud', link: '/packages/cloud' },
-            { text: 'Database', link: '/packages/database' },
-            { text: 'ORM', link: '/packages/orm' },
-            { text: 'Query Builder', link: '/packages/query-builder' },
-            { text: 'Router', link: '/packages/router' },
-            { text: 'Testing', link: '/packages/testing' },
-            { text: 'Validation', link: '/packages/validation' },
-          ],
-        },
-        {
-          text: 'Testing',
-          collapsed: true,
-          items: [
-            { text: 'Getting Started', link: '/testing/getting-started' },
-            { text: 'Unit Tests', link: '/testing/unit-tests' },
-            { text: 'Feature Tests', link: '/testing/feature-tests' },
-            { text: 'Http Tests', link: '/testing/http-tests' },
-            { text: 'Browser Tests', link: '/testing/browser-tests' },
-          ],
-        },
-        {
-          text: 'Project',
-          collapsed: true,
-          items: [
-            { text: 'Roadmap', link: '/project/roadmap' },
-            { text: 'Contributing', link: '/contribution-guide' },
-            { text: 'License', link: '/project/license' },
-          ],
-        },
-      ],
-    },
-    themeConfig: {
-      logo: '/images/logos/logo-transparent.svg',
-      footer: {
-        message: 'Released under the MIT License.',
-        copyright: 'Copyright 2024-present Stacks.js, Inc.',
-      },
-      socialLinks: [
-        { icon: 'twitter', link: 'https://twitter.com/stacksjs' },
-        { icon: 'github', link: 'https://github.com/stacksjs/stacks' },
-        { icon: 'discord', link: 'https://stacksjs.com/discord' },
       ],
     },
   },
 
-  // SEO Configuration
+  themeConfig: {
+    footer: {
+      message: 'Released under the MIT License.',
+      copyright: 'Copyright 2026-present ReportsHQ',
+    },
+    socialLinks: [
+      { icon: 'github', link: 'https://github.com/stacksjs/reportshq' },
+    ],
+  },
+
   sitemap: {
     enabled: true,
-    baseUrl: 'https://stacksjs.com/docs',
+    baseUrl: 'https://reportshq.org/docs',
   },
 
   robots: {

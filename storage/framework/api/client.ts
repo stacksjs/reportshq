@@ -261,6 +261,41 @@ export function createClient(config: ClientConfig) {
   },
 
   /**
+   * POST /api/auth/forgot
+   */
+  postAuthForgot(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/auth/forgot", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/auth/login
+   */
+  postAuthLogin(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/auth/login", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/auth/logout
+   */
+  postAuthLogout(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/auth/logout", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/auth/register
+   */
+  postAuthRegister(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/auth/register", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/auth/reset
+   */
+  postAuthReset(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/auth/reset", {}, [], false, options)
+  },
+
+  /**
    * GET /api/authors
    */
   getAuthors(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
@@ -5385,6 +5420,104 @@ export function createClient(config: ClientConfig) {
   },
 
   /**
+   * GET /api/projects/
+   */
+  getProjects(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "GET", "/api/projects/", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/projects/
+   */
+  postProjects(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/projects/", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/projects/accept
+   */
+  postProjectsAccept(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/projects/accept", {}, [], false, options)
+  },
+
+  /**
+   * GET /api/projects/{id}
+   */
+  getProjectsId(input: { "id": string }, options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "GET", "/api/projects/{id}", input ?? {}, [], false, options)
+  },
+
+  /**
+   * DELETE /api/projects/{id}
+   */
+  deleteProjectsId(input: { "id": string }, options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "DELETE", "/api/projects/{id}", input ?? {}, [], false, options)
+  },
+
+  /**
+   * GET /api/projects/{id}/event-names
+   */
+  getProjectsIdEventNames(input: { "id": string }, options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "GET", "/api/projects/{id}/event-names", input ?? {}, [], false, options)
+  },
+
+  /**
+   * GET /api/projects/{id}/events
+   */
+  getProjectsIdEvents(input: { "id": string }, options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "GET", "/api/projects/{id}/events", input ?? {}, [], false, options)
+  },
+
+  /**
+   * POST /api/projects/{id}/invites
+   */
+  postProjectsIdInvites(input: { "id": string }, options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/projects/{id}/invites", input ?? {}, [], false, options)
+  },
+
+  /**
+   * DELETE /api/projects/{id}/invites/{inviteId}
+   */
+  deleteProjectsIdInvitesInviteId(input: { "id": string; "inviteId": string }, options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "DELETE", "/api/projects/{id}/invites/{inviteId}", input ?? {}, [], false, options)
+  },
+
+  /**
+   * GET /api/projects/{id}/members
+   */
+  getProjectsIdMembers(input: { "id": string }, options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "GET", "/api/projects/{id}/members", input ?? {}, [], false, options)
+  },
+
+  /**
+   * DELETE /api/projects/{id}/members/{userId}
+   */
+  deleteProjectsIdMembersUserId(input: { "id": string; "userId": string }, options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "DELETE", "/api/projects/{id}/members/{userId}", input ?? {}, [], false, options)
+  },
+
+  /**
+   * POST /api/projects/{id}/query
+   */
+  postProjectsIdQuery(input: { "id": string }, options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/projects/{id}/query", input ?? {}, [], false, options)
+  },
+
+  /**
+   * POST /api/projects/{id}/rotate-key
+   */
+  postProjectsIdRotateKey(input: { "id": string }, options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/projects/{id}/rotate-key", input ?? {}, [], false, options)
+  },
+
+  /**
+   * POST /api/projects/{id}/settings
+   */
+  postProjectsIdSettings(input: { "id": string }, options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/projects/{id}/settings", input ?? {}, [], false, options)
+  },
+
+  /**
    * GET /api/queries/dashboard
    */
   getQueriesDashboard(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
@@ -5466,6 +5599,139 @@ export function createClient(config: ClientConfig) {
    */
   getReleasesId(input: { "id": string }, options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
     return request(config, "GET", "/api/releases/{id}", input ?? {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/archive
+   */
+  postReportsArchive(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/archive", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/blocks
+   */
+  postReportsBlocks(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/blocks", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/blocks/remove
+   */
+  postReportsBlocksRemove(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/blocks/remove", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/blocks/save
+   */
+  postReportsBlocksSave(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/blocks/save", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/create
+   */
+  postReportsCreate(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/create", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/duplicate
+   */
+  postReportsDuplicate(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/duplicate", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/exports
+   */
+  postReportsExports(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/exports", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/exports/create
+   */
+  postReportsExportsCreate(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/exports/create", {}, [], false, options)
+  },
+
+  /**
+   * GET /api/reports/exports/download
+   */
+  getReportsExportsDownload(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "GET", "/api/reports/exports/download", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/publish
+   */
+  postReportsPublish(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/publish", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/restore
+   */
+  postReportsRestore(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/restore", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/schedules
+   */
+  postReportsSchedules(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/schedules", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/schedules/create
+   */
+  postReportsSchedulesCreate(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/schedules/create", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/schedules/remove
+   */
+  postReportsSchedulesRemove(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/schedules/remove", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/schedules/toggle
+   */
+  postReportsSchedulesToggle(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/schedules/toggle", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/shares
+   */
+  postReportsShares(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/shares", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/shares/create
+   */
+  postReportsSharesCreate(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/shares/create", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/shares/revoke
+   */
+  postReportsSharesRevoke(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/shares/revoke", {}, [], false, options)
+  },
+
+  /**
+   * POST /api/reports/shares/rotate
+   */
+  postReportsSharesRotate(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/api/reports/shares/rotate", {}, [], false, options)
   },
 
   /**
@@ -6089,27 +6355,6 @@ export function createClient(config: ClientConfig) {
    */
   patchTransactionsId(input: { "id": string }, options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
     return request(config, "PATCH", "/api/transactions/{id}", input ?? {}, [], false, options)
-  },
-
-  /**
-   * GET /api/users
-   */
-  getUsers(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
-    return request(config, "GET", "/api/users", {}, [], false, options)
-  },
-
-  /**
-   * POST /api/users
-   */
-  postUsers(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
-    return request(config, "POST", "/api/users", {}, [], false, options)
-  },
-
-  /**
-   * GET /api/users/{id}
-   */
-  getUsersId(input: { "id": string }, options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
-    return request(config, "GET", "/api/users/{id}", input ?? {}, [], false, options)
   },
 
   /**
@@ -6796,6 +7041,20 @@ export function createClient(config: ClientConfig) {
    */
   getInfrastructureServers(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
     return request(config, "GET", "/infrastructure/servers", {}, [], false, options)
+  },
+
+  /**
+   * POST /ingest
+   */
+  postIngest(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "POST", "/ingest", {}, [], false, options)
+  },
+
+  /**
+   * GET /ingest/verify
+   */
+  getIngestVerify(options?: RequestOptions): Promise<ApiResult<Record<string, unknown>>> {
+    return request(config, "GET", "/ingest/verify", {}, [], false, options)
   },
 
   /**
