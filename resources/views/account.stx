@@ -1,0 +1,123 @@
+<script server>
+// The account page.
+//
+// Deliberately small. It holds the things that are true about a person rather
+// than about a project: who they are, and how to stop being signed in. Team
+// membership belongs to a project and lives in project settings; billing
+// arrives with #17.
+import { db as __db } from '@stacksjs/database'
+import { projectsFor } from '../../app/Support/access'
+import { sessionCookieName, sessionFrom } from '../../app/Support/session'
+
+const session = await sessionFrom(cookies)
+const cookieName = sessionCookieName()
+const user = session.user
+const authPending = session.stale
+
+const projects = user ? await projectsFor(user) : []
+const owned = projects.filter(project => String(project.role ?? '') === 'owner').length
+const joined = projects.length - owned
+
+// When the account was opened. Shown because "member since" is the one fact a
+// person cannot look up anywhere else in the product.
+const row = user
+  ? (await __db.unsafe(`SELECT created_at FROM users WHERE id = $1`, [user.id]))?.[0] as { created_at?: string } | undefined
+  : undefined
+
+function joinedLabel(value: unknown): string {
+  const raw = String(value ?? '').trim()
+  if (!raw)
+    return ''
+
+  const parsed = new Date(raw.includes('T') ? raw : `${raw.replace(' ', 'T')}Z`)
+  if (Number.isNaN(parsed.getTime()))
+    return ''
+
+  return parsed.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+const since = joinedLabel(row?.created_at)
+</script>
+
+<template>
+  <script>document.documentElement.setAttribute('data-session-cookie', {{ cookieName }})</script>
+  @include('AuthGuard')
+
+  <div class="min-h-[100dvh] bg-canvas text-ink">
+    {{-- What the guard reads. The server is the only side that can see the
+         HttpOnly session cookie, so it is the side that decides. --}}
+    @if (!user)
+      <div id="auth-required" hidden></div>
+    @endif
+    @if (authPending)
+      <div id="auth-pending" hidden></div>
+    @endif
+
+    @include('AppNav')
+
+    <main class="px-6 py-10 mx-auto max-w-2xl">
+      <h1 class="text-2xl font-semibold tracking-tight">Account</h1>
+      <p class="mt-1 mb-8 text-sm text-muted">Who you are here, and how to sign out.</p>
+
+      <div class="rounded-xl border divide-y border-line divide-line bg-panel">
+        <div class="flex gap-4 justify-between items-baseline px-5 py-4">
+          <span class="text-sm text-muted">Name</span>
+          <span class="text-sm text-ink">{{ user.name }}</span>
+        </div>
+        <div class="flex gap-4 justify-between items-baseline px-5 py-4">
+          <span class="text-sm text-muted">Email</span>
+          <span class="text-sm text-ink">{{ user.email }}</span>
+        </div>
+        @if (since)
+          <div class="flex gap-4 justify-between items-baseline px-5 py-4">
+            <span class="text-sm text-muted">Member since</span>
+            <span class="text-sm text-ink">{{ since }}</span>
+          </div>
+        @endif
+        <div class="flex gap-4 justify-between items-baseline px-5 py-4">
+          <span class="text-sm text-muted">Projects</span>
+          <span class="text-sm text-ink">{{ owned }} owned, {{ joined }} joined</span>
+        </div>
+      </div>
+
+      <div class="p-5 mt-6 rounded-xl border border-line">
+        <h2 class="text-sm font-medium">Sign out</h2>
+        <p class="mt-1 mb-4 max-w-[60ch] text-sm text-muted">
+          This ends the session everywhere it was being used, not just in this tab. The token is
+          revoked rather than forgotten, so a copy of it stops working too.
+        </p>
+        <button
+          id="signout"
+          type="button"
+          class="px-4 py-2 text-sm font-medium rounded-lg border border-line text-ink hover:border-accent"
+        >Sign out</button>
+      </div>
+    </main>
+  </div>
+
+<script>
+(function () {
+  var button = document.getElementById('signout')
+  if (!button) return
+
+  button.addEventListener('click', function () {
+    button.disabled = true
+    button.textContent = 'Signing out'
+
+    fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: '{}',
+    }).then(function () {
+      // replace rather than assign: the back button should not return to a
+      // page belonging to a session that no longer exists.
+      window.location.replace('/login')
+    }).catch(function () {
+      button.disabled = false
+      button.textContent = 'Sign out'
+    })
+  })
+}())
+</script>
+</template>

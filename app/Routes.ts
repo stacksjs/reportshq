@@ -31,4 +31,9 @@ export default {
   // handler still resolves per-project permission through app/Support/access.ts,
   // because being signed in says nothing about which projects are yours.
   'projects': { path: 'projects', prefix: '/api/projects', middleware: ['auth'] },
+
+  // Signing in, up and out. The one surface deliberately not behind `auth`,
+  // since requiring a session to create one would be a short conversation. It
+  // carries its own rate limits instead; see app/Support/signin-limits.ts.
+  'auth': { path: 'auth', prefix: '/api/auth' },
 } satisfies RouteRegistry

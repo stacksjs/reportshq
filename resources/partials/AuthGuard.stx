@@ -4,25 +4,31 @@
      and before the runtime exists, or a signed-out visitor sees the app shell
      first and then gets thrown out of it.
 
-     `#auth-pending` is rendered by the server when a cookie was presented and
-     did not authenticate. The server cannot tell "no cookie yet" from "bad
-     cookie" at render time, so it says which happened and this clears the stale
-     one. Bouncing both identically puts anyone whose token expired into a
-     redirect loop.
+     **The server decides, not this script.** It used to look for the session
+     cookie in `document.cookie`, which cannot work: the framework sets that
+     cookie `HttpOnly`, so a page script never sees it no matter who is signed
+     in. Every authenticated visitor was therefore bounced to /login, and
+     signing in produced a redirect loop between the two pages. It went
+     unnoticed for a long time because curl does not run scripts, so every page
+     returned 200 with correct markup while being unusable in a browser.
 
-     The cookie name comes from the root element rather than being spelled out
-     here, because the `auth` middleware resolves it from config: two spellings
-     is how a page authenticates while every request it makes is refused. --}}
+     So the page renders `#auth-required` when the server could not identify the
+     visitor, and `#auth-pending` when a cookie was presented and did not
+     authenticate. The first says where to go; the second says to bin the stale
+     cookie on the way, which is what stops an expired token from bouncing
+     somebody back and forth forever. --}}
 <script>
 (function () {
-  var name = document.documentElement.getAttribute('data-session-cookie') || 'auth-token'
-  if (document.cookie.indexOf(name + '=') === -1) {
-    window.location.replace('/login')
-    return
-  }
+  if (!document.getElementById('auth-required')) return
+
   if (document.getElementById('auth-pending')) {
+    var name = document.documentElement.getAttribute('data-session-cookie') || 'auth-token'
+    // Best effort: an HttpOnly cookie cannot be cleared from here either, and
+    // the server clears it on the next response. This only catches a
+    // non-HttpOnly copy left by an older session.
     document.cookie = name + '=; path=/; max-age=0'
-    window.location.replace('/login')
   }
-})()
+
+  window.location.replace('/login')
+}())
 </script>

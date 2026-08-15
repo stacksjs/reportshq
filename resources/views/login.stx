@@ -1,0 +1,130 @@
+<script server>
+// Signing in.
+//
+// The one page in the app that must render for a stranger, so it carries no
+// AuthGuard and no app chrome. It does the opposite check instead: somebody who
+// already has a session is sent to their projects rather than shown a form
+// asking them to do something they have already done.
+import { sessionCookieName, sessionFrom } from '../../app/Support/session'
+
+const session = await sessionFrom(cookies)
+const cookieName = sessionCookieName()
+const signedIn = session.user !== null
+</script>
+
+<template>
+  <div class="min-h-[100dvh] bg-canvas text-ink">
+    {{-- Already signed in: bounce before anything paints, the same way the
+         guard does in the other direction. --}}
+    @if (signedIn)
+      <script>window.location.replace('/projects')</script>
+    @endif
+
+    <script>document.documentElement.setAttribute('data-session-cookie', {{ cookieName }})</script>
+
+    <main class="grid place-items-center px-6 py-16 min-h-[100dvh]">
+      <div class="w-full max-w-sm">
+        <a href="/" class="flex gap-2 items-center mb-8 no-underline">
+          <i class="w-5 h-5 i-hugeicons-chart-histogram text-accent"></i>
+          <span class="font-semibold tracking-tight text-ink">ReportsHQ</span>
+        </a>
+
+        <h1 class="text-2xl font-semibold tracking-tight">Sign in</h1>
+        <p class="mt-1 mb-6 text-sm text-muted">Your reports are where you left them.</p>
+
+        {{-- A real form, so a password manager recognises it and the enter key
+             submits. The script intercepts it; without the script it still
+             posts somewhere sensible rather than nowhere. --}}
+        <form id="signin" method="post" action="/api/auth/login" class="grid gap-4">
+          <label class="block">
+            <span class="block mb-1 text-sm text-muted">Email</span>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="username"
+              required
+              class="px-3 py-2 w-full text-sm rounded-lg border border-line bg-panel text-ink"
+            />
+          </label>
+
+          <label class="block">
+            <span class="block mb-1 text-sm text-muted">Password</span>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+              class="px-3 py-2 w-full text-sm rounded-lg border border-line bg-panel text-ink"
+            />
+          </label>
+
+          <p id="error" class="text-sm text-warn" hidden></p>
+
+          <button
+            id="submit"
+            type="submit"
+            class="px-4 py-2.5 text-sm font-medium rounded-lg bg-accent text-accent-ink disabled:opacity-60"
+          >Sign in</button>
+        </form>
+
+        <p class="mt-6 text-sm text-muted">
+          No account yet?
+          <a href="/register" class="text-accent">Create one</a>
+        </p>
+      </div>
+    </main>
+  </div>
+
+{{-- Submitting the form.
+
+     A plain script for the same reason as the guard: this page has to work
+     before the runtime is loaded, and the whole page is one form. --}}
+<script>
+(function () {
+  var form = document.getElementById('signin')
+  if (!form) return
+
+  var error = document.getElementById('error')
+  var submit = document.getElementById('submit')
+
+  function fail(message) {
+    error.textContent = message
+    error.hidden = !message
+    submit.disabled = false
+    submit.textContent = 'Sign in'
+  }
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault()
+    fail('')
+    submit.disabled = true
+    submit.textContent = 'Signing in'
+
+    fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value,
+      }),
+    }).then(function (res) {
+      if (res.ok) {
+        // replace, not assign: the back button should not return to a sign-in
+        // form the person has already used.
+        window.location.replace('/projects')
+        return
+      }
+
+      return res.json().then(function (data) {
+        fail((data && data.message) || 'Could not sign you in.')
+      }).catch(function () { fail('Could not sign you in.') })
+    }).catch(function () {
+      fail('Could not reach the server.')
+    })
+  })
+}())
+</script>
+</template>

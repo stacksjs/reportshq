@@ -56,6 +56,11 @@ const cards = projects.map(project => ({
   @include('AuthGuard')
 
   <div class="min-h-[100dvh] bg-canvas text-ink">
+    {{-- What the guard reads. The server is the only side that can see the
+         HttpOnly session cookie, so it is the side that decides. --}}
+    @if (!user)
+      <div id="auth-required" hidden></div>
+    @endif
     @if (authPending)
       <div id="auth-pending" hidden></div>
     @endif

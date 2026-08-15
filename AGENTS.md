@@ -43,9 +43,9 @@ to copy verbatim.
 | Event ingestion | `routes/ingest.ts`, `app/Events/` (normalization, bounds, key auth) |
 | Domain models | `app/Models/` - every table in the database comes from one of these |
 | Query engine | `app/Reports/engine.ts` - block config in, typed series out |
-| Report templates | `app/Reports/templates/` - the auto-created reports |
+| Report templates | `app/Reports/templates.ts` - the auto-created reports |
 | Charts | `resources/components/charts/` - stx components over `ts-charts` |
-| Builder | `resources/views/reports/edit.stx` and its components |
+| Builder | `resources/views/report-edit.stx`, served at `/report-edit` |
 | Plan limits | `app/Billing/limits.ts` - the single source of truth for every tier number |
 
 Two token kinds, never confused: a **project ingest key** (`rhq_...`, public, write only, revocable)
@@ -126,6 +126,9 @@ one.
   survived a full HTTP pass: every page returned 200 with correct markup, and
   every one of them bounced in a real browser. Load a page in the browser before
   believing a front-end change works.
+- **A new `.stx` view needs a dev server restart.** The route table is built at
+  boot, so a freshly added view 404s while its path is listed on the 404 page's
+  own "available pages", which is a confusing way to find out.
 - **`./buddy lint` only sees files git already tracks**, so a file you just wrote
   is skipped and the project reports clean without it ever being opened. CI reads
   it one commit later and fails. Either `git add` before linting, or run
