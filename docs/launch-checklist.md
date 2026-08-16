@@ -211,12 +211,26 @@ than the server's.
 
 ## Performance
 
-- [ ] Ingest sustained-load test against a documented target
-- [ ] Builder preview latency budget
+- [x] Ingest sustained rate measured, against the rate limit that bounds it
+- [x] Report query latency measured, raw and via the pre-aggregate
 - [ ] Public share under burst, with the cache holding
 
-Numbers to be recorded in this repo when measured. Nothing here is ticked from
-reasoning about the code.
+Numbers and the machine they came from are in `docs/benchmarks.md`, produced by
+`scripts/benchmark.ts`. Nothing here is ticked from reasoning about the code.
+
+At 250,000 events on an M3 Pro against local Postgres: one worker sustains about
+32,000 events/s, which is far more than a single project can legally send through
+the rate limit; a 30-day daily count costs ~440 ms against the raw table and
+~99 ms through the rollups.
+
+**The first version of the benchmark reported that the rollups made no difference
+at all**, 1.1x and 0.9x. It built its range by hand as `now + 24 hours`, which
+ends a day in the future; the rollups do not cover tomorrow, coverage correctly
+returned false, and every query fell back to the raw table. The benchmark was
+measuring the raw path twice. Nothing was broken and everything reported success,
+which is the only reason it was convincing. The application does not have this
+problem, because `resolveRange` ends at the exclusive start of tomorrow and no
+route accepts a raw range from a caller.
 
 ---
 

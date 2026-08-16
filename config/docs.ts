@@ -75,6 +75,7 @@ const config: BunPressOptions = {
           text: 'Reference',
           items: [
             { text: 'Design brief', link: '/design-brief' },
+            { text: 'Benchmarks', link: '/benchmarks' },
           ],
         },
       ],

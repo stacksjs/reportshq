@@ -4,8 +4,9 @@ import { schema } from '@stacksjs/validation'
 /**
  * One project's events for one day and one event name, pre-aggregated.
  *
- * The benchmark in docs/engine-benchmarks.md is why this exists: a 30-day daily
- * line over a million events is ~467ms, and a report is eight of those.
+ * The benchmark in docs/benchmarks.md is why this exists. A 30-day daily line
+ * over 250,000 events is ~440ms against the raw table and ~99ms through here,
+ * and a report is several of those on one page.
  *
  * Deliberately narrow. It rolls up by (project, day, name) and nothing else,
  * because the alternatives do not work:
