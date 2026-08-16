@@ -404,8 +404,41 @@ decision, not a side effect of a QA pass.
 
 ---
 
+## Blockers
+
+Things that must be true before this is sellable, which no amount of testing
+here can make true.
+
+### The integration packages are not published
+
+`docs/quickstart.md` step 4 tells a new customer:
+
+```bash
+bun add @reportshq/stacks
+composer require reportshq/laravel
+```
+
+Both commands fail today. `@reportshq/stacks` returns 404 from the npm registry
+and there is no `@reportshq` scope at all; `reportshq/laravel` returns 404 from
+Packagist and there is no `reportshq` vendor. Both packages exist in this repo
+at `packages/stacks` and `packages/laravel`, at version 0.1.0, unpublished.
+
+So the documented path from "I tried the curl" to "it is wired into my app"
+stops dead, at the step where somebody had decided to adopt the product. The
+docs are not wrong about what the packages do; they are wrong that you can
+install them.
+
+Either publish both, or say plainly on the page that they are not out yet.
+Publishing is a decision about a namespace and a release, not a QA fix, so it is
+recorded here rather than done.
+
 ## Sign-off
 
-Not yet. Correctness, performance, docs and the two ops drills are open, and
-billing is blocked on #17. The security pass is complete and its findings are
-fixed.
+Not yet, and the nearest blocker is not a test result: the two integration
+packages the quickstart tells customers to install are not published anywhere.
+
+Security, correctness, docs and most of the design and ops work are done, with
+findings fixed and recorded above. Billing is blocked on #17. Still open: a
+burst test of the public share cache is done but the wider performance work is
+partial, the quickstart has not been run end to end on a clean machine by a
+person, and the production rollback has been documented but never exercised.
