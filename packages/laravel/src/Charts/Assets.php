@@ -21,10 +21,24 @@ final class Assets
 {
     private static ?string $css = null;
 
+    private static ?string $builder = null;
+
     public static function css(): string
     {
         // Read once per process. A report page is one request and a queue
         // worker rendering a scheduled one may do hundreds.
         return self::$css ??= (string) file_get_contents(__DIR__.'/../../resources/css/reportshq.css');
+    }
+
+    /**
+     * The arranging script, for the builder page only.
+     *
+     * Never on a viewer: a report is read rather than operated, and shipping
+     * the drag handling to somebody who cannot edit is bytes they will not use
+     * against a grid they cannot move.
+     */
+    public static function builderScript(): string
+    {
+        return self::$builder ??= (string) file_get_contents(__DIR__.'/../../resources/js/builder.js');
     }
 }

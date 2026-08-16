@@ -26,6 +26,8 @@
   --rhq-warn: #b45309;
   --rhq-warn-soft: rgba(180, 83, 9, 0.10);
   --rhq-pos: #15803d;
+  --rhq-neg: #be123c;
+  --rhq-accent-soft: rgba(58, 79, 208, 0.10);
   --rhq-pos-soft: rgba(21, 128, 61, 0.10);
 
   /* Five slots before they repeat, plus a neutral for a folded tail. */
@@ -50,6 +52,10 @@
     --rhq-warn: #fbbf24;
     --rhq-warn-soft: rgba(251, 191, 36, 0.12);
     --rhq-pos: #4ade80;
+  --rhq-neg: #fb7185;
+  --rhq-accent-soft: rgba(143, 162, 255, 0.12);
+    --rhq-neg: #fb7185;
+    --rhq-accent-soft: rgba(143, 162, 255, 0.12);
     --rhq-pos-soft: rgba(74, 222, 128, 0.12);
     --series-1: #8fa2ff;
     --series-2: #f4739f;
@@ -72,6 +78,8 @@
   --rhq-warn: #fbbf24;
   --rhq-warn-soft: rgba(251, 191, 36, 0.12);
   --rhq-pos: #4ade80;
+  --rhq-neg: #fb7185;
+  --rhq-accent-soft: rgba(143, 162, 255, 0.12);
   --rhq-pos-soft: rgba(74, 222, 128, 0.12);
   --series-1: #8fa2ff;
   --series-2: #f4739f;
@@ -200,3 +208,89 @@ body {
 .rhq-pill-live { background: var(--rhq-pos-soft); color: var(--rhq-pos); }
 
 a:focus-visible, .rhq-list a:focus-visible { outline: 2px solid var(--rhq-accent); outline-offset: 2px; }
+
+/* ---- The builder ------------------------------------------------------- */
+
+.rhq-header-bar { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.rhq-header-bar h1 { font-size: 1.4rem; }
+.rhq-actions { display: flex; gap: 0.5rem; }
+
+.rhq-button {
+  font: inherit; font-size: 0.86rem; font-weight: 500;
+  padding: 0.45rem 0.9rem; border-radius: 7px;
+  border: 1px solid var(--rhq-border); background: var(--rhq-panel); color: var(--rhq-text);
+  cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;
+}
+.rhq-button:hover { border-color: var(--rhq-accent); }
+.rhq-button-primary { background: var(--rhq-accent); border-color: var(--rhq-accent); color: #fff; }
+.rhq-button-danger { color: var(--rhq-neg); border-color: var(--rhq-border); }
+.rhq-icon { background: none; border: 0; color: var(--rhq-text-3); font-size: 1.2rem; cursor: pointer; line-height: 1; padding: 0; }
+
+.rhq-builder { display: grid; grid-template-columns: 1fr; gap: 1rem; align-items: start; }
+@media (min-width: 1024px) { .rhq-builder { grid-template-columns: 170px minmax(0, 1fr); } }
+@media (min-width: 1280px) { .rhq-builder:has(.rhq-panel:not([hidden])) { grid-template-columns: 170px minmax(0, 1fr) 250px; } }
+
+.rhq-palette { display: grid; gap: 0.4rem; align-content: start; }
+.rhq-palette-title {
+  margin: 0 0 0.2rem; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--rhq-text-3); font-weight: 550;
+}
+.rhq-add {
+  font: inherit; font-size: 0.86rem; text-align: left;
+  padding: 0.45rem 0.7rem; border-radius: 7px;
+  border: 1px solid var(--rhq-border); background: var(--rhq-panel); color: var(--rhq-text); cursor: pointer;
+}
+.rhq-add:hover { border-color: var(--rhq-accent); }
+.rhq-hint { margin: 0.6rem 0 0; font-size: 0.76rem; line-height: 1.5; color: var(--rhq-text-3); }
+.rhq-hint-narrow { display: block; }
+@media (min-width: 1024px) { .rhq-hint-narrow { display: none; } }
+
+/* The tile itself is the drag handle, so the gesture starts anywhere on it. */
+.rhq-tile { position: relative; cursor: grab; }
+.rhq-tile:focus-visible, .rhq-tile.is-selected { outline: none; }
+.rhq-tile:focus-visible .rhq-block, .rhq-tile.is-selected .rhq-block {
+  border-color: var(--rhq-accent);
+  box-shadow: 0 0 0 3px var(--rhq-accent-soft, rgba(58, 79, 208, 0.10));
+}
+.rhq-tile.is-dragging { cursor: grabbing; opacity: 0.9; z-index: 20; }
+
+/* Ours, not the browser's: without this a finger pans the page instead of
+ * moving the block, on the touch devices the pointer events were written for. */
+.rhq-tile { touch-action: auto; }
+@media (min-width: 1024px) { .rhq-tile { touch-action: none; } }
+
+/* Nothing gets selected while a block is moving. A pointer dragged across a
+ * grid full of text selects it, and the blue smear left behind makes a working
+ * drag look broken. */
+#rhq-grid.is-arranging, #rhq-grid.is-arranging * { user-select: none; -webkit-user-select: none; }
+#rhq-grid.is-arranging .rhq-tile:not(.is-dragging) { transition: transform 0.12s ease; }
+
+.rhq-resize {
+  position: absolute; right: 3px; bottom: 3px; width: 14px; height: 14px;
+  cursor: nwse-resize; opacity: 0; transition: opacity 0.12s ease;
+  border-right: 2px solid var(--rhq-text-3); border-bottom: 2px solid var(--rhq-text-3);
+  border-bottom-right-radius: 5px;
+}
+.rhq-tile:hover .rhq-resize, .rhq-tile.is-selected .rhq-resize { opacity: 0.6; }
+
+.rhq-panel {
+  display: grid; gap: 0.75rem; align-content: start;
+  padding: 1rem; background: var(--rhq-panel);
+  border: 1px solid var(--rhq-border); border-radius: 10px;
+}
+.rhq-panel[hidden] { display: none; }
+.rhq-panel-head { display: flex; align-items: center; justify-content: space-between; }
+.rhq-query { display: grid; gap: 0.7rem; }
+.rhq-query[hidden] { display: none; }
+
+.rhq-field { display: grid; gap: 0.25rem; font-size: 0.78rem; color: var(--rhq-text-2); }
+.rhq-field[hidden] { display: none; }
+.rhq-field input, .rhq-field select, .rhq-field textarea {
+  font: inherit; font-size: 0.85rem;
+  padding: 0.4rem 0.5rem; border-radius: 6px;
+  border: 1px solid var(--rhq-border); background: var(--rhq-bg); color: var(--rhq-text);
+  width: 100%;
+}
+.rhq-field input:focus-visible, .rhq-field select:focus-visible, .rhq-field textarea:focus-visible {
+  outline: 2px solid var(--rhq-accent); outline-offset: -1px;
+}

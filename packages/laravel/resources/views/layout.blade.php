@@ -16,6 +16,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{-- The builder posts to its own endpoints, and Laravel's VerifyCsrfToken
+         runs on the `web` middleware every application mounts these behind. --}}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Reports' }}</title>
     <style>{!! ReportsHQ\Laravel\Charts\Assets::css() !!}</style>
 </head>
