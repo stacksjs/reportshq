@@ -409,33 +409,40 @@ decision, not a side effect of a QA pass.
 Things that must be true before this is sellable, which no amount of testing
 here can make true.
 
-### The Laravel package is not on Packagist yet
+### Resolved: both integration packages are published
 
-`@reportshq/stacks@0.1.0` **is published**, and confirmed end to end rather than
-just installed: a clean directory, `bun add @reportshq/stacks`, the exact code
-from `docs/stacks.md`, an application emitting its own `order:created` and
+**`@reportshq/stacks@0.1.0`** is on npm, confirmed end to end rather than merely
+installed: a clean directory, `bun add @reportshq/stacks`, the exact code from
+`docs/stacks.md`, an application emitting its own `order:created` and
 `user:created`, and the rows arriving in the database as
 `commerce.order.created` with value, currency and `properties.order_id`, and as
 `user.registered`. An event outside the taxonomy was ignored rather than
 forwarded, which is what the page promises.
 
-`reportshq/laravel` is not installable yet. Packagist reads `composer.json` from
-a repository root and the package lives in a subdirectory of this monorepo, so
-it is mirrored to **github.com/ReportsHQ/laravel**, tagged `v0.1.0`, ready to
-submit. The submission itself needs a Packagist username as well as an API
-token, and only the token was to hand.
+**`reportshq/laravel@v0.1.0`** is on Packagist, confirmed the same way:
+`composer require reportshq/laravel` in a clean directory resolves and installs
+from the registry, and the installed code maps `Order:created` to
+`commerce.order.created` with value, currency and `properties.order_id`, maps
+`Registered` to `user.registered`, ignores an event whose domain is switched
+off, and ignores an unmapped event.
 
-Until it is submitted, `composer require reportshq/laravel` fails, so the
-quickstart says so rather than telling somebody to run a command that cannot
-work.
+Packagist reads `composer.json` from a repository root, so the package is
+mirrored to **github.com/ReportsHQ/laravel**. That mirror is a manual copy of
+`packages/laravel`, which means it can go stale: **re-mirror and tag it whenever
+that directory changes**, or a fix will exist in the monorepo and not in the
+package people install.
 
 ## Sign-off
 
-Not yet, and the nearest blocker is not a test result: the two integration
-packages the quickstart tells customers to install are not published anywhere.
+Not yet, but the packaging blocker is gone: both integration packages are
+published and installable, and each was verified from its registry rather than
+from this repository.
 
-Security, correctness, docs and most of the design and ops work are done, with
-findings fixed and recorded above. Billing is blocked on #17. Still open: a
-burst test of the public share cache is done but the wider performance work is
-partial, the quickstart has not been run end to end on a clean machine by a
-person, and the production rollback has been documented but never exercised.
+Security, correctness, docs, performance and ops are done, with every finding
+fixed and recorded above. Still open, and each for a stated reason: billing is
+blocked on #17; the quickstart's sign-up and builder steps have not been walked
+by a person on a clean machine, which no script can stand in for; and the
+production rollback is documented but has never been exercised on the live site.
+
+One standing hazard worth repeating: the Laravel package on Packagist is a
+manual mirror of `packages/laravel`. Nothing enforces that they agree.

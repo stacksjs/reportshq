@@ -69,10 +69,8 @@ framework and stop writing tracking calls:
 
 - [Stacks](/docs/stacks): `bun add @reportshq/stacks`, then `...listen()` in
   `app/Events.ts`
-- [Laravel](/docs/laravel): not on Packagist yet. The package is written and
-  mirrored at [ReportsHQ/laravel](https://github.com/ReportsHQ/laravel); until
-  it is submitted, `composer require reportshq/laravel` will not resolve. Post
-  JSON to the endpoint above in the meantime.
+- [Laravel](/docs/laravel): `composer require reportshq/laravel`, then the
+  service provider registers itself
 
 Both translate the events your application already emits into the taxonomy, and
 both produce byte-identical payloads for the same logical event.
