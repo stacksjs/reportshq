@@ -28,6 +28,12 @@ use ReportsHQ\Laravel\Sampler;
 use ReportsHQ\Laravel\Sender;
 use ReportsHQ\Laravel\Transport;
 
+/** Stands in for an application's own status cast, which is what Eloquent hands over. */
+enum TestOrderStatus: string
+{
+    case Shipped = 'shipped';
+}
+
 final class Runner
 {
     public int $passed = 0;
@@ -332,6 +338,61 @@ $run->test('taking the buffer empties it, so the queued job cannot double send',
 
     $run->same(1, count($transport->take()), 'expected the batch');
     $run->same(0, $transport->pending(), 'expected the buffer emptied');
+});
+
+/*
+ * What an application actually hands over.
+ *
+ * `toArray()` gives scalars, and the fixture cases are all written that way.
+ * Real integrations are not: an application merges `$model->status` in by hand,
+ * or passes `getAttributes()`, and then the payload holds the objects Eloquent
+ * casts to. Mapping happens inline in the listener, before anything is
+ * buffered, so nothing downstream was catching what casting one of those threw.
+ */
+$run->test('a backed enum in the payload reads as its value', function (Runner $run) use ($all): void {
+    $mapped = Mapper::map('Order:created', [
+        'id' => 9,
+        'total' => 4250,
+        'status' => TestOrderStatus::Shipped,
+    ], $all);
+
+    $run->same('shipped', $mapped['properties']['status'] ?? null, 'expected the enum read as its value');
+});
+
+$run->test('an object with no string reading is dropped rather than fatal', function (Runner $run) use ($all): void {
+    $mapped = Mapper::map('Order:created', [
+        'id' => 9,
+        'total' => 4250,
+        'status' => new stdClass(),
+    ], $all);
+
+    $run->same('9', $mapped['properties']['order_id'] ?? null, 'expected the order still mapped');
+    $run->assert(! isset($mapped['properties']['status']), 'expected the unreadable object dropped');
+});
+
+$run->test('a date object in the payload does not kill the request', function (Runner $run) use ($all): void {
+    $mapped = Mapper::map('Order:created', [
+        'id' => 9,
+        'total' => 4250,
+        'currency' => 'usd',
+        'created_at' => new DateTimeImmutable('2026-03-04T05:06:07+00:00'),
+    ], $all);
+
+    $run->same('2026-03-04T05:06:07+00:00', $mapped['occurred_at'] ?? null, 'expected the timestamp used');
+});
+
+$run->test('a stringable value object is read rather than dropped', function (Runner $run) use ($all): void {
+    $money = new class
+    {
+        public function __toString(): string
+        {
+            return '4250';
+        }
+    };
+
+    $mapped = Mapper::map('Order:created', ['id' => 9, 'total' => $money], $all);
+
+    $run->same(4250, $mapped['value'] ?? null, 'expected the total read through __toString');
 });
 
 /*

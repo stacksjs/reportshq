@@ -213,7 +213,23 @@ than the server's.
 
 - [x] Ingest sustained rate measured, against the rate limit that bounds it
 - [x] Report query latency measured, raw and via the pre-aggregate
-- [ ] Public share under burst, with the cache holding
+- [x] Public share under burst, with the cache holding: 4 tests
+
+**Found and fixed.** The cache had a hole exactly the width of the query. `get`
+missed, the query ran, `set` filled it, and every request arriving in between
+missed too and started its own copy. Sequentially it looked perfect: one miss,
+then hits. Measured under a burst, **fifty concurrent identical requests ran the
+query fifty times**.
+
+That window is the shape of a shared report link posted somewhere busy, which is
+the most public surface this product has, viewed by strangers who did not choose
+to wait. At 250,000 events each of those runs is ~440 ms of database work.
+
+Requests for a key already being computed now wait for that answer instead of
+asking again. Per process, so a fleet computes once per worker rather than once
+per request, and no coordination between machines is needed for that to be true.
+The in-flight entry is cleared even when the computation throws, so one bad query
+cannot become a permanent outage for one report.
 
 Numbers and the machine they came from are in `docs/benchmarks.md`, produced by
 `scripts/benchmark.ts`. Nothing here is ticked from reasoning about the code.

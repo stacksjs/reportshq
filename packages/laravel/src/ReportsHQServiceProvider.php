@@ -78,20 +78,58 @@ final class ReportsHQServiceProvider extends ServiceProvider
         $reports = fn (): ReportsHQ => $this->app->make(ReportsHQ::class);
 
         $events->listen(Registered::class, function (Registered $event) use ($reports): void {
-            $reports()->handle('Registered', $this->attributesOf($event->user));
+            $reports()->handle('Registered', $this->subject($event->user));
         });
 
         $events->listen(Login::class, function (Login $event) use ($reports): void {
-            $reports()->handle('Login', $this->attributesOf($event->user));
+            $reports()->handle('Login', $this->subject($event->user));
         });
 
         $events->listen(Logout::class, function (Logout $event) use ($reports): void {
             // A logout can arrive with no user, when a session expired rather
             // than somebody choosing to leave.
             if ($event->user !== null) {
-                $reports()->handle('Logout', $this->attributesOf($event->user));
+                $reports()->handle('Logout', $this->subject($event->user));
             }
         });
+    }
+
+    /**
+     * The payload for an auth event, with the person named.
+     *
+     * On these three events the subject *is* the authenticated user, so its own
+     * identifier is the `user_key`. Nothing else can supply it: a model's
+     * `toArray()` holds `id`, and the mapper reads `user_key`, `user_id` or
+     * `customer_id`, none of which an ordinary `User` has. Passing the
+     * attributes alone therefore produced `user.registered` and `user.login`
+     * events with no subject at all, for every Laravel application, from the
+     * one-line integration that is the whole quickstart. They still arrived and
+     * still counted, so signups looked right, while unique users and the
+     * retention grid quietly stayed empty.
+     *
+     * `getAuthIdentifier()` is the primary key, which is what a pseudonymous
+     * key should be. The email sitting next to it in the same array is never
+     * read, and must not be: this is not a table that should accumulate
+     * identities.
+     *
+     * @return array<string, mixed>
+     */
+    private function subject(mixed $user): array
+    {
+        $attributes = $this->attributesOf($user);
+
+        if (is_object($user) && method_exists($user, 'getAuthIdentifier')) {
+            $identifier = $user->getAuthIdentifier();
+
+            if (is_scalar($identifier) && (string) $identifier !== '') {
+                // Only when the application has not already said who this is.
+                // A custom user provider may carry its own `user_key`, and its
+                // answer is better than ours.
+                $attributes['user_key'] ??= (string) $identifier;
+            }
+        }
+
+        return $attributes;
     }
 
     /**

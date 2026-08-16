@@ -67,6 +67,26 @@ function stableStringify(value: unknown): string {
 }
 
 /**
+ * Computations already running, by key.
+ *
+ * A cache with a hole in it. `get` misses, the query runs, `set` fills it, and
+ * every request that arrives during that window misses too and starts its own
+ * copy of the same query. Sequentially the cache looks perfect: one miss, then
+ * hits. Under a burst it does nothing at all, and a burst is the only time it
+ * matters.
+ *
+ * Measured before this existed: fifty concurrent identical requests ran the
+ * query fifty times. That is the shape of a shared report link posted somewhere
+ * busy, which is the most public surface this product has and the one where the
+ * viewers are strangers who will not wait.
+ *
+ * Per process, so a fleet still computes once per worker rather than once
+ * globally. That is a far smaller number than once per request, and it needs no
+ * coordination between machines to be true.
+ */
+const inFlight = new Map<string, Promise<EngineResult>>()
+
+/**
  * Run through the cache.
  *
  * Every cache failure falls through to the engine. A cache is an optimisation,
@@ -85,14 +105,34 @@ export async function cached(parts: CacheKeyParts, run: () => Promise<EngineResu
     // Fall through and compute.
   }
 
-  const result = await run()
+  // Somebody is already asking this exact question. Wait for their answer
+  // rather than asking it again.
+  const running = inFlight.get(key)
+  if (running)
+    return await running
+
+  const work = (async () => {
+    const result = await run()
+
+    try {
+      await cache.set(key, JSON.stringify(result), TTL_SECONDS)
+    }
+    catch {
+      // Answer the question even if it cannot be remembered.
+    }
+
+    return result
+  })()
+
+  inFlight.set(key, work)
 
   try {
-    await cache.set(key, JSON.stringify(result), TTL_SECONDS)
+    return await work
   }
-  catch {
-    // Answer the question even if it cannot be remembered.
+  finally {
+    // Cleared whether it resolved or threw. A failed computation left behind
+    // would hand its rejection to every future caller of this key, turning one
+    // bad query into a permanent outage for that report.
+    inFlight.delete(key)
   }
-
-  return result
 }

@@ -252,7 +252,7 @@ final class Mapper
     private static function firstNumber(array $payload, array $keys): int|float|null
     {
         foreach ($keys as $key) {
-            $value = $payload[$key] ?? null;
+            $value = self::scalarise($payload[$key] ?? null);
 
             if (is_int($value) || is_float($value)) {
                 return $value;
@@ -281,7 +281,7 @@ final class Mapper
     private static function firstString(array $payload, array $keys): ?string
     {
         foreach ($keys as $key) {
-            $value = $payload[$key] ?? null;
+            $value = self::scalarise($payload[$key] ?? null);
 
             if ($value === null || is_bool($value) || is_array($value)) {
                 continue;
@@ -295,5 +295,40 @@ final class Mapper
         }
 
         return null;
+    }
+
+    /**
+     * Whatever an application handed us, reduced to something castable.
+     *
+     * An application does not necessarily pass `toArray()` output. It may pass
+     * `getAttributes()`, or merge a model attribute in by hand, and either of
+     * those carries the objects Eloquent casts to: a backed enum for a status,
+     * a `DateTimeInterface` for a timestamp, a money or value object for a
+     * total. Casting one of those to string is a fatal `Error`, thrown from
+     * inside the analytics package, on the request path of somebody else's
+     * checkout.
+     *
+     * That is the one failure mode this package exists to never have. The
+     * transport catches throwables from the *sender*, but mapping happens
+     * inline in the listener, long before anything is buffered, so nothing was
+     * catching this. Unwrap what has an obvious scalar reading and discard the
+     * rest: a missing property is a report with a gap in it, and a fatal is an
+     * order that did not get placed.
+     */
+    private static function scalarise(mixed $value): mixed
+    {
+        if ($value instanceof \BackedEnum) {
+            return $value->value;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d\TH:i:sP');
+        }
+
+        if (is_object($value)) {
+            return method_exists($value, '__toString') ? (string) $value : null;
+        }
+
+        return $value;
     }
 }
