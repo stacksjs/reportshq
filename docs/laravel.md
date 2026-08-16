@@ -1,5 +1,10 @@
 # Laravel integration
 
+> **Not on Packagist yet.** The package is complete and mirrored at
+> [ReportsHQ/laravel](https://github.com/ReportsHQ/laravel) at `v0.1.0`, but
+> `composer require reportshq/laravel` will not resolve until it is submitted.
+> Everything below describes the package as written.
+
 `reportshq/laravel` sends a Laravel application's own events to ReportsHQ. Your
 app keeps firing the events it already fires; the package listens, translates
 them into [the taxonomy](/docs/events), and ships them after the response has

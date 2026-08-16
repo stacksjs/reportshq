@@ -409,28 +409,25 @@ decision, not a side effect of a QA pass.
 Things that must be true before this is sellable, which no amount of testing
 here can make true.
 
-### The integration packages are not published
+### The Laravel package is not on Packagist yet
 
-`docs/quickstart.md` step 4 tells a new customer:
+`@reportshq/stacks@0.1.0` **is published**, and confirmed end to end rather than
+just installed: a clean directory, `bun add @reportshq/stacks`, the exact code
+from `docs/stacks.md`, an application emitting its own `order:created` and
+`user:created`, and the rows arriving in the database as
+`commerce.order.created` with value, currency and `properties.order_id`, and as
+`user.registered`. An event outside the taxonomy was ignored rather than
+forwarded, which is what the page promises.
 
-```bash
-bun add @reportshq/stacks
-composer require reportshq/laravel
-```
+`reportshq/laravel` is not installable yet. Packagist reads `composer.json` from
+a repository root and the package lives in a subdirectory of this monorepo, so
+it is mirrored to **github.com/ReportsHQ/laravel**, tagged `v0.1.0`, ready to
+submit. The submission itself needs a Packagist username as well as an API
+token, and only the token was to hand.
 
-Both commands fail today. `@reportshq/stacks` returns 404 from the npm registry
-and there is no `@reportshq` scope at all; `reportshq/laravel` returns 404 from
-Packagist and there is no `reportshq` vendor. Both packages exist in this repo
-at `packages/stacks` and `packages/laravel`, at version 0.1.0, unpublished.
-
-So the documented path from "I tried the curl" to "it is wired into my app"
-stops dead, at the step where somebody had decided to adopt the product. The
-docs are not wrong about what the packages do; they are wrong that you can
-install them.
-
-Either publish both, or say plainly on the page that they are not out yet.
-Publishing is a decision about a namespace and a release, not a QA fix, so it is
-recorded here rather than done.
+Until it is submitted, `composer require reportshq/laravel` fails, so the
+quickstart says so rather than telling somebody to run a command that cannot
+work.
 
 ## Sign-off
 
