@@ -24,6 +24,19 @@ import { compact, seriesColor } from '../../../app/Reports/charts'
  * The sibling charts carry the `Chart` suffix for this reason. This one did
  * not, and was the only one broken.
  *
+ * `rows` is built with `.slice()` rather than `[...result.series]`, and that is
+ * load-bearing. stx's server-script parser does not lift a `const` whose
+ * initializer *begins* with an array spread: the binding exists in the script
+ * and never reaches template scope, so `@foreach` reported `rows is not
+ * iterable` while `rows.length` in the same script read fine. It took the
+ * `withDefaults` default for `label` down with it, which is why the first
+ * column header was blank. Both cleared together the moment the spread moved.
+ *
+ * That is an stx defect and belongs upstream, not here; `.slice()` is the
+ * idiomatic copy anyway, so this is not a workaround so much as the form that
+ * happens to parse. Anything added to this script should avoid opening a
+ * declaration with `[...`.
+ *
  * The frame is inlined rather than shared through a ChartFrame component.
  *
  * stx drops every prop passed from one component to another in this version: a
@@ -43,10 +56,15 @@ interface TableChartProps {
 const { result, title, label } = withDefaults(defineProps<TableChartProps>(), { label: 'Series' })
 
 const total = result.series.reduce((sum: number, series: any) => sum + series.total, 0)
-const rows = [...result.series]
+const rows = result.series
+  .slice()
   .sort((a: any, b: any) => b.total - a.total)
   .map((series: any, index: number) => ({
-    key: series.key === 'total' ? (title ?? 'Total') : series.key,
+    // `||`, not `??`. An untitled block passes an empty string rather than
+    // undefined, so the nullish form left the only row in an ungrouped table
+    // labelled with nothing at all: a colour swatch, a number, and no word
+    // saying what the number was of.
+    key: series.key === 'total' ? (title || 'Total') : series.key,
     color: seriesColor(index, series.key),
     value: compact(series.total),
     share: total > 0 ? `${Math.round((series.total / total) * 100)}%` : '-',
