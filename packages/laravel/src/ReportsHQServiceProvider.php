@@ -12,6 +12,7 @@ use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use ReportsHQ\Laravel\Console\SendScheduledReports;
 use ReportsHQ\Laravel\Reports\Runner;
 use ReportsHQ\Laravel\Semantic\Configured;
 use ReportsHQ\Laravel\Semantic\Registry;
@@ -94,6 +95,14 @@ final class ReportsHQServiceProvider extends ServiceProvider
         ], 'reportshq-views');
 
         $this->registerRoutes();
+        $this->registerApi();
+
+        if ($this->app->runningInConsole()) {
+            // Registered, never scheduled. An application knows whether it has
+            // a scheduler running at all, and a package that adds itself to one
+            // is a package that sends email nobody asked for.
+            $this->commands([SendScheduledReports::class]);
+        }
 
         $config = $this->app->make(Config::class);
 
@@ -140,6 +149,30 @@ final class ReportsHQServiceProvider extends ServiceProvider
             'middleware' => $routes['middleware'] ?? ['web'],
         ], function (): void {
             $this->loadRoutesFrom(__DIR__.'/../routes/reportshq.php');
+        });
+    }
+
+    /**
+     * The JSON surface, if the application asked for it.
+     *
+     * Its own group, so an application can publish the API to a built stx
+     * client while keeping the server rendered pages off, or the other way
+     * round. They answer the same questions and are guarded differently.
+     */
+    private function registerApi(): void
+    {
+        /** @var array<string, mixed> $api */
+        $api = $this->app['config']->get('reportshq.api', []);
+
+        if (($api['enabled'] ?? false) !== true) {
+            return;
+        }
+
+        Route::group([
+            'prefix' => $api['prefix'] ?? 'api/reportshq',
+            'middleware' => $api['middleware'] ?? ['api'],
+        ], function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/api.php');
         });
     }
 

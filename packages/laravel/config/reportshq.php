@@ -81,6 +81,28 @@ return [
         'enabled' => env('REPORTSHQ_ROUTES', false),
         'prefix' => env('REPORTSHQ_ROUTE_PREFIX', 'reports'),
         'middleware' => ['web'],
+
+        /*
+         * A share link is read by somebody with no account, so it deliberately
+         * does not inherit the middleware above. Keep `web` for the session and
+         * cookie handling, and do not add a guard here unless you mean the link
+         * to stop working for the people it was sent to.
+         */
+        'share_middleware' => ['web'],
+    ],
+
+    /*
+     * The JSON surface the stx client reads.
+     *
+     * Separate from the pages and guarded separately, because the two fail
+     * differently: a page wants a session and a redirect to a login, and an API
+     * call wants a token and a 401. Off by default for the same reason the
+     * pages are.
+     */
+    'api' => [
+        'enabled' => env('REPORTSHQ_API', false),
+        'prefix' => env('REPORTSHQ_API_PREFIX', 'api/reportshq'),
+        'middleware' => ['api'],
     ],
 
     /*

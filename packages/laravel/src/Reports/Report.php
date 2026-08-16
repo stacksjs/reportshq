@@ -53,6 +53,16 @@ class Report extends Model
         return $this->hasMany(Block::class, 'report_id')->orderBy('y')->orderBy('x');
     }
 
+    public function shares(): HasMany
+    {
+        return $this->hasMany(Share::class, 'report_id')->latest('id');
+    }
+
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(Schedule::class, 'report_id');
+    }
+
     public function revisions(): HasMany
     {
         return $this->hasMany(Revision::class, 'report_id')->latest('created_at');
