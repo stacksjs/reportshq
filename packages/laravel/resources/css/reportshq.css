@@ -1,0 +1,202 @@
+/*
+ * The report surface.
+ *
+ * Inlined into the page rather than served as an asset, so an application does
+ * not have to publish anything, run a build, or teach its bundler about this
+ * package to see a report. It is under four kilobytes; a request to save that
+ * is a worse trade than the bytes.
+ *
+ * Three themes, not two. An explicit choice stamps `data-theme`, and the
+ * default setting stamps nothing at all, so `prefers-color-scheme` is what
+ * separates light from dark for most readers. Every colour is defined on bare
+ * `:root` and only redefined in the two overrides; a colour whose sole
+ * definition sits inside a media query is the classic unreadable-page bug.
+ */
+
+:root {
+  color-scheme: light;
+
+  --rhq-bg: #fcfbf9;
+  --rhq-panel: #ffffff;
+  --rhq-border: rgba(20, 22, 28, 0.10);
+  --rhq-text: #14161c;
+  --rhq-text-2: #4a4f5c;
+  --rhq-text-3: #6b7180;
+  --rhq-accent: #3a4fd0;
+  --rhq-warn: #b45309;
+  --rhq-warn-soft: rgba(180, 83, 9, 0.10);
+  --rhq-pos: #15803d;
+  --rhq-pos-soft: rgba(21, 128, 61, 0.10);
+
+  /* Five slots before they repeat, plus a neutral for a folded tail. */
+  --series-1: #3a4fd0;
+  --series-2: #b8336a;
+  --series-3: #1f7a6b;
+  --series-4: #9c5d1a;
+  --series-5: #5b4bab;
+  --series-other: #8a909d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --rhq-bg: #0b0d12;
+    --rhq-panel: #12151d;
+    --rhq-border: rgba(148, 163, 184, 0.12);
+    --rhq-text: #f2f4f8;
+    --rhq-text-2: #b0b8c7;
+    --rhq-text-3: #7d8798;
+    --rhq-accent: #8fa2ff;
+    --rhq-warn: #fbbf24;
+    --rhq-warn-soft: rgba(251, 191, 36, 0.12);
+    --rhq-pos: #4ade80;
+    --rhq-pos-soft: rgba(74, 222, 128, 0.12);
+    --series-1: #8fa2ff;
+    --series-2: #f4739f;
+    --series-3: #4dd4bd;
+    --series-4: #e0a458;
+    --series-5: #b5a6f5;
+    --series-other: #7d8798;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --rhq-bg: #0b0d12;
+  --rhq-panel: #12151d;
+  --rhq-border: rgba(148, 163, 184, 0.12);
+  --rhq-text: #f2f4f8;
+  --rhq-text-2: #b0b8c7;
+  --rhq-text-3: #7d8798;
+  --rhq-accent: #8fa2ff;
+  --rhq-warn: #fbbf24;
+  --rhq-warn-soft: rgba(251, 191, 36, 0.12);
+  --rhq-pos: #4ade80;
+  --rhq-pos-soft: rgba(74, 222, 128, 0.12);
+  --series-1: #8fa2ff;
+  --series-2: #f4739f;
+  --series-3: #4dd4bd;
+  --series-4: #e0a458;
+  --series-5: #b5a6f5;
+  --series-other: #7d8798;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--rhq-bg);
+  color: var(--rhq-text);
+  font: 15px/1.55 ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.rhq-page { max-width: 1180px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+.rhq-header { display: grid; gap: 0.35rem; margin-bottom: 2rem; }
+.rhq-header h1 { margin: 0; font-size: 1.75rem; letter-spacing: -0.02em; font-weight: 620; }
+.rhq-lede { margin: 0; color: var(--rhq-text-2); }
+.rhq-meta { margin: 0; font-size: 0.85rem; color: var(--rhq-text-3); }
+.rhq-warn { color: var(--rhq-warn); }
+
+/* Twelve columns above the breakpoint, one below it. A twelve column grid on a
+ * phone gives each block about eighty pixels, which clips every title to three
+ * letters, so the blocks stack in reading order instead. */
+.rhq-grid { display: grid; grid-template-columns: 1fr; gap: 0.85rem; }
+.rhq-cell { grid-column: 1 / -1; }
+
+@media (min-width: 1024px) {
+  .rhq-grid { grid-template-columns: repeat(12, 1fr); grid-auto-rows: 56px; }
+  .rhq-cell { grid-column: var(--x) / span var(--w); grid-row: span var(--h); }
+}
+
+.rhq-block {
+  margin: 0;
+  height: 100%;
+  padding: 1.1rem 1.15rem;
+  background: var(--rhq-panel);
+  border: 1px solid var(--rhq-border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.rhq-title { font-size: 0.9rem; font-weight: 550; color: var(--rhq-text); }
+
+.rhq-big { justify-content: flex-start; }
+.rhq-number {
+  margin: 0;
+  font-size: 2.1rem;
+  font-weight: 620;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+.rhq-caption { margin: 0; font-size: 0.85rem; color: var(--rhq-text-3); }
+
+.rhq-chart { width: 100%; height: auto; display: block; }
+.rhq-chart-donut { max-width: 220px; margin: 0 auto; }
+.rhq-grid-line, .rhq-grid { stroke: var(--rhq-border); stroke-width: 1; }
+.rhq-axis { fill: var(--rhq-text-3); font-size: 10px; font-family: inherit; }
+.rhq-donut-total { fill: var(--rhq-text); font-size: 22px; font-weight: 620; font-family: inherit; }
+.rhq-donut-caption { fill: var(--rhq-text-3); font-size: 10px; font-family: inherit; }
+
+.rhq-legend {
+  display: flex; flex-wrap: wrap; gap: 0.35rem 1rem;
+  margin: 0; padding: 0; list-style: none;
+  font-size: 0.82rem; color: var(--rhq-text-2);
+}
+.rhq-legend li { display: flex; align-items: center; gap: 0.4rem; }
+.rhq-legend-value { color: var(--rhq-text-3); font-variant-numeric: tabular-nums; }
+.rhq-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; display: inline-block; }
+
+/* Wide content scrolls inside its own box, so the page never scrolls sideways. */
+.rhq-scroll { overflow-x: auto; flex: 1; min-height: 0; }
+.rhq-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.rhq-table th {
+  text-align: left; font-size: 0.72rem; font-weight: 550; color: var(--rhq-text-3);
+  padding: 0.35rem 0.5rem 0.35rem 0; border-bottom: 1px solid var(--rhq-border);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.rhq-table td { padding: 0.4rem 0.5rem 0.4rem 0; border-bottom: 1px solid var(--rhq-border); }
+.rhq-table tr:last-child td { border-bottom: 0; }
+.rhq-right { text-align: right; }
+.rhq-num { font-variant-numeric: tabular-nums; }
+.rhq-muted { color: var(--rhq-text-3); }
+
+.rhq-note p { margin: 0; color: var(--rhq-text-2); }
+
+.rhq-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0.2rem; text-align: center; color: var(--rhq-text-3); font-size: 0.88rem;
+  padding: 1.5rem 0;
+}
+.rhq-empty p { margin: 0; }
+.rhq-empty-page { padding: 5rem 1rem; border: 1px dashed var(--rhq-border); border-radius: 10px; }
+.rhq-empty-page h2 { margin: 0 0 0.3rem; font-size: 1.05rem; color: var(--rhq-text); font-weight: 600; }
+
+/* A block whose config the compiler refused. Marked on the block, because the
+ * block is what the person is looking at. */
+.rhq-broken { border-color: var(--rhq-warn); background: var(--rhq-warn-soft); }
+.rhq-error { margin: 0; font-size: 0.86rem; color: var(--rhq-text-2); }
+
+.rhq-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.rhq-list li {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 0.9rem 1.1rem; background: var(--rhq-panel);
+  border: 1px solid var(--rhq-border); border-radius: 10px;
+}
+.rhq-list a { flex: 1; display: grid; gap: 0.15rem; color: inherit; text-decoration: none; min-width: 0; }
+.rhq-list a:hover .rhq-list-name { color: var(--rhq-accent); }
+.rhq-list-name { font-weight: 550; }
+.rhq-list-desc { font-size: 0.86rem; color: var(--rhq-text-2); }
+
+.rhq-pill {
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em;
+  padding: 0.2em 0.55em; border-radius: 3px;
+  background: var(--rhq-warn-soft); color: var(--rhq-warn); flex-shrink: 0;
+}
+.rhq-pill-live { background: var(--rhq-pos-soft); color: var(--rhq-pos); }
+
+a:focus-visible, .rhq-list a:focus-visible { outline: 2px solid var(--rhq-accent); outline-offset: 2px; }

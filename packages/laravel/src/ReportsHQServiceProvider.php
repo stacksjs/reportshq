@@ -10,6 +10,7 @@ use Illuminate\Auth\Events\Registered;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use ReportsHQ\Laravel\Reports\Runner;
 use ReportsHQ\Laravel\Semantic\Configured;
@@ -78,6 +79,18 @@ final class ReportsHQServiceProvider extends ServiceProvider
         // it in step with a schema it did not design.
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
 
+        // Namespaced, so `reportshq::report` is unambiguous and an application
+        // with a view of its own called `report` does not shadow ours. The same
+        // collision cost the hosted product a week when a chart component
+        // silently lost its name to one the framework already shipped.
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'reportshq');
+
+        $this->publishes([
+            __DIR__.'/../resources/views' => $this->app->resourcePath('views/vendor/reportshq'),
+        ], 'reportshq-views');
+
+        $this->registerRoutes();
+
         $config = $this->app->make(Config::class);
 
         // Everything past this point is the **event** side, and the key gates
@@ -94,6 +107,36 @@ final class ReportsHQServiceProvider extends ServiceProvider
 
         $this->listenForAuthEvents($config);
         $this->arrangeDelivery($config);
+    }
+
+    /**
+     * The standalone report pages, if the application asked for them.
+     *
+     * Off unless switched on. A package that mounts routes without being asked
+     * publishes a page somebody finds out about from a security review, and an
+     * application wanting only the Filament plugin, or only the query engine,
+     * wants none of these.
+     *
+     * The middleware is the application's answer to who may read a report. This
+     * package cannot know which of your users may see a total of everybody's
+     * orders, so it does not guess: whatever is configured is what runs, and
+     * the default is `web` alone.
+     */
+    private function registerRoutes(): void
+    {
+        /** @var array<string, mixed> $routes */
+        $routes = $this->app['config']->get('reportshq.routes', []);
+
+        if (($routes['enabled'] ?? false) !== true) {
+            return;
+        }
+
+        Route::group([
+            'prefix' => $routes['prefix'] ?? 'reports',
+            'middleware' => $routes['middleware'] ?? ['web'],
+        ], function (): void {
+            $this->loadRoutesFrom(__DIR__.'/../routes/reportshq.php');
+        });
     }
 
     /**

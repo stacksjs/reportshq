@@ -43,6 +43,24 @@ return [
     'queue' => env('REPORTSHQ_QUEUE'),
 
     /*
+     * The standalone report pages.
+     *
+     * Off by default. A package that mounts routes into an application without
+     * being asked is a package that publishes a page somebody has to find out
+     * about from a security review, and an application using the Filament
+     * plugin, or only the query engine, wants none of this.
+     *
+     * `middleware` is where authorisation happens, and it has to: this package
+     * cannot know which of your users may see a total of everybody's orders,
+     * and guessing would be worse than saying so.
+     */
+    'routes' => [
+        'enabled' => env('REPORTSHQ_ROUTES', false),
+        'prefix' => env('REPORTSHQ_ROUTE_PREFIX', 'reports'),
+        'middleware' => ['web'],
+    ],
+
+    /*
      * The models the report builder may query.
      *
      * Empty means nothing is queryable, which is the right default: a builder

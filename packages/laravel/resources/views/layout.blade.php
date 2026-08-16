@@ -1,0 +1,27 @@
+{{--
+    The page around a report.
+
+    Standalone rather than extending the host application's layout, and that is
+    a decision rather than laziness: an application's own layout carries its
+    navigation, its auth chrome and its CSS, none of which this package can
+    predict. A page that renders correctly everywhere beats one that inherits
+    beautifully in the application it was written against.
+
+    The Filament plugin wraps these same views in the panel, so an application
+    that has one gets it inside the admin it already runs, and everybody else
+    gets this.
+--}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ $title ?? 'Reports' }}</title>
+    <style>{!! ReportsHQ\Laravel\Charts\Assets::css() !!}</style>
+</head>
+<body>
+    <main class="rhq-page">
+        @yield('content')
+    </main>
+</body>
+</html>
