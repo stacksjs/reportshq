@@ -35,15 +35,17 @@ curl -X POST https://reportshq.org/ingest \
   }'
 ```
 
-A successful call returns the number stored and the number rejected:
+A successful call returns what it did with the batch:
 
 ```json
-{ "ok": true, "stored": 1, "rejected": 0 }
+{ "ok": true, "stored": 1, "dropped": 0, "skipped": 0 }
 ```
 
-`rejected` is never silently non-zero. If an event is refused, the response
-says which and why. See the [ingestion reference](/docs/ingest) for the full
-contract.
+`dropped` is events the validator refused, `skipped` is events past the
+per-request cap. Neither is ever silently non-zero: when something is dropped
+the response carries an `errors` array saying which event and why, so a client
+that logs it can fix its own payload without opening a support conversation.
+See the [ingestion reference](/docs/ingest) for the full contract.
 
 To check a key without sending anything:
 

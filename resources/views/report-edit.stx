@@ -307,7 +307,7 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
                       @elseif (block.kind === 'donut')
                         <DonutChart :result="block.result" title="{{ block.title }}" />
                       @elseif (block.kind === 'table')
-                        <DataTable :result="block.result" title="{{ block.title }}" />
+                        <TableChart :result="block.result" title="{{ block.title }}" />
                       @elseif (block.kind === 'funnel')
                         <FunnelChart :result="block.result" title="{{ block.title }}" />
                       @elseif (block.kind === 'heatmap')

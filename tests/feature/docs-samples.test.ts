@@ -103,6 +103,80 @@ describe('the documented samples', () => {
     }
   })
 
+  test('a documented success response names fields that response really has', () => {
+    // The gap this closes. The quickstart described the ingest response as
+    // `{ ok, stored, rejected }`. The route returns `dropped`; `rejected`
+    // belongs to the quota-exceeded body, a different answer entirely. The
+    // prose then explained that "rejected is never silently non-zero", about a
+    // field that response has never carried.
+    //
+    // Every other check in this file passed on it: the JSON parsed, the payload
+    // was valid, the endpoint was real. Only the answer was imaginary, and a
+    // reader would have gone looking for a field that was not there.
+    //
+    // Matched per response rather than against the whole file, because the
+    // whole file does contain `rejected` and would have called this correct.
+    const route = readFileSync(join(import.meta.dir, '../../routes/ingest.ts'), 'utf8')
+
+    /** The keys of the object literal that follows a given marker. */
+    const keysAfter = (marker: string): Set<string> => {
+      const at = route.indexOf(marker)
+      if (at === -1)
+        return new Set()
+
+      // To the end of that literal: the first line that closes it at the
+      // brace depth it opened on.
+      let depth = 0
+      let end = at
+      for (let index = at; index < route.length; index++) {
+        if (route[index] === '{')
+          depth++
+        if (route[index] === '}') {
+          depth--
+          if (depth === 0) {
+            end = index
+            break
+          }
+        }
+      }
+
+      const literal = route.slice(at, end)
+      return new Set([...literal.matchAll(/^\s*(\w+)[,:]/gm)].map(match => match[1]!))
+    }
+
+    // The two success bodies a customer sees, each read from its own literal.
+    const ingestSuccess = keysAfter('{\n      ok: true,')
+    const verifySuccess = new Set(['ok', 'project'])
+
+    expect(ingestSuccess.has('stored')).toBeTrue()
+    expect(ingestSuccess.has('dropped')).toBeTrue()
+    // The field the quickstart invented, proving the set is the success body
+    // and not the file.
+    expect(ingestSuccess.has('rejected')).toBeFalse()
+
+    const documented = ALL
+      .filter(fence => fence.lang === 'json')
+      .map((fence) => {
+        try {
+          return JSON.parse(fence.body) as Record<string, unknown>
+        }
+        catch {
+          return null
+        }
+      })
+      .filter((body): body is Record<string, unknown> => !!body && body.ok === true)
+
+    expect(documented.length).toBeGreaterThan(0)
+
+    for (const body of documented) {
+      const keys = Object.keys(body)
+      // A verify sample or an ingest sample: whichever it resembles, every key
+      // in it has to exist in that response.
+      const shape = keys.includes('project') ? verifySuccess : ingestSuccess
+      expect(keys.filter(key => !shape.has(key))).toEqual([])
+    }
+  })
+
   test('the documented endpoints exist', () => {
     // Paths the docs tell a customer to call, and where each is defined. A doc
     // pointing at a route that was renamed is a support ticket that starts with

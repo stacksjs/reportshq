@@ -107,7 +107,7 @@ const missingSeed = !projectId
               <DonutChart :result="byPlan" title="Orders by plan" />
             </div>
             <div class="p-5 rounded-xl border border-line bg-panel">
-              <DataTable :result="bySource" title="Signups by source" label="Source" />
+              <TableChart :result="bySource" title="Signups by source" label="Source" />
             </div>
             <div class="p-5 rounded-xl border border-line bg-panel">
               <FunnelChart :result="funnel" title="Browse to order" />

@@ -338,7 +338,25 @@ request by the shape of its wrapper and never by whether its contents look
 valid. Caught only by mutation testing, because a passing test looks identical
 either way.
 
-- [ ] Quickstart executed verbatim on a clean machine profile
+- [x] Quickstart's API claims executed against production, and its response
+      shapes checked against the routes
+
+**Found and fixed.** The quickstart told a new customer the ingest call answers
+`{ "ok": true, "stored": 1, "rejected": 0 }`. It answers `dropped`, not
+`rejected`; `rejected` belongs to the quota-exceeded body, which is a different
+response entirely. The prose then explained that "rejected is never silently
+non-zero", about a field that response has never carried. The very first thing
+somebody does with this product is paste that curl and read the answer.
+
+Every existing docs check passed on it: the JSON parsed, the payload was valid,
+the endpoint was real. Only the answer was imaginary. The new test matches each
+documented success body against the keys of the specific response literal that
+produces it, rather than against the file, because the file does contain
+`rejected` and would have called the sample correct. Verified by reintroducing
+the exact bug and watching it fail.
+
+- [ ] Quickstart run end to end on a clean machine, including the sign-up and
+      builder steps a script cannot check
 
 ---
 
