@@ -16,8 +16,8 @@ namespace ReportsHQ\Laravel;
 final class Config
 {
     /**
-     * @param array<string, bool> $domains
-     * @param callable(string): void|null $onError
+     * @param  array<string, bool>  $domains
+     * @param  callable(string): void|null  $onError
      */
     public function __construct(
         public string $key = '',
@@ -43,7 +43,7 @@ final class Config
     /**
      * Build from an array, as the service provider does from Laravel's config.
      *
-     * @param array<string, mixed> $values
+     * @param  array<string, mixed>  $values
      */
     public static function fromArray(array $values): self
     {

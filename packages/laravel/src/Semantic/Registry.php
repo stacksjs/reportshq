@@ -34,16 +34,36 @@ final class Registry
     }
 
     /**
-     * The shortest hop sequence from one model to another.
+     * A hop sequence from one model to another, preferring one that keeps the
+     * row count.
      *
-     * Breadth first, and non fanning hops are explored first, so a target
-     * reachable both ways is reached the way that keeps the row count. That
-     * ordering is what lets "orders by member state" join through
-     * `member` rather than wandering out through `items` and back.
+     * Two searches rather than one, and the reason is worth writing down. A
+     * single breadth first walk returns the shortest route, and shortest is not
+     * the property that matters: from an order line, both `order -> categories`
+     * and `product -> category` are two hops, the first multiplies rows and the
+     * second does not, and which one a plain walk finds first comes down to the
+     * order somebody declared their relations in. So the clean routes are
+     * searched on their own first, and the full graph only if that finds
+     * nothing.
+     *
+     * When both searches fail the answer is null. When only the second
+     * succeeds, the route it found is the one quoted back in the refusal, which
+     * is what lets the message name the hop that multiplies.
      *
      * @return list<Relation>|null Null when there is no route at all.
      */
     public function path(string $from, string $to): ?array
+    {
+        return $this->search($from, $to, true) ?? $this->search($from, $to, false);
+    }
+
+    /**
+     * Breadth first from one model to another.
+     *
+     * @param  bool  $cleanOnly  Ignore hops that multiply rows.
+     * @return list<Relation>|null
+     */
+    private function search(string $from, string $to, bool $cleanOnly): ?array
     {
         if ($from === $to) {
             return [];
@@ -65,13 +85,11 @@ final class Registry
                 continue;
             }
 
-            // One hops before many hops, at every level, so the first route
-            // found to a given model is the cheapest in rows as well as in
-            // joins.
-            $relations = array_values($model->relations);
-            usort($relations, static fn (Relation $a, Relation $b): int => ($a->fansOut() ? 1 : 0) <=> ($b->fansOut() ? 1 : 0));
+            foreach ($model->relations as $relation) {
+                if ($cleanOnly && $relation->fansOut()) {
+                    continue;
+                }
 
-            foreach ($relations as $relation) {
                 if (isset($seen[$relation->target])) {
                     continue;
                 }

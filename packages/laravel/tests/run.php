@@ -71,7 +71,7 @@ final class Runner
     }
 }
 
-$run = new Runner();
+$run = new Runner;
 $all = ['commerce' => true, 'users' => true, 'cms' => true];
 
 /*
@@ -363,7 +363,7 @@ $run->test('an object with no string reading is dropped rather than fatal', func
     $mapped = Mapper::map('Order:created', [
         'id' => 9,
         'total' => 4250,
-        'status' => new stdClass(),
+        'status' => new stdClass,
     ], $all);
 
     $run->same('9', $mapped['properties']['order_id'] ?? null, 'expected the order still mapped');

@@ -19,6 +19,7 @@ declare(strict_types=1);
  */
 
 require __DIR__.'/../src/Semantic/GrainMismatch.php';
+require __DIR__.'/../src/Semantic/Pivot.php';
 require __DIR__.'/../src/Semantic/Relation.php';
 require __DIR__.'/../src/Semantic/Measure.php';
 require __DIR__.'/../src/Semantic/Dimension.php';

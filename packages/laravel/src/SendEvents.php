@@ -33,9 +33,7 @@ final class SendEvents implements ShouldQueue
     public int $tries = 1;
 
     /** @param array<int, array<string, mixed>> $events */
-    public function __construct(private array $events)
-    {
-    }
+    public function __construct(private array $events) {}
 
     public function handle(Config $config): void
     {

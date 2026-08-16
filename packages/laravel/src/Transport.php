@@ -50,7 +50,7 @@ final class Transport
      *
      * Appends to an array and returns. Everything that can fail happens later.
      *
-     * @param array<string, mixed> $event
+     * @param  array<string, mixed>  $event
      */
     public function track(array $event): void
     {

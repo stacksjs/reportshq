@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ReportsHQ\Laravel;
 
+use Illuminate\Database\Eloquent\Model;
+
 /**
  * The application-facing entry point.
  *
@@ -17,13 +19,12 @@ final class ReportsHQ
     public function __construct(
         private Config $config,
         private Transport $transport,
-    ) {
-    }
+    ) {}
 
     /**
      * Translate and queue an event by its mapped name.
      *
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
     public function handle(string $event, array $payload = []): void
     {
@@ -41,7 +42,7 @@ final class ReportsHQ
      * fits: a custom name is stored and queryable, but no report template is
      * written against it, so nothing will build itself from it.
      *
-     * @param array<string, mixed> $event
+     * @param  array<string, mixed>  $event
      */
     public function track(array $event): void
     {
@@ -59,12 +60,12 @@ final class ReportsHQ
      * whose orders live in `App\Models\Purchase` can still map them onto
      * `commerce.order.created` without renaming anything.
      *
-     * @param class-string $model
-     * @param string[] $events
+     * @param  class-string  $model
+     * @param  string[]  $events
      */
     public function observe(string $model, string $as, array $events = ['created']): void
     {
-        if (! method_exists($model, 'observe') && ! class_exists(\Illuminate\Database\Eloquent\Model::class)) {
+        if (! method_exists($model, 'observe') && ! class_exists(Model::class)) {
             return;
         }
 

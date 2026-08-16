@@ -9,6 +9,7 @@ use Illuminate\Auth\Events\Logout;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -152,8 +153,8 @@ final class ReportsHQServiceProvider extends ServiceProvider
 
             $config = $this->app->make(Config::class);
 
-            if ($config->queue !== null && class_exists(\Illuminate\Support\Facades\Bus::class)) {
-                \Illuminate\Support\Facades\Bus::dispatch(
+            if ($config->queue !== null && class_exists(Bus::class)) {
+                Bus::dispatch(
                     (new SendEvents($transport->take()))->onQueue($config->queue),
                 );
 

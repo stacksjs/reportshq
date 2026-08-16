@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ReportsHQ\Laravel;
 
+use Illuminate\Support\Facades\Http;
+
 /**
  * The HTTP call itself.
  *
@@ -26,9 +28,9 @@ final class Sender
      */
     public static function default(): callable
     {
-        if (class_exists(\Illuminate\Support\Facades\Http::class)) {
+        if (class_exists(Http::class)) {
             return static function (string $endpoint, string $key, array $body): int {
-                $response = \Illuminate\Support\Facades\Http::withHeaders([
+                $response = Http::withHeaders([
                     'X-ReportsHQ-Key' => $key,
                     'Content-Type' => 'application/json',
                 ])->timeout(5)->post($endpoint, $body);

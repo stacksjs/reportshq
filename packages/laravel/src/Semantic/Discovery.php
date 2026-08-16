@@ -188,18 +188,64 @@ final class Discovery
 
             $related = $relation->getRelated();
 
+            $columns = self::joinColumns($relation, $instance, $related);
+
+            if ($columns === null) {
+                // A relation whose columns cannot be read is kept, with empty
+                // columns, rather than dropped. Keeping it means the grain
+                // check still sees the hop and still refuses a fan-out through
+                // it; the compiler then says which relation it cannot write.
+                // Dropping it would make the same query look answerable.
+                $columns = ['base' => '', 'target' => ''];
+            }
+
             $relations[] = new Relation(
                 name: $method->getName(),
                 target: Str::snake(class_basename($related)),
                 cardinality: Relation::cardinalityOf(class_basename($relation)),
-                localKey: $instance->getKeyName(),
-                foreignKey: method_exists($relation, 'getForeignKeyName')
-                    ? (string) $relation->getForeignKeyName()
-                    : $related->getKeyName(),
+                baseColumn: $columns['base'],
+                targetColumn: $columns['target'],
             );
         }
 
         return $relations;
+    }
+
+    /**
+     * The two columns a hop equates, named for the side they sit on.
+     *
+     * Eloquent's own vocabulary flips between relation types: `getForeignKeyName`
+     * is a column on the base table for a `belongsTo` and on the related table
+     * for a `hasMany`. Reading them into `base` and `target` here is what lets
+     * the compiler write every join the same way.
+     *
+     * Returns null for the shapes not handled yet, which are the ones through a
+     * pivot or a morph. They are refused loudly rather than guessed at, because
+     * a join missing half its condition is a cross product rather than an error.
+     *
+     * @return array{base: string, target: string}|null
+     */
+    private static function joinColumns(EloquentRelation $relation, Eloquent $instance, Eloquent $related): ?array
+    {
+        $type = class_basename($relation);
+
+        if ($type === 'BelongsTo') {
+            return [
+                'base' => (string) $relation->getForeignKeyName(),
+                'target' => (string) $relation->getOwnerKeyName(),
+            ];
+        }
+
+        if (in_array($type, ['HasOne', 'HasMany', 'MorphOne', 'MorphMany'], true)) {
+            $foreign = (string) $relation->getForeignKeyName();
+            $local = method_exists($relation, 'getLocalKeyName')
+                ? (string) $relation->getLocalKeyName()
+                : $instance->getKeyName();
+
+            return ['base' => $local, 'target' => $foreign];
+        }
+
+        return null;
     }
 
     private static function excluded(string $column): bool

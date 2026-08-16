@@ -163,8 +163,8 @@ final class Mapper
      * forwarding them under made-up names fills a project with vocabulary no
      * report template can read.
      *
-     * @param array<string, mixed> $payload
-     * @param array<string, bool> $domains
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, bool>  $domains
      * @return array<string, mixed>|null
      */
     public static function map(string $event, array $payload, array $domains): ?array
@@ -227,7 +227,7 @@ final class Mapper
 
     /** The event names this package listens for, given the enabled domains.
      *
-     * @param array<string, bool> $domains
+     * @param  array<string, bool>  $domains
      * @return string[]
      */
     public static function names(array $domains): array
@@ -246,8 +246,8 @@ final class Mapper
     /**
      * The first of these keys holding something that reads as a number.
      *
-     * @param array<string, mixed> $payload
-     * @param string[] $keys
+     * @param  array<string, mixed>  $payload
+     * @param  string[]  $keys
      */
     private static function firstNumber(array $payload, array $keys): int|float|null
     {
@@ -275,8 +275,8 @@ final class Mapper
      * Numbers are stringified, because an id is an identifier whichever type
      * the ORM handed it over as, and the two SDKs must agree on which.
      *
-     * @param array<string, mixed> $payload
-     * @param string[] $keys
+     * @param  array<string, mixed>  $payload
+     * @param  string[]  $keys
      */
     private static function firstString(array $payload, array $keys): ?string
     {
