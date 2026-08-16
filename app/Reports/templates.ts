@@ -97,7 +97,7 @@ export const TEMPLATES: ReportTemplate[] = [
 
   {
     key: 'customers',
-    version: 2,
+    version: 3,
     name: 'Customers',
     description: 'Who is buying, how many come back, and where they came from.',
     requires: ['commerce.order.created'],
@@ -106,7 +106,14 @@ export const TEMPLATES: ReportTemplate[] = [
       metric('Orders', 3, { events: ['commerce.order.created'], measure: 'count', filters: [] }),
       {
         kind: 'big_number',
-        title: 'Revenue per customer',
+        // Called "Revenue per customer" through version 2, which this query has
+        // never computed: it is the mean order value, so it answers what an
+        // order is worth, not what a customer is worth. With 120 orders from 40
+        // customers the two differ by a factor of three, and the tile sat next
+        // to "Buying customers: 40" reading 12.5k while revenue per customer
+        // was 37.5k. Renamed to what it is rather than left to be divided by
+        // the wrong denominator in somebody's head.
+        title: 'Average order',
         layout: { x: 6, y: 0, w: 3, h: 3 },
         query: { events: ['commerce.order.created'], measure: 'avg', field: 'value', filters: [] },
       },

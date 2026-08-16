@@ -277,8 +277,27 @@ route accepts a raw range from a caller.
 - [x] No horizontal overflow at 375px on the marketing pages
 - [x] Tap targets at 375px, against WCAG 2.2 target size including its spacing
       exception
-- [ ] Keyboard-only session through the builder itself, which needs a signed-in
-      fixture the sweep above did not set up
+- [x] Keyboard-only session through the builder, on a signed-in fixture
+
+The builder audits clean: no contrast failures, no unlabelled inputs, no
+controls without an accessible name, and no positive `tabindex` to break the
+natural order. The tab order runs breadcrumb, View, Publish, the nine block
+types, then the blocks themselves, and every stop paints a focus ring. Each
+block is a `role="group"` carrying its grid position in its accessible name
+("Orders block, column 0, row 0"), which is exactly what a drag-and-drop canvas
+owes a screen reader.
+
+**Found and fixed.** Everything needed to arrange a report by keyboard was
+present except one line. Tiles are focusable, the keydown handler moves and
+deletes the selected block, there are focus-visible styles for it, and the help
+text on screen says "arrow keys move the selected block". But `select` was only
+ever called from `pointerdown`, so a keyboard user could tab to a block, read
+the instructions, press an arrow, and watch nothing happen. Selection now
+happens on focus as well, which is what a click already does.
+
+Verified in a browser rather than asserted: tab to the block and it selects, two
+ArrowRight presses move it from column 0 to column 2, the accessible name
+updates to match, and the new position is in the database.
 
 **Found and fixed.** 22 footer links were 18px tall with 10px between them, so a
 24px target circle centred on one overlapped its neighbour: a fail of WCAG 2.2

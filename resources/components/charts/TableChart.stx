@@ -10,6 +10,20 @@ import { compact, seriesColor } from '../../../app/Reports/charts'
  * in a form that does not depend on either.
  */
 /**
+ * Named `TableChart`, not `DataTable`, and that is not a style choice.
+ *
+ * `@stacksjs/ts-analytics` ships a `DataTable` of its own, and when two
+ * components share a name the framework's wins, silently. Every table block in
+ * the product was therefore rendering that component instead of this one: it
+ * expects `rows` and `columns`, received `result`, and emitted
+ * `<!-- [Foreach Error [1102]]: rows is not iterable -->` into a table body
+ * nobody reads the source of. The header row still drew, so a table with no
+ * rows looked exactly like a table with no data, on the report viewer, the
+ * builder, the embed and every public share link.
+ *
+ * The sibling charts carry the `Chart` suffix for this reason. This one did
+ * not, and was the only one broken.
+ *
  * The frame is inlined rather than shared through a ChartFrame component.
  *
  * stx drops every prop passed from one component to another in this version: a
@@ -19,14 +33,14 @@ import { compact, seriesColor } from '../../../app/Reports/charts'
  * shared frame would therefore have rendered without its legend on every chart,
  * and the legend is what makes this palette legal.
  */
-interface DataTableProps {
+interface TableChartProps {
   result: any
   title?: string
   /** Column header for the series key. */
   label?: string
 }
 
-const { result, title, label } = withDefaults(defineProps<DataTableProps>(), { label: 'Series' })
+const { result, title, label } = withDefaults(defineProps<TableChartProps>(), { label: 'Series' })
 
 const total = result.series.reduce((sum: number, series: any) => sum + series.total, 0)
 const rows = [...result.series]
