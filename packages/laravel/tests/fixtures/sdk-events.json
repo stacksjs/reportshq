@@ -1,0 +1,171 @@
+{
+  "$comment": [
+    "The contract every ReportsHQ SDK must satisfy.",
+    "",
+    "Each case states a logical event in the vocabulary of each framework, and the",
+    "one taxonomy event both must produce from it. The SDKs are written in",
+    "different languages by different people at different times; without a shared",
+    "set of expected payloads they drift, and the drift is invisible until",
+    "somebody's Laravel app produces a report that looks different from the same",
+    "app written in Stacks.",
+    "",
+    "`expected` omits `occurred_at`: it is stamped when an event is queued, not",
+    "derived from the payload, unless the payload carries its own timestamp. Cases",
+    "that do supply one assert it is used.",
+    "",
+    "Adding a case here is how a taxonomy change reaches both SDKs: add the name",
+    "to docs/events.md, add a case, then make each SDK pass it."
+  ],
+  "cases": [
+    {
+      "case": "an order is placed",
+      "stacks": {
+        "event": "order:created",
+        "payload": { "id": 9, "total": 4250, "currency": "usd", "user_id": "u1", "item_count": 3, "status": "paid" }
+      },
+      "laravel": {
+        "event": "Order:created",
+        "payload": { "id": 9, "total": 4250, "currency": "usd", "user_id": "u1", "item_count": 3, "status": "paid" }
+      },
+      "expected": {
+        "name": "commerce.order.created",
+        "value": 4250,
+        "currency": "USD",
+        "user_key": "u1",
+        "properties": { "order_id": "9", "items": 3, "status": "paid" }
+      }
+    },
+    {
+      "case": "an order with no currency still carries its value",
+      "stacks": { "event": "order:created", "payload": { "id": 11, "total": 100 } },
+      "laravel": { "event": "Order:created", "payload": { "id": 11, "total": 100 } },
+      "expected": {
+        "name": "commerce.order.created",
+        "value": 100,
+        "properties": { "order_id": "11" }
+      }
+    },
+    {
+      "case": "a refund",
+      "stacks": {
+        "event": "order:refunded",
+        "payload": { "id": 9, "refunded_amount": 500, "currency": "eur", "reason": "damaged" }
+      },
+      "laravel": {
+        "event": "Order:refunded",
+        "payload": { "id": 9, "refunded_amount": 500, "currency": "eur", "reason": "damaged" }
+      },
+      "expected": {
+        "name": "commerce.order.refunded",
+        "value": 500,
+        "currency": "EUR",
+        "properties": { "order_id": "9", "reason": "damaged" }
+      }
+    },
+    {
+      "case": "checkout begins",
+      "stacks": {
+        "event": "checkout:started",
+        "payload": { "total": 1999, "currency": "gbp", "session_id": "s7", "user_id": "u2" }
+      },
+      "laravel": {
+        "event": "Checkout:started",
+        "payload": { "total": 1999, "currency": "gbp", "session_id": "s7", "user_id": "u2" }
+      },
+      "expected": {
+        "name": "commerce.checkout.started",
+        "value": 1999,
+        "currency": "GBP",
+        "user_key": "u2",
+        "session_key": "s7"
+      }
+    },
+    {
+      "case": "somebody signs up",
+      "stacks": {
+        "event": "user:created",
+        "payload": { "user_id": "u3", "plan": "pro", "source": "organic" }
+      },
+      "laravel": {
+        "event": "Registered",
+        "payload": { "user_id": "u3", "plan": "pro", "source": "organic" }
+      },
+      "expected": {
+        "name": "user.registered",
+        "user_key": "u3",
+        "properties": { "plan": "pro", "source": "organic" }
+      }
+    },
+    {
+      "case": "somebody signs in",
+      "stacks": { "event": "user:login", "payload": { "user_id": "u3", "session_id": "s9" } },
+      "laravel": { "event": "Login", "payload": { "user_id": "u3", "session_id": "s9" } },
+      "expected": {
+        "name": "user.login",
+        "user_key": "u3",
+        "session_key": "s9"
+      }
+    },
+    {
+      "case": "a subscription starts",
+      "stacks": {
+        "event": "subscription:created",
+        "payload": { "user_id": "u4", "amount": 2900, "currency": "usd", "plan": "scale", "interval": "month" }
+      },
+      "laravel": {
+        "event": "Subscription:created",
+        "payload": { "user_id": "u4", "amount": 2900, "currency": "usd", "plan": "scale", "interval": "month" }
+      },
+      "expected": {
+        "name": "user.subscription.started",
+        "value": 2900,
+        "currency": "USD",
+        "user_key": "u4",
+        "properties": { "plan": "scale", "interval": "month" }
+      }
+    },
+    {
+      "case": "a post is published",
+      "stacks": {
+        "event": "post:published",
+        "payload": { "id": 44, "author_id": "a1", "category": "engineering" }
+      },
+      "laravel": {
+        "event": "Post:published",
+        "payload": { "id": 44, "author_id": "a1", "category": "engineering" }
+      },
+      "expected": {
+        "name": "cms.post.published",
+        "properties": { "post_id": "44", "author": "a1", "category": "engineering" }
+      }
+    },
+    {
+      "case": "an event that carries its own timestamp keeps it",
+      "stacks": {
+        "event": "user:login",
+        "payload": { "user_id": "u5", "created_at": "2026-08-01T09:30:00.000Z" }
+      },
+      "laravel": {
+        "event": "Login",
+        "payload": { "user_id": "u5", "created_at": "2026-08-01T09:30:00.000Z" }
+      },
+      "expected": {
+        "name": "user.login",
+        "user_key": "u5",
+        "occurred_at": "2026-08-01T09:30:00.000Z"
+      }
+    },
+    {
+      "case": "an empty payload produces a bare event, not a bag of nulls",
+      "stacks": { "event": "user:logout", "payload": {} },
+      "laravel": { "event": "Logout", "payload": {} },
+      "expected": { "name": "user.logout" }
+    },
+    {
+      "case": "an event nobody maps is not forwarded under an invented name",
+      "stacks": { "event": "widget:frobnicated", "payload": { "id": 1 } },
+      "laravel": { "event": "Widget:frobnicated", "payload": { "id": 1 } },
+      "expected": null
+    }
+  ]
+}

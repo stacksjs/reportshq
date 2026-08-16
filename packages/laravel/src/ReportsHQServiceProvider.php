@@ -11,6 +11,9 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\ServiceProvider;
+use ReportsHQ\Laravel\Reports\Runner;
+use ReportsHQ\Laravel\Semantic\Configured;
+use ReportsHQ\Laravel\Semantic\Registry;
 
 /**
  * Wiring the integration into a Laravel application.
@@ -43,6 +46,25 @@ final class ReportsHQServiceProvider extends ServiceProvider
             $app->make(Config::class),
             $app->make(Transport::class),
         ));
+
+        // The report side, which is independent of the event side and stays so.
+        // An application may use either, both, or neither: an empty `models`
+        // config means nothing is queryable and nothing here costs anything.
+        $this->app->singleton(Registry::class, function (Application $app): Registry {
+            /** @var array<string, array<string, mixed>> $models */
+            $models = $app['config']->get('reportshq.models', []);
+
+            return Configured::from($models);
+        });
+
+        $this->app->bind(Runner::class, function (Application $app): Runner {
+            $connection = $app['config']->get('reportshq.connection');
+
+            return new Runner(
+                $app->make(Registry::class),
+                $app->make('db')->connection($connection),
+            );
+        });
     }
 
     public function boot(): void
@@ -51,9 +73,19 @@ final class ReportsHQServiceProvider extends ServiceProvider
             __DIR__.'/../config/reportshq.php' => $this->app->configPath('reportshq.php'),
         ], 'reportshq-config');
 
+        // Loaded rather than published. A report's storage is the package's
+        // own, and an application that publishes it inherits the job of keeping
+        // it in step with a schema it did not design.
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+
         $config = $this->app->make(Config::class);
 
-        // Nothing is registered at all when there is no key. An unconfigured
+        // Everything past this point is the **event** side, and the key gates
+        // only that. Reports are read from the application's own database and
+        // need no key, no account and no network, so the storage above and the
+        // registry in `register()` are always available.
+        //
+        // Nothing is registered when there is no key. An unconfigured
         // application does not pay for listeners that would discard everything
         // they receive, and nothing appears in a debug dump looking broken.
         if (! $config->enabled()) {

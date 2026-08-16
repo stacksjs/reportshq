@@ -83,7 +83,26 @@ $all = ['commerce' => true, 'users' => true, 'cms' => true];
  * Laravel app and a Stacks app doing the same thing produce reports that
  * quietly disagree, and nobody finds out until somebody compares them.
  */
-$fixturePath = __DIR__.'/../../../docs/fixtures/sdk-events.json';
+/*
+ * The fixture lives in the monorepo's docs, and this package is also mirrored
+ * to its own repository for Packagist, where that path does not exist. Both
+ * locations are tried so the mirror can run its own tests: a package people
+ * install whose suite only passes somewhere else is not a suite.
+ */
+$fixturePath = null;
+
+foreach ([__DIR__.'/../../../docs/fixtures/sdk-events.json', __DIR__.'/fixtures/sdk-events.json'] as $candidate) {
+    if (is_file($candidate)) {
+        $fixturePath = $candidate;
+        break;
+    }
+}
+
+if ($fixturePath === null) {
+    echo "\n  FAIL  the cross-SDK fixture is missing from both known locations\n\n";
+    exit(1);
+}
+
 $fixtures = json_decode((string) file_get_contents($fixturePath), true, 512, JSON_THROW_ON_ERROR);
 
 $run->test('the fixture file has cases in it', function (Runner $run) use ($fixtures): void {

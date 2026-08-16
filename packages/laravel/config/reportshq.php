@@ -42,6 +42,44 @@ return [
      */
     'queue' => env('REPORTSHQ_QUEUE'),
 
+    /*
+     * The models the report builder may query.
+     *
+     * Empty means nothing is queryable, which is the right default: a builder
+     * is a SELECT with a drag handle on it, and an application should say what
+     * it is willing to expose rather than discover it has exposed everything.
+     *
+     * `php artisan reportshq:discover` writes a draft of this from your own
+     * Eloquent models, with every sensitive looking column already left out.
+     * The draft is a starting point and not an answer: it can see that a column
+     * is an integer and it cannot see that the integer is cents, or that one
+     * of two foreign keys is the customer and the other is the login.
+     *
+     * Each entry is:
+     *
+     *   'order' => [
+     *       'class' => App\Models\Order::class,
+     *       'label' => 'Order',
+     *       'grain' => 'one row per order',
+     *       'dimensions' => ['status' => ['label' => 'Status', 'type' => 'string']],
+     *       'measures' => [
+     *           'revenue' => ['label' => 'Revenue', 'aggregate' => 'sum', 'column' => 'total_amount'],
+     *       ],
+     *       'relations' => ['member' => ['model' => 'member', 'cardinality' => 'one', ...]],
+     *   ],
+     */
+    'models' => [],
+
+    /*
+     * Which connection reports are read from.
+     *
+     * Null means the application's default. Naming a read replica here is the
+     * answer to the one operational objection to embedded reporting: an
+     * analytical query scanning orders on every page load is competing with the
+     * transaction that pays for the company.
+     */
+    'connection' => env('REPORTSHQ_CONNECTION'),
+
     'batch_size' => (int) env('REPORTSHQ_BATCH_SIZE', 50),
     'max_buffer_size' => (int) env('REPORTSHQ_MAX_BUFFER', 10000),
     'max_retries' => (int) env('REPORTSHQ_MAX_RETRIES', 3),
