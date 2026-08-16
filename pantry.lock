@@ -2744,9 +2744,9 @@
       "version": "1.0.8",
       "source": "pantry"
     },
-    "sourceware.org/libffi@3.8.0": {
+    "sourceware.org/libffi@3.6.0": {
       "name": "sourceware.org/libffi",
-      "version": "3.8.0",
+      "version": "3.6.0",
       "source": "pantry"
     },
     "sqlite.org@3.53.4": {
