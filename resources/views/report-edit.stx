@@ -692,6 +692,24 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
     else showPanel(false)
   }
 
+  // Focusing a block selects it, which is the whole of keyboard arranging.
+  //
+  // Everything else was already here: the tiles are focusable, the keydown
+  // handler below moves and deletes the selected one, the help text says so,
+  // and there are focus-visible styles for it. But `select` was only ever
+  // called from `pointerdown`, so a keyboard user could tab to a block, read
+  // that arrow keys move it, press one, and watch nothing happen. The feature
+  // was built and then not connected.
+  //
+  // On focus rather than on Enter, because that is what the pointer does: a
+  // click selects, and tabbing to a block is the keyboard's way of choosing it.
+  // A second key to press would need explaining, and the instructions on screen
+  // already do not mention one.
+  grid.addEventListener('focusin', function (event) {
+    var tile = event.target.closest ? event.target.closest('.block-tile') : null
+    if (tile) select(tile)
+  })
+
   grid.addEventListener('pointerdown', function (event) {
     var tile = event.target.closest ? event.target.closest('.block-tile') : null
     if (!tile) return
