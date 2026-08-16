@@ -28,4 +28,5 @@ Route::post('/{slug}/blocks/{block}', [BuilderController::class, 'saveBlock'])->
 Route::delete('/{slug}/blocks/{block}', [BuilderController::class, 'removeBlock'])->name('reportshq.blocks.remove');
 Route::post('/{slug}/publish', [BuilderController::class, 'publish'])->name('reportshq.publish');
 
+Route::get('/{slug}/download/{format}', [ReportController::class, 'download'])->name('reportshq.download');
 Route::get('/{slug}', [ReportController::class, 'show'])->name('reportshq.show');

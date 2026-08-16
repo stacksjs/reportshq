@@ -294,3 +294,9 @@ a:focus-visible, .rhq-list a:focus-visible { outline: 2px solid var(--rhq-accent
 .rhq-field input:focus-visible, .rhq-field select:focus-visible, .rhq-field textarea:focus-visible {
   outline: 2px solid var(--rhq-accent); outline-offset: -1px;
 }
+
+.rhq-downloads { margin: 0.35rem 0 0; font-size: 0.82rem; color: var(--rhq-text-3); display: flex; gap: 0.6rem; align-items: baseline; }
+.rhq-downloads a { color: var(--rhq-accent); text-decoration: none; }
+.rhq-downloads a:hover { text-decoration: underline; }
+
+.rhq-license { margin: 2.5rem 0 0; padding-top: 1rem; border-top: 1px solid var(--rhq-border); font-size: 0.78rem; color: var(--rhq-text-3); }

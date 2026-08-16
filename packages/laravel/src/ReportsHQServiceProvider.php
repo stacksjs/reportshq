@@ -58,6 +58,10 @@ final class ReportsHQServiceProvider extends ServiceProvider
             return Configured::from($models);
         });
 
+        $this->app->singleton(License::class, fn (Application $app): License => new License(
+            $app['config']->get('reportshq.license'),
+        ));
+
         $this->app->bind(Runner::class, function (Application $app): Runner {
             $connection = $app['config']->get('reportshq.connection');
 

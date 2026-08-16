@@ -43,6 +43,29 @@ return [
     'queue' => env('REPORTSHQ_QUEUE'),
 
     /*
+     * The Filament plugin, when an application uses one.
+     *
+     * The slug defaults to the package's own name rather than to `reports`,
+     * because Filament resolves a collision by first registration rather than
+     * by complaining: an application that already has a Reports page would
+     * silently keep it and this one would never appear. Change it if the nicer
+     * path is free.
+     */
+    'filament' => [
+        'slug' => env('REPORTSHQ_FILAMENT_SLUG', 'reportshq'),
+    ],
+
+    /*
+     * The licence key, checked offline and never sent anywhere.
+     *
+     * Nothing gates the reports. An unlicensed application reports on its own
+     * data exactly as a licensed one does; the pages simply say they are
+     * unlicensed. A reporting tool that blanks a dashboard over a billing state
+     * is one nobody can rely on for the dashboard.
+     */
+    'license' => env('REPORTSHQ_LICENSE'),
+
+    /*
      * The standalone report pages.
      *
      * Off by default. A package that mounts routes into an application without

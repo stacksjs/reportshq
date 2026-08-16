@@ -19,6 +19,12 @@
             <p class="rhq-lede">{{ $report->description }}</p>
         @endif
 
+        <p class="rhq-downloads">
+            <span>Download</span>
+            <a href="{{ route('reportshq.download', [$report->slug, 'csv']) }}">CSV</a>
+            <a href="{{ route('reportshq.download', [$report->slug, 'xlsx']) }}">XLSX</a>
+        </p>
+
         @if ($report->published_at)
             <p class="rhq-meta">Published {{ $report->published_at->format('j M Y') }} &middot; {{ $report->timezone }}</p>
         @else

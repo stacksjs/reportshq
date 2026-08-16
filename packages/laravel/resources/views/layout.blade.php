@@ -25,6 +25,13 @@
 <body>
     <main class="rhq-page">
         @yield('content')
+
+        @php($notice = app(ReportsHQ\Laravel\License::class)->notice())
+
+        @if ($notice)
+            {{-- Said once, at the bottom, and never in the way of a number. --}}
+            <p class="rhq-license">{{ $notice }}</p>
+        @endif
     </main>
 </body>
 </html>
