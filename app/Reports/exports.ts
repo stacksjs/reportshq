@@ -6,19 +6,20 @@
  *     Block            Point                 Series   Value
  *     Revenue per day  2026-08-01T00:00:00Z  total    4250
  *
- * Rather than a sheet per block with its own columns. Two reasons, and the
- * second is the one that decided it. `ts-spreadsheets` models a spreadsheet as
- * one `headings` array and one `data` array, so a sheet per block is not
- * something the library can express. And a report is heterogeneous by design -
- * a big number, a funnel and a daily line have nothing in common columnwise -
- * so a wide format would be mostly empty cells and would change shape every
- * time somebody added a block. Long format survives that, and it is what a
- * pivot table wants anyway.
+ * That is the CSV, which has no tabs and where one flat table a pivot can read
+ * beats several stacked in a file. The xlsx puts each block on its own sheet
+ * instead, named after the block, which is what somebody opening a workbook
+ * expects to find.
+ *
+ * A wide format, a column per block, is the shape neither of them uses: a
+ * report is heterogeneous by design, since a big number, a funnel and a daily
+ * line have nothing in common columnwise, so it would be mostly empty cells and
+ * would change shape every time somebody added a block.
  *
  * The numbers come from the same engine call the viewer makes, so an export and
  * the screen it was taken from cannot disagree.
  */
-import type { Content } from 'ts-spreadsheets'
+import type { Content, Sheet } from 'ts-spreadsheets'
 import { spreadsheet } from 'ts-spreadsheets'
 import { runQuery } from './engine'
 import { publishedBlocks } from './reports'
@@ -31,6 +32,18 @@ export interface ExportOptions {
 }
 
 export const EXPORT_HEADINGS = ['Block', 'Point', 'Series', 'Value']
+
+/** What to call a block nobody named. The same words the builder's palette uses. */
+const BLOCK_LABELS: Record<string, string> = {
+  big_number: 'Big number',
+  line: 'Line',
+  area: 'Area',
+  bar: 'Bar',
+  donut: 'Donut',
+  table: 'Table',
+  funnel: 'Funnel',
+  heatmap: 'Heatmap',
+}
 
 /** A `t` that reads the same in a spreadsheet as it does in the API. */
 function pointLabel(value: unknown): string {
@@ -96,7 +109,10 @@ export async function exportContent(options: ExportOptions): Promise<Content> {
     if (kind === 'text')
       continue
 
-    const title = block.title ? String(block.title) : kind
+    // An untitled block still has to be called something, and in a workbook it
+    // becomes the name on the tab. `big_number` and `bar` are what this said
+    // before: the internal kind, in a place a person reads.
+    const title = block.title ? String(block.title) : (BLOCK_LABELS[kind] ?? 'Block')
 
     try {
       const result = await runQuery({
@@ -118,16 +134,55 @@ export async function exportContent(options: ExportOptions): Promise<Content> {
   return { headings: EXPORT_HEADINGS, data }
 }
 
+/**
+ * The same numbers, arranged one sheet per block.
+ *
+ * The long format above is the right shape for a pivot table and the wrong one
+ * for reading: somebody who wants the revenue series has to filter a column
+ * first. A workbook has tabs for exactly this, so the xlsx uses them, named
+ * after the blocks the person was looking at. The `Block` column is dropped
+ * inside each sheet, since the tab already says it.
+ *
+ * CSV keeps the long format. It has no tabs, and one flat table that a pivot
+ * can read is more useful there than three tables stacked in one file.
+ */
+export async function exportSheets(options: ExportOptions): Promise<Sheet[]> {
+  const content = await exportContent(options)
+  const byBlock = new Map<string, (string | number)[][]>()
+
+  for (const row of content.data) {
+    const [title, ...rest] = row
+    const key = String(title)
+
+    if (!byBlock.has(key))
+      byBlock.set(key, [])
+
+    byBlock.get(key)!.push(rest)
+  }
+
+  // A report whose blocks all failed or hold nothing still produces a
+  // workbook, with the headings and no rows, rather than a file that will not
+  // open because it has no sheets in it.
+  if (byBlock.size === 0)
+    return [{ name: 'Report', headings: EXPORT_HEADINGS, data: [] }]
+
+  return [...byBlock.entries()].map(([title, rows]) => ({
+    name: title,
+    headings: EXPORT_HEADINGS.slice(1),
+    data: rows,
+  }))
+}
+
 /** The report as CSV text. */
 export async function exportCsv(options: ExportOptions): Promise<string> {
   const content = await exportContent(options)
   return String(spreadsheet.create(content, { type: 'csv' }).content)
 }
 
-/** The report as an xlsx workbook. */
+/** The report as an xlsx workbook, a sheet per block. */
 export async function exportXlsx(options: ExportOptions): Promise<Uint8Array> {
-  const content = await exportContent(options)
-  return spreadsheet.create(content, { type: 'excel' }).content as Uint8Array
+  const sheets = await exportSheets(options)
+  return spreadsheet.create(sheets, { type: 'excel' }).content as Uint8Array
 }
 
 /** A filename somebody can find again in a downloads folder. */

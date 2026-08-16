@@ -10,6 +10,7 @@
  * A spreadsheet that opens is not the same as a spreadsheet that is right.
  */
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
+import { inflateRawSync } from 'node:zlib'
 import { db } from '@stacksjs/database'
 import { rangeFor } from '../../app/Jobs/DeliverReports'
 import { storeEvents } from '../../app/Events/ingest'
@@ -240,6 +241,54 @@ describe('the range a cadence reports on', () => {
   })
 })
 
+/**
+ * The entries of a zip, read the way a spreadsheet application reads one:
+ * find the end-of-central-directory record, walk the directory, inflate.
+ *
+ * Written out rather than asserted on the byte prefix, because the prefix is
+ * exactly what the old export test checked and exactly what a broken archive
+ * also has.
+ */
+function unzip(archive: Uint8Array): Map<string, Uint8Array> {
+  const view = new DataView(archive.buffer, archive.byteOffset, archive.byteLength)
+
+  let end = -1
+  for (let i = archive.length - 22; i >= 0; i--) {
+    if (view.getUint32(i, true) === 0x06054B50) {
+      end = i
+      break
+    }
+  }
+
+  if (end < 0)
+    throw new Error('no end-of-central-directory record: this is not a zip')
+
+  const count = view.getUint16(end + 10, true)
+  const entries = new Map<string, Uint8Array>()
+  let cursor = view.getUint32(end + 16, true)
+
+  for (let i = 0; i < count; i++) {
+    const method = view.getUint16(cursor + 10, true)
+    const compressedSize = view.getUint32(cursor + 20, true)
+    const nameLength = view.getUint16(cursor + 28, true)
+    const extraLength = view.getUint16(cursor + 30, true)
+    const commentLength = view.getUint16(cursor + 32, true)
+    const localOffset = view.getUint32(cursor + 42, true)
+    const name = new TextDecoder().decode(archive.slice(cursor + 46, cursor + 46 + nameLength))
+
+    const dataStart = localOffset + 30
+      + view.getUint16(localOffset + 26, true)
+      + view.getUint16(localOffset + 28, true)
+
+    const payload = archive.slice(dataStart, dataStart + compressedSize)
+    entries.set(name, method === 0 ? payload : new Uint8Array(inflateRawSync(payload)))
+
+    cursor += 46 + nameLength + extraLength + commentLength
+  }
+
+  return entries
+}
+
 describe('exports', () => {
   const options = () => ({ projectId, reportId, timezone: 'UTC', range: 'last_7_days' })
 
@@ -285,15 +334,45 @@ describe('exports', () => {
     expect(total).toBe(100)
   })
 
-  test('the xlsx is a real workbook', async () => {
+  test('the xlsx is an archive a reader can actually open', async () => {
     const xlsx = await exportXlsx(options())
+    const entries = unzip(xlsx)
 
-    expect(xlsx.byteLength).toBeGreaterThan(100)
-    // A xlsx is a zip, and every zip starts PK. A file that opens is not the
-    // same as a file that is right, but a file that does not open is certainly
-    // wrong.
-    expect(xlsx[0]).toBe(0x50)
-    expect(xlsx[1]).toBe(0x4B)
+    // This used to assert only that the first two bytes were `PK`, and passed
+    // for years against a file no reader could open: the archive had no
+    // end-of-central-directory record at all, so `unzip -t` and Excel both gave
+    // up on it. Every zip starts PK, including a broken one, which is why the
+    // test has to get to the entries.
+    expect([...entries.keys()]).toContain('xl/workbook.xml')
+    expect([...entries.keys()]).toContain('xl/worksheets/sheet1.xml')
+  })
+
+  test('the workbook has one named tab per block', async () => {
+    const entries = unzip(await exportXlsx(options()))
+    const workbook = new TextDecoder().decode(entries.get('xl/workbook.xml')!)
+    const names = [...workbook.matchAll(/<sheet name="([^"]*)"/g)].map(match => match[1])
+
+    expect(names).toContain('Revenue')
+    // The note is not a tab, for the same reason it is not a row.
+    expect(names.some(name => String(name).includes('note'))).toBeFalse()
+  })
+
+  test('a sheet holds the same numbers the CSV does', async () => {
+    const entries = unzip(await exportXlsx(options()))
+    const workbook = new TextDecoder().decode(entries.get('xl/workbook.xml')!)
+    const names = [...workbook.matchAll(/<sheet name="([^"]*)"/g)].map(match => String(match[1]))
+    const sheet = new TextDecoder().decode(entries.get(`xl/worksheets/sheet${names.indexOf('Revenue') + 1}.xml`)!)
+
+    const values = [...sheet.matchAll(/<v>([\d.-]+)<\/v>/g)].map(match => Number(match[1]))
+
+    expect(values.reduce((sum, value) => sum + value, 0)).toBe(100)
+  })
+
+  test('an untitled block is named, not left as its kind', async () => {
+    // It becomes the name on a workbook tab, and `big_number` is not something
+    // to show somebody who opens the file.
+    const content = await exportContent(options())
+    expect(content.data.some(row => String(row[0]).includes('_'))).toBeFalse()
   })
 
   test('the filename says what and when', () => {
