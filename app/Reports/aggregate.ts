@@ -52,12 +52,18 @@ export function extremeOf(values: number[], pick: 'min' | 'max'): number {
 }
 
 /**
- * Fold a measure's bucket values into the single number a headline shows.
+ * Fold a measure's bucket values into one number.
  *
- * `count` and `count_unique` sum, which for uniques means distinct-per-bucket
- * added up rather than distinct overall. Distinct counts do not compose, and
- * this is the honest version of that: the alternative is one count over the
- * whole range, which cannot be drawn as a series.
+ * This is the **series** total, which is what a stacked chart or a top-N split
+ * needs: the buckets it was given, combined the way that measure combines.
+ *
+ * It is no longer what a headline shows, and the difference matters. `avg` and
+ * `count_unique` do not compose across buckets: a mean of daily means weights a
+ * quiet day like a busy one, and daily distinct counts added together count a
+ * returning customer once per day they returned. Folding them here is still
+ * right for a series, whose buckets genuinely are per day. The engine asks
+ * those two measures over the whole range instead, ungrouped, for the one
+ * number a `big_number` block shows. See `headlineTotal` in engine.ts.
  */
 export function foldMeasure(measure: Measure, values: number[]): number {
   switch (measure) {

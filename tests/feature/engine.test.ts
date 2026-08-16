@@ -104,20 +104,23 @@ describe('measures', () => {
       query: { events: ['commerce.order.created'], measure: 'count_unique', filters: [], grain: 'day' },
     })
 
-    // a, b on day -2 (a twice); c on day -1; a, d on day 0. Distinct per
-    // bucket then summed: 2 + 1 + 2.
-    expect(result.total).toBe(5)
+    // a and b on day -2 (a twice), c on day -1, a and d on day 0. Four distinct
+    // people across the range, not the 2 + 1 + 2 that adding the daily counts
+    // gives: a bought on two of the three days and must not count twice.
+    expect(result.total).toBe(4)
   })
 
-  test('avg averages the buckets that have data', async () => {
+  test('avg averages the values, not the daily averages', async () => {
     const result = await runQuery({
       projectId,
       range,
       query: { events: ['commerce.order.created'], measure: 'avg', field: 'value', filters: [], grain: 'day' },
     })
 
-    // Daily averages are 20, 40 and 55; their mean is 38.33.
-    expect(result.total).toBeCloseTo((20 + 40 + 55) / 3, 5)
+    // 10 + 20 + 30 + 40 + 50 + 60 over six orders = 35. Not the mean of the
+    // daily means (20, 40, 55 -> 38.33), which weights day -1's single order
+    // the same as day -2's three.
+    expect(result.total).toBeCloseTo(210 / 6, 5)
   })
 
   test('min and max read the extremes', async () => {

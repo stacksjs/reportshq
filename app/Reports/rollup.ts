@@ -294,6 +294,50 @@ function dayLengthMs(day: string, timezone: string): number {
 }
 
 /**
+ * The mean over the whole range, weighted by how many values each day held.
+ *
+ * A headline average cannot be folded from the daily averages a chart draws: a
+ * day with one order would weigh the same as a day with forty. The rollups keep
+ * `value_sum` and `value_count` per day precisely so the real mean is still
+ * available after the raw rows are gone, and this is the only thing that needs
+ * them together.
+ *
+ * Days holding no values contribute nothing to either side, so a quiet Sunday
+ * neither drags the mean down nor counts as a zero, matching what the raw path
+ * does with its empty buckets.
+ */
+export async function rollupAverage(
+  projectId: number,
+  query: BlockQuery,
+  range: Range,
+  timezone: string,
+): Promise<number> {
+  const conditions = ['project_id = $1', 'day >= $2', 'day < $3']
+  const params: unknown[] = [
+    projectId,
+    localDayString(range.from, timezone),
+    localDayString(range.to, timezone),
+  ]
+
+  if (query.events.length > 0) {
+    const placeholders = query.events.map((_, index) => `$${params.length + index + 1}`)
+    conditions.push(`name IN (${placeholders.join(', ')})`)
+    params.push(...query.events)
+  }
+
+  const rows = await db.unsafe(
+    `SELECT COALESCE(SUM(value_sum), 0) AS total, COALESCE(SUM(value_count), 0) AS entries
+       FROM event_rollups
+      WHERE ${conditions.join(' AND ')}`,
+    params,
+  ) as Array<{ total: number | null, entries: number | null }>
+
+  const entries = Number(rows?.[0]?.entries ?? 0)
+
+  return entries === 0 ? 0 : Number(rows?.[0]?.total ?? 0) / entries
+}
+
+/**
  * Answer a query from the rollups.
  *
  * Returns the same `Series[]` the raw path returns, so the engine can swap

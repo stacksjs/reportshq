@@ -17,7 +17,7 @@ import type { Range } from './range'
 import { db } from '@stacksjs/database'
 import { foldMeasure, meanOfMeaningful } from './aggregate'
 import { bucketsFor, defaultGrain, previousRange, resolveRange, truncate } from './range'
-import { canUseRollups, rollupSeries, rollupsCover } from './rollup'
+import { canUseRollups, rollupAverage, rollupSeries, rollupsCover } from './rollup'
 import { DEFAULT_SERIES, isAllowedField, validateBlockQuery } from './schema'
 import { getDialectDriver, resolveDialect, toDialectPlaceholders } from 'bun-query-builder'
 
@@ -260,7 +260,7 @@ export async function runQuery(options: RunOptions): Promise<EngineResult> {
     ? await rollupSeries(projectId, query, range, grain, timezone)
     : await runSeries(projectId, query, range, grain, offsetHours, timezone)
 
-  const total = totalOf(series, query.measure)
+  const total = await headlineTotal(projectId, query, range, series, timezone)
 
   const result: EngineResult = {
     series,
@@ -274,7 +274,7 @@ export async function runQuery(options: RunOptions): Promise<EngineResult> {
     const previousSeries = await useRollups(projectId, query, grain, previous, timezone)
       ? await rollupSeries(projectId, query, previous, grain, timezone)
       : await runSeries(projectId, query, previous, grain, offsetHoursFor(timezone, previous.from), timezone)
-    const previousTotal = totalOf(previousSeries, query.measure)
+    const previousTotal = await headlineTotal(projectId, query, previous, previousSeries, timezone)
 
     result.comparison = {
       total: previousTotal,
@@ -287,6 +287,87 @@ export async function runQuery(options: RunOptions): Promise<EngineResult> {
   }
 
   return result
+}
+
+/**
+ * The one number a headline shows for the whole range.
+ *
+ * A series and its headline answer two different questions, and only some
+ * measures give the same answer to both. `count` and `sum` do: the buckets are
+ * a partition, and adding them up is the range. `avg` and `count_unique` do
+ * not, and folding their buckets produces a number that is not wrong by a
+ * rounding error but wrong by a different question:
+ *
+ * - **`avg`** folded is a mean of daily means, which weights a Tuesday with one
+ *   order the same as a Saturday with forty. A month of real orders reported an
+ *   average order value 18% below the true one, and nothing about it looked
+ *   odd.
+ * - **`count_unique`** folded is daily distinct counts added together, so a
+ *   customer who ordered on five days counted five times. The Customers
+ *   report's headline read 97 buying customers for 40 real ones.
+ *
+ * So the headline is asked as its own question, over the whole range, with no
+ * bucketing. The series keeps its per-bucket values, because a chart of unique
+ * buyers per day genuinely is per day. The two numbers differ, and they are
+ * supposed to: the total is not the sum of the bars, and for these measures it
+ * never was.
+ *
+ * Everything else still folds, which keeps one code path for the composable
+ * measures and avoids a second query for the common case.
+ */
+async function headlineTotal(
+  projectId: number,
+  query: BlockQuery,
+  range: Range,
+  series: Series[],
+  timezone: string,
+): Promise<number> {
+  if (query.measure !== 'avg' && query.measure !== 'count_unique')
+    return totalOf(series, query.measure)
+
+  // A funnel's total is its own thing, computed by runFunnel, and never
+  // reaches here.
+  if (query.steps && query.steps.length >= 2)
+    return totalOf(series, query.measure)
+
+  // The rollups keep `value_sum` and `value_count` per day, which is exactly
+  // what a weighted mean over the range needs. They never serve count_unique
+  // at all: see canUseRollups.
+  if (query.measure === 'avg' && await useRollups(projectId, query, 'day', range, timezone))
+    return await rollupAverage(projectId, query, range, timezone)
+
+  return await rangeAggregate(projectId, query, range)
+}
+
+/**
+ * One aggregate over the whole range, ungrouped.
+ *
+ * Deliberately built from the same `whereFor` and `aggregateFor` the series
+ * uses, so the headline can never be filtering differently from the chart above
+ * it, which is the failure this fix would otherwise trade for the one it fixes.
+ */
+async function rangeAggregate(projectId: number, query: BlockQuery, range: Range): Promise<number> {
+  const where = whereFor(projectId, query, range)
+  const aggregate = aggregateFor(query.measure, query.field)
+
+  const params: unknown[] = []
+
+  // Same left-to-right parameter order as the series statement: the
+  // aggregate's property key, if it has one, then the WHERE clause's.
+  if (aggregate.needsField && query.field?.startsWith('properties.'))
+    params.push(query.field.slice('properties.'.length))
+
+  params.push(...where.params)
+
+  const rows = await db.unsafe(
+    toDialectPlaceholders(
+      `SELECT ${aggregate.sql} AS value FROM events WHERE ${where.sql}`,
+      resolveDialect(),
+    ),
+    params,
+  ) as Array<{ value: number | null }>
+
+  return Number(rows?.[0]?.value ?? 0)
 }
 
 /**

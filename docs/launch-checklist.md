@@ -189,10 +189,23 @@ same rule, so correcting the engine made the two paths disagree, and the
 equivalence tests caught it within one run. Both now call one shared fold, so
 they agree by construction rather than by two people remembering the same thing.
 
-Two expectations of mine were wrong rather than the engine: `count_unique`
-reports distinct-per-bucket summed, and `avg` is the mean of the bucket
-averages. Both are deliberate and documented, and the tests now say so at the
-point where a reader would otherwise assume a bug.
+Two of my expectations disagreed with the engine on `count_unique` and `avg`,
+and I recorded the engine as correct because the existing tests documented that
+behaviour as deliberate. **That was the wrong call, and the headline numbers were
+wrong.** Folded from buckets, `count_unique` added daily distinct counts together
+so a customer who ordered on five days counted five times, and `avg` took a mean
+of daily means so a Tuesday with one order weighed the same as a Saturday with
+forty. The Customers report read 97 buying customers for 40 real ones.
+
+Both headlines are now asked as their own question over the whole range, with no
+bucketing, while the series keeps its per-bucket values because a chart of unique
+buyers per day genuinely is per day. The total is not the sum of the bars for
+these two measures, and it never should have been.
+
+The lesson worth keeping: "the existing tests say this is intentional" is not
+evidence that it is right. A documented behaviour is still a behaviour somebody
+chose once, and a headline that disagrees with the question it answers is a
+defect however carefully it was commented.
 
 ---
 

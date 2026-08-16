@@ -131,41 +131,46 @@ describe('every measure, worked out by hand', () => {
     expect(Number((await ask({ events: [ORDERS], measure: 'count', grain: 'day' })).total)).toBe(5)
   })
 
-  test('count_unique: distinct within each bucket, then added up', async () => {
-    // Deliberately NOT three. Distinct counts do not compose across buckets, so
-    // the engine reports distinct-per-bucket summed and says so: 2 Feb has a and
-    // b, 3 Feb has a, 9 Feb has c, 2 Mar has b, giving 2 + 1 + 1 + 1.
-    //
-    // Three would be the answer to a different question ("how many people
-    // bought at all"), and answering it would mean one distinct count over the
-    // whole range, which cannot be drawn as a series.
-    expect(Number((await ask({ events: [ORDERS], measure: 'count_unique', grain: 'day' })).total)).toBe(5)
+  test('count_unique: a, b and c, so three people', async () => {
+    // a bought on two days and b on two months, so any count that added up
+    // per-bucket distincts would say five. The headline is asked over the whole
+    // range instead, because "how many customers bought" has one answer and it
+    // is not the sum of the daily answers.
+    expect(Number((await ask({ events: [ORDERS], measure: 'count_unique', grain: 'day' })).total)).toBe(3)
   })
 
-  test('count_unique at a coarser grain gives a smaller number, as it must', async () => {
-    // The same events in fewer buckets can only merge duplicates, never create
-    // them. By month: February has a, b, c (3) and March has b (1).
-    expect(Number((await ask({ events: [ORDERS], measure: 'count_unique', grain: 'month' })).total)).toBe(4)
+  test('count_unique does not change when the grain does', async () => {
+    // The strongest statement of the same property. How many people bought is a
+    // fact about the range, so drawing it in months rather than days cannot
+    // change it. Under per-bucket summing it changed with every grain.
+    for (const grain of ['day', 'week', 'month'] as const)
+      expect(Number((await ask({ events: [ORDERS], measure: 'count_unique', grain })).total)).toBe(3)
   })
 
   test('sum: 10 + 20 + 30 + 40 + 50 = 150', async () => {
     expect(Number((await ask({ events: [ORDERS], measure: 'sum', field: 'value', grain: 'day' })).total)).toBe(150)
   })
 
-  test('avg: the mean of the daily averages, not of the five values', async () => {
-    // Also deliberately not 30. Each bucket carries its own average and the
-    // headline is their mean, so a day with one order weighs the same as a day
-    // with two: (15 + 30 + 40 + 50) / 4 = 33.75.
-    expect(Number((await ask({ events: [ORDERS], measure: 'avg', field: 'value', grain: 'day' })).total)).toBeCloseTo(33.75, 5)
+  test('avg: 150 over 5 orders = 30', async () => {
+    // The mean of the values, not the mean of the daily means. Folding bucket
+    // averages would give (15 + 30 + 40 + 50) / 4 = 33.75, which weights 2
+    // February's two orders the same as 2 March's one.
+    expect(Number((await ask({ events: [ORDERS], measure: 'avg', field: 'value', grain: 'day' })).total)).toBe(30)
+  })
+
+  test('avg does not change when the grain does', async () => {
+    // Same property as count_unique: an average order value is a fact about the
+    // range, not about how it was drawn.
+    for (const grain of ['day', 'week', 'month'] as const)
+      expect(Number((await ask({ events: [ORDERS], measure: 'avg', field: 'value', grain })).total)).toBe(30)
   })
 
   test('avg ignores the event that carries no value at all', async () => {
-    // Including every event adds the registration, which has a null value. It
-    // shares 9 February with the order of 40. If a null were read as a zero
-    // that bucket would average 20 and the headline would move.
+    // Including every event adds the registration, whose value is null. Six
+    // events, five values: reading the null as a zero would give 25.
     const result = await ask({ events: [], measure: 'avg', field: 'value', grain: 'day' })
 
-    expect(Number(result.total)).toBeCloseTo(33.75, 5)
+    expect(Number(result.total)).toBe(30)
   })
 
   test('min: 10, and max: 50', async () => {
