@@ -85,6 +85,7 @@
     "pickier": "^0.1.51",
     "stacks": "^0.70.378",
     "ts-pantry": "^0.11.21",
+    "ts-spreadsheets": "^0.2.4",
     "ts-rate-limiter": "^0.4.6"
   },
   "workspaces": [

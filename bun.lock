@@ -17,6 +17,7 @@
         "stacks": "^0.70.378",
         "ts-pantry": "^0.11.21",
         "ts-rate-limiter": "^0.4.6",
+        "ts-spreadsheets": "^0.2.4",
       },
       "devDependencies": {
         "better-dx": "^0.2.17",
@@ -466,7 +467,7 @@
 
     "ts-slug": ["ts-slug@0.1.2", "", {}, "sha512-/0uzIGb8OkLQzv38kjB1LgAXgFSCxqjLl+YlaJzNlYnZyfH3/r/YLiRoyIME/YPXrt/iks/nGBABC6QDClGJkA=="],
 
-    "ts-spreadsheets": ["ts-spreadsheets@0.2.3", "", { "bin": { "spreadsheets": "./dist/bin/cli.js" } }, "sha512-93j5oQsw3WQPdo8trEPN2PyDuR+V2uUbs20G8jEEtI7w5/vXAQH+UugO1RZ5YD+ufyHGKvsDeIJFlfewuJqEaA=="],
+    "ts-spreadsheets": ["ts-spreadsheets@0.2.4", "", { "bin": { "spreadsheets": "./dist/bin/cli.js" } }, "sha512-fK1LCW8r0B1rwRzTDIHUCptoRGK7NpIBwZQIdb8dy42RLABon5WeYTZoe4Zy6PdNDcvVD/RPeLoOXZztr5szZA=="],
 
     "ts-syntax-highlighter": ["ts-syntax-highlighter@0.2.14", "", { "bin": { "ts-syntax-highlighter": "./dist/bin/cli.js" } }, "sha512-xujx4yJ4Rlhwdstopq6KVYs78K5nSfkpUk/GRK/InwmnJ/SN+E+hUSuSvQZz922xlXYe1SFBtzXxQXbpRt46fw=="],
 
@@ -485,6 +486,10 @@
     "@stacksjs/bun-router/ts-rate-limiter": ["ts-rate-limiter@0.4.5", "", { "bin": { "ts-rate-limiter": "./dist/bin/init-config.js" } }, "sha512-YK/jzrweqsWE7Ujtn7a6v+8RD/NhMmXEzpiTWoqQC/wvU0UHs+qBYomaPkGNsiNKJE72loX5q4DaqJFLLG9XPQ=="],
 
     "@stacksjs/bunpress/@stacksjs/ts-cloud": ["@stacksjs/ts-cloud@0.7.119", "", { "dependencies": { "@stacksjs/ts-xml": "^0.1.0", "@ts-cloud/aws-types": "0.7.119", "@ts-cloud/core": "0.7.119" }, "bin": { "cloud": "./dist/bin/cli.js" } }, "sha512-04zcKHcJr7LAnRPaC615SYB43tkH/GqyBsNZ5PSpBz9JO4DOSwREC7zLvq6lZqURzdDnACn429HnAKo4u4/duw=="],
+
+    "@stacksjs/cms/ts-spreadsheets": ["ts-spreadsheets@0.2.3", "", { "bin": { "spreadsheets": "./dist/bin/cli.js" } }, "sha512-93j5oQsw3WQPdo8trEPN2PyDuR+V2uUbs20G8jEEtI7w5/vXAQH+UugO1RZ5YD+ufyHGKvsDeIJFlfewuJqEaA=="],
+
+    "@stacksjs/commerce/ts-spreadsheets": ["ts-spreadsheets@0.2.3", "", { "bin": { "spreadsheets": "./dist/bin/cli.js" } }, "sha512-93j5oQsw3WQPdo8trEPN2PyDuR+V2uUbs20G8jEEtI7w5/vXAQH+UugO1RZ5YD+ufyHGKvsDeIJFlfewuJqEaA=="],
 
     "@stacksjs/docs/@stacksjs/bunpress": ["@stacksjs/bunpress@0.2.2", "", { "dependencies": { "@cwcss/crosswind": "^0.2.16", "@stacksjs/clapp": "^0.2.0", "@stacksjs/stx": "^0.2.171", "@stacksjs/ts-i18n": "^0.1.11", "bunfig": "^0.15.17", "ts-syntax-highlighter": "^0.2.14" }, "peerDependencies": { "@stacksjs/ts-cloud": "^0.7.51" }, "optionalPeers": ["@stacksjs/ts-cloud"], "bin": { "bunpress": "./dist/bin/cli.js" } }, "sha512-f2/b3w/dcEZoJ7D+7NdPqtrDSsnhZ/vbkqwDCszuqGtNNW9X38yWEtclNNCKDQG06MTBkB6Fmc5oFuOdO+mWag=="],
 
@@ -677,6 +682,10 @@
     "hello-world-fx/stacks/@stacksjs/buddy/@stacksjs/ts-cloud": ["@stacksjs/ts-cloud@0.7.126", "", { "dependencies": { "@stacksjs/ts-xml": "^0.1.0", "@ts-cloud/aws-types": "0.7.126", "@ts-cloud/core": "0.7.126" }, "bin": { "cloud": "./dist/bin/cli.js" } }, "sha512-s9l9RvyUuej4b9N9nhaQEWzrWV+IOfjOTHh0thX0CAD3Cbsd/fBI4/HPOYl7M5BZwIyF9wnMnJN3OlGSqT3yWg=="],
 
     "hello-world-fx/stacks/@stacksjs/cloud/@stacksjs/ts-cloud": ["@stacksjs/ts-cloud@0.7.126", "", { "dependencies": { "@stacksjs/ts-xml": "^0.1.0", "@ts-cloud/aws-types": "0.7.126", "@ts-cloud/core": "0.7.126" }, "bin": { "cloud": "./dist/bin/cli.js" } }, "sha512-s9l9RvyUuej4b9N9nhaQEWzrWV+IOfjOTHh0thX0CAD3Cbsd/fBI4/HPOYl7M5BZwIyF9wnMnJN3OlGSqT3yWg=="],
+
+    "hello-world-fx/stacks/@stacksjs/cms/ts-spreadsheets": ["ts-spreadsheets@0.2.3", "", { "bin": { "spreadsheets": "./dist/bin/cli.js" } }, "sha512-93j5oQsw3WQPdo8trEPN2PyDuR+V2uUbs20G8jEEtI7w5/vXAQH+UugO1RZ5YD+ufyHGKvsDeIJFlfewuJqEaA=="],
+
+    "hello-world-fx/stacks/@stacksjs/commerce/ts-spreadsheets": ["ts-spreadsheets@0.2.3", "", { "bin": { "spreadsheets": "./dist/bin/cli.js" } }, "sha512-93j5oQsw3WQPdo8trEPN2PyDuR+V2uUbs20G8jEEtI7w5/vXAQH+UugO1RZ5YD+ufyHGKvsDeIJFlfewuJqEaA=="],
 
     "hello-world-fx/stacks/@stacksjs/dns/@stacksjs/ts-cloud": ["@stacksjs/ts-cloud@0.7.126", "", { "dependencies": { "@stacksjs/ts-xml": "^0.1.0", "@ts-cloud/aws-types": "0.7.126", "@ts-cloud/core": "0.7.126" }, "bin": { "cloud": "./dist/bin/cli.js" } }, "sha512-s9l9RvyUuej4b9N9nhaQEWzrWV+IOfjOTHh0thX0CAD3Cbsd/fBI4/HPOYl7M5BZwIyF9wnMnJN3OlGSqT3yWg=="],
 
