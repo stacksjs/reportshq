@@ -442,6 +442,53 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
      finger and a stylus, and pointer capture means a fast drag that leaves the
      tile does not drop the gesture. --}}
 <script>
+/*
+ * Adding a block, wired separately from everything else on this page.
+ *
+ * An empty report renders no `#grid` at all, only the "An empty grid" panel.
+ * The arranging script below therefore returns immediately, and while it lived
+ * there this listener returned with it: on a brand new report every button in
+ * the palette did nothing, silently, which is the first thing anybody does
+ * here. A report could only ever be built by starting from a template.
+ *
+ * So it stands alone. It needs no grid, because there is nothing to arrange
+ * until a block exists, and the response is a reload that renders one.
+ */
+(function () {
+  var buttons = document.querySelectorAll('.add-block')
+  if (!buttons.length) return
+
+  var params = new URLSearchParams(window.location.search)
+  var project = params.get('project')
+  var slug = params.get('slug')
+  var state = document.getElementById('save-state')
+
+  Array.prototype.forEach.call(buttons, function (button) {
+    button.addEventListener('click', function () {
+      if (state) state.textContent = 'Adding'
+
+      fetch('/api/reports/blocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          project: project,
+          slug: slug,
+          kind: button.dataset.kind,
+          w: Number(button.dataset.w),
+          h: Number(button.dataset.h),
+        }),
+      }).then(function (res) {
+        // A reload rather than an optimistic insert: the new block has to be
+        // rendered by the engine anyway, and the server already knows how.
+        if (res.ok) window.location.reload()
+        else if (state) state.textContent = 'Could not add that'
+      }).catch(function () {
+        if (state) state.textContent = 'Could not add that'
+      })
+    })
+  })
+})()
+
 (function () {
   var grid = document.getElementById('grid')
   if (!grid) return
@@ -759,7 +806,18 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
     var originH = Number(tile.dataset.h)
     var unit = cellWidth()
 
-    tile.setPointerCapture(event.pointerId)
+    // Capture keeps a fast drag that outruns the tile from dropping the
+    // gesture, which is worth having and is not worth the whole drag. It
+    // throws whenever the pointer is not one the browser considers active, and
+    // an exception here happens before the move listeners below are attached,
+    // so the block simply would not move and nothing would say why. Best
+    // effort, then carry on: without capture a drag that leaves the tile ends
+    // early, which is a far smaller failure than one that never starts.
+    try {
+      tile.setPointerCapture(event.pointerId)
+    }
+    catch {}
+
     tile.classList.add('is-dragging')
     grid.classList.add('is-arranging')
 
@@ -790,7 +848,15 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
     }
 
     function end() {
-      tile.releasePointerCapture(event.pointerId)
+      // Guarded for the same reason the capture is: releasing one that was
+      // never taken throws, and this runs before the cleanup below it. An
+      // exception here would leave the tile stuck in its dragging state with
+      // the move listener still attached.
+      try {
+        tile.releasePointerCapture(event.pointerId)
+      }
+      catch {}
+
       tile.classList.remove('is-dragging')
       grid.classList.remove('is-arranging')
       tile.removeEventListener('pointermove', move)
@@ -860,28 +926,8 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
     }
   })
 
-  Array.prototype.forEach.call(document.querySelectorAll('.add-block'), function (button) {
-    button.addEventListener('click', function () {
-      say('Adding')
-      fetch('/api/reports/blocks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          project: project,
-          slug: slug,
-          kind: button.dataset.kind,
-          w: Number(button.dataset.w),
-          h: Number(button.dataset.h),
-        }),
-      }).then(function (res) {
-        // A reload rather than an optimistic insert: the new block has to be
-        // rendered by the engine anyway, and the server already knows how.
-        if (res.ok) window.location.reload()
-        else say('Could not add that')
-      })
-    })
-  })
-
+  // Adding a block is wired at the top of this file, outside the grid guard,
+  // because it is the one action that has to work when there is no grid yet.
 
   // ---- Block settings -------------------------------------------------
   //
@@ -1202,6 +1248,20 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
 .block-tile {
   cursor: grab;
   transition: box-shadow 0.12s ease, border-color 0.12s ease;
+
+  /* The gesture is ours, not the browser's. Without this a finger on a tile
+   * pans the page instead of moving the block, so the drag that the sidebar
+   * promises works with a mouse and silently does not with a touch screen,
+   * which is the case the pointer-event code was written for in the first
+   * place. Above the lg breakpoint only, since below it the grid stacks and
+   * scrolling the page is the right behaviour. */
+  touch-action: auto;
+}
+
+@media (min-width: 1024px) {
+  .block-tile {
+    touch-action: none;
+  }
 }
 
 .block-tile:focus-visible,
@@ -1240,6 +1300,20 @@ const viewHref = `/report?project=${projectId}&slug=${slug}`
  * visible while dragging rather than guessed. */
 #grid.is-arranging .block-tile:not(.is-dragging) {
   transition: transform 0.12s ease;
+}
+
+/* Nothing gets selected while a block is being moved.
+ *
+ * A pointer dragged across a page with the button down is also a text
+ * selection, and the grid is full of text: dragging a block highlighted its
+ * title, the numbers inside it and whatever the gesture passed over on the way,
+ * and left that blue smear behind afterwards. It made a working drag look
+ * broken. `is-arranging` goes on at pointerdown and off at the drop, so this
+ * lasts exactly as long as the gesture. */
+#grid.is-arranging,
+#grid.is-arranging * {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* A block whose config the server rejected. Marked on the block as well as in
