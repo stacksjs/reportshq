@@ -308,12 +308,14 @@ describe('dimensions, against the same arithmetic', () => {
     expect(await byPlan('max', 'value')).toEqual({ pro: 50, starter: 40 })
   })
 
-  test('count_unique per plan, bucket by bucket as everywhere else', async () => {
-    // pro: 2 Feb has a and b, 2 Mar has b, so 3. starter: 3 Feb has a, 9 Feb
-    // has c, so 2. The two do not add to the three distinct people in the
-    // fixture, because a bought on both plans and distinct counts never
-    // compose. The engine is consistent about this rather than right in one
-    // place and wrong in another.
-    expect(await byPlan('count_unique')).toEqual({ pro: 3, starter: 2 })
+  test('count_unique per plan counts people, not people per day', async () => {
+    // pro has a and b (b twice, on 2 Feb and 2 Mar), so 2. starter has a and c,
+    // so 2. Folding the daily counts said pro was 3.
+    //
+    // The rows still do not add to the three distinct people in the fixture,
+    // and that is not the same defect: a bought on both plans, so she belongs
+    // to both rows. A split of a distinct count genuinely overlaps, which is
+    // why the headline is asked separately rather than summed from here.
+    expect(await byPlan('count_unique')).toEqual({ pro: 2, starter: 2 })
   })
 })

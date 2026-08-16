@@ -371,6 +371,58 @@ async function rangeAggregate(projectId: number, query: BlockQuery, range: Range
 }
 
 /**
+ * One aggregate per dimension value over the whole range, ungrouped by time.
+ *
+ * The row totals of a split, for the measures that cannot be folded from
+ * buckets. Built from the same `whereFor`, `aggregateFor` and `columnFor` the
+ * series uses, so a row can never be answering a different question from the
+ * chart it sits beside.
+ *
+ * The `(none)` key matches what `runSeries` does with a null or empty
+ * dimension value, so a row for events missing the property lines up with its
+ * series instead of silently keeping the folded number.
+ */
+async function dimensionTotals(
+  projectId: number,
+  query: BlockQuery,
+  range: Range,
+): Promise<Map<string, number>> {
+  const where = whereFor(projectId, query, range)
+  const aggregate = aggregateFor(query.measure, query.field)
+
+  const params: unknown[] = []
+
+  if (aggregate.needsField && query.field?.startsWith('properties.'))
+    params.push(query.field.slice('properties.'.length))
+
+  const dimensionSql = columnFor(query.dimension!)
+  if (query.dimension!.startsWith('properties.'))
+    params.push(query.dimension!.slice('properties.'.length))
+
+  params.push(...where.params)
+
+  const rows = await db.unsafe(
+    toDialectPlaceholders(
+      `SELECT ${dimensionSql} AS series_key, ${aggregate.sql} AS value
+         FROM events
+        WHERE ${where.sql}
+        GROUP BY series_key`,
+      resolveDialect(),
+    ),
+    params,
+  ) as Array<{ series_key: string | null, value: number | null }>
+
+  const totals = new Map<string, number>()
+
+  for (const row of rows) {
+    const key = row.series_key === null || row.series_key === '' ? '(none)' : String(row.series_key)
+    totals.set(key, Number(row.value ?? 0))
+  }
+
+  return totals
+}
+
+/**
  * An average of averages is not an average, and a total of maxima is not a
  * maximum. The overall number is derived from the series the way the measure
  * actually composes.
@@ -468,6 +520,21 @@ async function runSeries(
   if (!query.dimension)
     return series.length > 0 ? series : [{ key: 'total', points: buckets.map(t => ({ t, value: 0 })), total: 0 }]
 
+  // A split's row totals are the same question the headline asks, once per
+  // dimension value, and `avg` and `count_unique` do not survive being folded
+  // from buckets any better here than they do there. A table of buying
+  // customers by plan would add up each plan's daily distinct counts and report
+  // more customers per row than the project has. Asked properly instead, in one
+  // grouped query.
+  if (query.measure === 'avg' || query.measure === 'count_unique') {
+    const totals = await dimensionTotals(projectId, query, range)
+
+    series = series.map(entry => ({
+      ...entry,
+      total: totals.get(entry.key) ?? entry.total,
+    }))
+  }
+
   return collapseToTopN(series, query.limit ?? DEFAULT_SERIES, buckets)
 }
 
@@ -477,6 +544,13 @@ async function runSeries(
  *
  * A dimension with 400 values is 400 lines, which is a smear rather than a
  * chart. Folding the tail keeps the total honest, which dropping it would not.
+ *
+ * The one place that stays approximate is `count_unique`: "Other" sums the
+ * tail's distinct counts, so somebody who appears under two folded values is
+ * counted twice in that single row. Answering it exactly needs a distinct count
+ * over the tail, which is a query that cannot be written until the tail is
+ * known. The named rows and the headline are exact, which is where anybody
+ * reads a number off.
  */
 function collapseToTopN(series: Series[], limit: number, buckets: string[]): Series[] {
   const sorted = [...series].sort((a, b) => b.total - a.total)
