@@ -315,10 +315,26 @@ front of it, and reported success. Fixed at the source in Stacks 0.70.378:
 quoted text is removed before looking for the migrate step, because what a
 command says is not what it does. Confirmed by watching the warning disappear
 from a real deploy.
-- [ ] Rollback drill, actually exercised rather than documented
-- [ ] Backup restore drill: restore the Postgres backup to a scratch database and
-      boot the app against it
-- [ ] On-call notes for the known failure modes
+- [x] Backup restore drill, actually run: `pg_dump` the database, drop and
+      recreate a scratch one, restore, and boot the app against it. 38 tables,
+      zero errors, a sentinel row intact, the migrations table complete, and the
+      report engine answering from the restored data
+- [x] On-call notes for the known failure modes, in `docs/on-call.md`, built from
+      what has actually gone wrong here rather than from imagination
+- [ ] Rollback drill on production
+
+The restore drill turned up no defect, and it did turn up a gap in the runbook:
+the procedure ended at "run psql" with nothing about checking the result. A
+restore that exits 0 is not a restore that worked, and the moment to discover
+otherwise is not the second command, which drops the live database. The runbook
+now carries the verification steps and says to restore into a scratch database
+first whenever the situation allows.
+
+The rollback drill stays open deliberately rather than being quietly ticked. The
+documented procedure is a revert and a push, which is exercised by every deploy
+in the sense that reverts are ordinary commits, but nobody has rolled production
+back and watched it. That is a live-site exercise and it should be somebody's
+decision, not a side effect of a QA pass.
 
 ---
 

@@ -153,6 +153,31 @@ systemctl start 'reportshq-main@*' 'reportshq-api@*'
 
 `buddy db:backups` lists what is there.
 
+### Verify the restore, do not assume it
+
+A restore that runs without error is not a restore that worked. Drilled on
+2026-08-15 against a scratch database, the sequence above completed cleanly and
+carried 38 tables; what proved it was the checks afterwards, not the exit code.
+
+```bash
+# 1. Does the data exist, and is it the data you expected?
+psql -d reportshq_scratch -c "select count(*) from projects"
+psql -d reportshq_scratch -c "select count(*) from information_schema.tables where table_schema='public'"
+
+# 2. Does the app read it? Point the app at the scratch database and run a
+#    report query. A schema that restored and an app that cannot use it look
+#    identical until somebody opens a page.
+DB_DATABASE=reportshq_scratch bun -e "import {db} from '@stacksjs/database'; console.log((await db.unsafe('select count(*) as n from projects'))[0])"
+
+# 3. Is the migrations table intact? If it is empty, the next deploy will try to
+#    replay every migration against a populated database.
+psql -d reportshq_scratch -c "select count(*) from migrations"
+```
+
+Restore into a scratch database first whenever the situation allows it. The
+sequence above drops the live database as its second command, and a dump that
+turns out to be short or truncated is discovered one command too late.
+
 ## Rolling back
 
 Releases are atomic and the previous one is kept. A release that fails its
