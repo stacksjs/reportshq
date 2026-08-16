@@ -44,12 +44,12 @@ const footerColumns = [
       <div>
         <h2 class="mb-2 text-xs font-medium tracking-wide uppercase text-subtle">Product</h2>
         <ul class="grid gap-1 list-none">
-          <li><a href="/pricing" class="text-sm no-underline text-muted hover:text-ink">Pricing</a></li>
-          <li><a href="/docs" class="text-sm no-underline text-muted hover:text-ink">Documentation</a></li>
-          <li><a href="/docs/ingest" class="text-sm no-underline text-muted hover:text-ink">HTTP ingest</a></li>
-          <li><a href="/docs/stacks" class="text-sm no-underline text-muted hover:text-ink">Stacks package</a></li>
-          <li><a href="/docs/laravel" class="text-sm no-underline text-muted hover:text-ink">Laravel package</a></li>
-          <li><a href="/register" class="text-sm no-underline text-muted hover:text-ink">Start free</a></li>
+          <li><a href="/pricing" class="inline-block py-1 text-sm no-underline text-muted hover:text-ink">Pricing</a></li>
+          <li><a href="/docs" class="inline-block py-1 text-sm no-underline text-muted hover:text-ink">Documentation</a></li>
+          <li><a href="/docs/ingest" class="inline-block py-1 text-sm no-underline text-muted hover:text-ink">HTTP ingest</a></li>
+          <li><a href="/docs/stacks" class="inline-block py-1 text-sm no-underline text-muted hover:text-ink">Stacks package</a></li>
+          <li><a href="/docs/laravel" class="inline-block py-1 text-sm no-underline text-muted hover:text-ink">Laravel package</a></li>
+          <li><a href="/register" class="inline-block py-1 text-sm no-underline text-muted hover:text-ink">Start free</a></li>
         </ul>
       </div>
 
@@ -58,7 +58,7 @@ const footerColumns = [
           <h2 class="mb-2 text-xs font-medium tracking-wide uppercase text-subtle">{{ column.heading }}</h2>
           <ul class="grid gap-1 list-none">
             @foreach (column.links as link)
-              <li><a href="{{ link.href }}" class="text-sm no-underline text-muted hover:text-ink">{{ link.label }}</a></li>
+              <li><a href="{{ link.href }}" class="inline-block py-1 text-sm no-underline text-muted hover:text-ink">{{ link.label }}</a></li>
             @endforeach
           </ul>
         </div>
@@ -68,8 +68,8 @@ const footerColumns = [
     <div class="flex flex-wrap gap-4 justify-between px-6 pb-10 mx-auto max-w-6xl">
       <p class="text-xs text-subtle">Built with Stacks. Self-host it or let us run it.</p>
       <ul class="flex gap-4 list-none">
-        <li><a href="mailto:hello@reportshq.org" class="text-xs no-underline text-subtle hover:text-ink">Contact</a></li>
-        <li><a href="https://github.com/stacksjs/reportshq" class="text-xs no-underline text-subtle hover:text-ink">Source</a></li>
+        <li><a href="mailto:hello@reportshq.org" class="inline-block py-1 text-xs no-underline text-subtle hover:text-ink">Contact</a></li>
+        <li><a href="https://github.com/stacksjs/reportshq" class="inline-block py-1 text-xs no-underline text-subtle hover:text-ink">Source</a></li>
       </ul>
     </div>
   </footer>

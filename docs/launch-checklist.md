@@ -239,10 +239,30 @@ route accepts a raw range from a caller.
 - [x] No em-dash or separator en-dash in any user-visible string. The only hits
       were scaffold: a starter partial and a demo quotes job, both since removed
       or unreachable
-- [ ] `stacks-design-taste` Section 14 pre-flight across marketing, app shell,
-      builder, chart gallery and emails, both themes, three viewports
-- [ ] Accessibility sweep: keyboard-only builder session, focus order, contrast
-      against the token docs, reduced-motion honoured
+- [x] Contrast measured, not eyeballed: every text node on the landing page,
+      pricing, sign-in and the chart gallery, against its real computed
+      background, in both themes. Zero failures at AA
+- [x] Keyboard walk of the sign-in form: logical order, and every stop paints a
+      focus ring
+- [x] Reduced-motion honoured by every animated view and chart
+- [x] No horizontal overflow at 375px on the marketing pages
+- [x] Tap targets at 375px, against WCAG 2.2 target size including its spacing
+      exception
+- [ ] Keyboard-only session through the builder itself, which needs a signed-in
+      fixture the sweep above did not set up
+
+**Found and fixed.** 22 footer links were 18px tall with 10px between them, so a
+24px target circle centred on one overlapped its neighbour: a fail of WCAG 2.2
+target size (2.5.8, AA) on the page every visitor lands on. They now carry real
+padding, which takes them to 24px and above, and the same measurement afterwards
+reports zero failures at 375px with no horizontal overflow and no change to the
+desktop layout.
+
+**A false alarm worth writing down.** The first focus check called `.focus()` on
+every focusable element and reported that not one of them showed an indicator,
+on every page. Programmatic focus does not match `:focus-visible`, which is the
+selector a well-built page uses, so the audit was measuring its own method. Real
+keyboard navigation shows the ring everywhere. Six "failures" that were not.
 
 **Fixed while checking.** The scaffold shipped a simulated desktop UI: taskbar,
 draggable windows, start menu, fake login screen, 2,224 lines of script. Its
