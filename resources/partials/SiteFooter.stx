@@ -37,7 +37,7 @@ const footerColumns = [
           <span class="text-sm font-semibold text-ink">ReportsHQ</span>
         </div>
         <p class="mt-2 max-w-[28ch] text-sm text-muted">
-          Reports that build themselves, from the events your app already sends.
+          Reports that run inside your own application, against your own database.
         </p>
       </div>
 

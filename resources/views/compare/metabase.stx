@@ -26,20 +26,28 @@ const breadcrumbs = [
 
 const sections = [
   {
-    "heading": "Metabase queries the database you already have",
-    "body": "That is a real advantage. Your production data is already there, already correct, already joined, and nothing new has to be sent anywhere. If your team has somebody who writes SQL comfortably, Metabase will answer questions this product cannot express at all."
+    "heading": "Metabase is a service you run beside your application",
+    "body": "It is a separate deployment with its own database, its own login, its own upgrades and its own connection into production. That separation is what makes it powerful: it will answer questions in SQL that no packaged tool can express, against any database you point it at, for anyone you give an account to."
   },
   {
-    "heading": "This reports on a stream of events",
-    "body": "There is no query to write and no schema to understand, because the shape is fixed: events with a name, a value and some properties. That constraint is what lets a report create itself the first time an order event arrives, and it is also the ceiling on what you can ask."
+    "heading": "This is a package inside the application",
+    "body": "It installs with composer, reads the models you already have, and renders through the routes you already guard. There is nothing else to deploy, nothing else to upgrade, and no second copy of who is allowed to see what. A report is code in your repository, reviewed in a pull request and deployed with everything else."
+  },
+  {
+    "heading": "Your database connection stays where it is",
+    "body": "Metabase needs credentials into production, which is a decision worth taking seriously and a thing to rotate, audit and firewall. This queries in process, through the ORM the application already uses, so there is no new connection, no new credential and no new host holding one."
   },
   {
     "heading": "Where Metabase wins",
-    "body": "Anything needing a join, a window function, or a question nobody anticipated. Reporting on state rather than events, such as how many subscriptions are active right now, which is a query against your tables and not something a stream of events answers well."
+    "body": "Anything ad hoc. A question nobody anticipated, a join across three schemas, a window function, an analyst who wants to explore rather than read. Metabase is a tool for asking; this is a tool for answering the same questions repeatedly and well."
   },
   {
     "heading": "Where this wins",
-    "body": "Time to the first correct report, sharing with people who will never have database access, and not pointing a reporting tool at your production database in the first place."
+    "body": "Reports that ship with the feature they describe. Anything where the numbers must obey the same rules as the application: a soft delete that a raw query would miss, a tenant scope, a status that means something specific in your domain. Reading a model rather than a table means a report cannot quietly disagree with the product."
+  },
+  {
+    "heading": "And for the people who are not staff",
+    "body": "A share link serves one published report to somebody with no account and no database access, from your own domain. In Metabase that is a public link from a service you also have to keep running."
   }
 ]
 </script>
@@ -63,9 +71,9 @@ const sections = [
       </div>
 
       <div class="p-8 mt-16 rounded-2xl border border-line bg-panel">
-        <h2 class="text-xl font-semibold tracking-tight">If nobody on the team writes SQL</h2>
+        <h2 class="text-xl font-semibold tracking-tight">Most teams want both</h2>
         <p class="mt-2 text-sm leading-relaxed text-muted">
-          That is the case this is built for. If somebody does, and they enjoy it, Metabase is probably the better answer.
+          Metabase for the question nobody saw coming, this for the fifteen reports everyone reads every week. They are not really the same tool, and the second one should not need a server.
         </p>
         <a href="/register" class="inline-block px-4 py-2.5 mt-5 text-sm font-medium no-underline rounded-lg bg-accent text-accent-ink">
           Start free

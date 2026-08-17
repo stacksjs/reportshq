@@ -13,7 +13,7 @@ import { useSeoMeta } from 'stx'
 import { PLANS } from '../../app/Billing/limits'
 
 const siteUrl = 'https://reportshq.org'
-const siteDescription = 'Reports that build themselves, from the events your application already sends. Send events over HTTP or install a package, and the Commerce, Users and Content reports appear with real numbers in them.'
+const siteDescription = 'Reports that run inside your own Laravel application, against your own database. Install a package, point it at the models you already have, and the numbers never leave your servers.'
 
 useSeoMeta({
   title: 'ReportsHQ: reports that build themselves',
@@ -87,27 +87,28 @@ const heroPlans = {
   total: 1284,
 }
 
-const curlSnippet = `curl -X POST https://reportshq.org/ingest \\
-  -H "X-ReportsHQ-Key: rhq_your_project_key" \\
-  -H "Content-Type: application/json" \\
-  -d '{"events":[{"name":"commerce.order.created","value":4250,"currency":"USD"}]}'`
+const curlSnippet = `composer require reportshq/laravel
+php artisan vendor:publish --tag=reportshq-config
+php artisan migrate`
 
-const stacksSnippet = `// app/Events.ts
-import { listen } from '@reportshq/stacks'
-
-export default {
-  ...listen(),
-}`
+const stacksSnippet = `// config/reportshq.php
+'models' => [
+    'order' => [
+        'model' => App\\Models\\Order::class,
+        'measures' => ['revenue' => 'sum:total_amount'],
+        'time' => ['placed' => 'created_at'],
+    ],
+],`
 
 const steps = [
   {
-    title: 'Send what already happens',
-    body: 'Install the package for your framework and the events your application already emits are translated and forwarded. Or post JSON to one endpoint. Either way you are not writing tracking calls.',
-    icon: 'i-hugeicons-cloud-upload',
+    title: 'Install it into the application',
+    body: 'One composer package and a migration. No service to deploy beside it, no connection into production to hand out, and nothing to keep upgrading separately from the app it reports on.',
+    icon: 'i-hugeicons-package',
   },
   {
-    title: 'Reports appear on their own',
-    body: 'When a project starts sending events the standard taxonomy recognises, the matching reports are created and published with real numbers already in them. Nothing to configure.',
+    title: 'Name the models you already have',
+    body: 'An order, a customer, a subscription. Say which fields are measures and which are dates, and the reports have real numbers in them immediately, obeying the same scopes and soft deletes the application does.',
     icon: 'i-hugeicons-magic-wand-01',
   },
   {
@@ -150,23 +151,23 @@ const features = [
   },
 ]
 
-const freeEvents = PLANS.free.events.toLocaleString('en-GB')
+const freeApplications = PLANS.free.applications
 
 const docLinks = [
   {
-    title: 'The ingest contract',
-    body: 'The endpoint, the batch limits, and what happens to an event that fails validation. Nothing is dropped without a reason you can read.',
-    href: '/docs/ingest',
+    title: 'The Laravel package',
+    body: 'Installing it, describing your models, and what the builder can compose once they are described.',
+    href: '/docs/laravel',
   },
   {
-    title: 'The event taxonomy',
-    body: 'The names that make a report create itself, and how to send something the standard set does not cover.',
-    href: '/docs/events',
+    title: 'The query API',
+    body: 'The JSON surface the charts read, and the refusals it returns rather than answering a question wrongly.',
+    href: '/docs/api',
   },
   {
-    title: 'Limits and retention',
-    body: 'What each plan carries, the grace band past a quota, and what survives when raw events are pruned.',
-    href: '/docs/limits',
+    title: 'Self-hosting',
+    body: 'There is no other kind. What a licence covers, and what happens when you leave the key unset.',
+    href: '/docs/deploy',
   },
 ]
 </script>
@@ -202,7 +203,7 @@ const docLinks = [
             </div>
 
             <p class="mt-4 text-sm text-subtle">
-              {{ freeEvents }} events a month on the free plan. No card.
+              {{ freeApplications }} application free, with unlimited reports. No card.
             </p>
           </div>
 

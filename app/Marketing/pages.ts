@@ -130,32 +130,11 @@ export const PAGES: MarketingPage[] = [
 
   // Comparisons
   {
-    slug: 'google-analytics',
-    group: 'compare',
-    title: 'ReportsHQ compared with Google Analytics',
-    description: 'GA measures traffic to pages. This measures things that happened in your application. They answer different questions, and plenty of teams should run both.',
-    icon: 'i-hugeicons-analytics-01',
-  },
-  {
     slug: 'metabase',
     group: 'compare',
     title: 'ReportsHQ compared with Metabase',
-    description: 'Metabase queries the database you already have, which is more powerful and needs someone who writes SQL. This reports on a stream of events with no query to write.',
+    description: 'Metabase is a service you run beside your application, with its own login and its own connection into production. This is a package inside it, reading the models you already have.',
     icon: 'i-hugeicons-database',
-  },
-  {
-    slug: 'mixpanel',
-    group: 'compare',
-    title: 'ReportsHQ compared with Mixpanel',
-    description: 'Mixpanel is a deeper product analytics tool with cohorts and behavioural segmentation. This is a smaller thing that gets a team to a correct report sooner.',
-    icon: 'i-hugeicons-chart-line-data-02',
-  },
-  {
-    slug: 'plausible',
-    group: 'compare',
-    title: 'ReportsHQ compared with Plausible',
-    description: 'Plausible is privacy-first web analytics from a script on your pages. This reads server-side events, so it sees orders and refunds a page-view tracker cannot.',
-    icon: 'i-hugeicons-shield-01',
   },
   {
     slug: 'looker-studio',

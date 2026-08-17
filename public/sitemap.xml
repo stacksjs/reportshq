@@ -81,22 +81,7 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://reportshq.org/compare/google-analytics</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://reportshq.org/compare/metabase</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://reportshq.org/compare/mixpanel</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://reportshq.org/compare/plausible</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
