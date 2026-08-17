@@ -26,20 +26,20 @@ const breadcrumbs = [
 
 const sections = [
   {
-    "heading": "The taxonomy is the contract",
-    "body": "Events carry names like commerce.order.created or users.signup.completed. When a project starts sending names the standard taxonomy recognises, the reports for that family are created and published, with the numbers already in them. There is no template gallery to browse and nothing to pick before you see anything."
+    "heading": "Describe a model once",
+    "body": "Name the model, say which fields are measures and which are dates, and that is the description. An Order with a total and a placed-at is enough for revenue over time, orders per day, and average order value, none of which you asked for individually."
   },
   {
-    "heading": "Created once, then yours",
-    "body": "An automatic report is a starting point, not a fixture. Open it in the builder and change what it counts, add blocks, or throw half of it away. Once you have edited it, it stops being managed for you, because a report that rewrites itself under an author is worse than no report."
+    "heading": "The reports build themselves from that",
+    "body": "A described model implies its own reports. Commerce, Customers and Users appear with real numbers already in them, because everything they need was in the description. There is no template gallery to browse and nothing to pick before you see anything."
   },
   {
-    "heading": "Nothing appears from nothing",
-    "body": "A report is only created when there is data for it. An empty dashboard of placeholder charts teaches people the product does not work, and it is the first thing most tools show you."
+    "heading": "They obey the application's own rules",
+    "body": "A report reads the model, not the table. A soft delete stays deleted, a global scope still applies, and a status means what your domain says it means. A raw query against the same table would quietly disagree with the product, and nobody would notice until the numbers were quoted in a meeting."
   },
   {
-    "heading": "Honest about what it does not know",
-    "body": "A comparison against a period with no data says so rather than inventing a percentage. This is how dashboards end up claiming a four thousand percent rise, and it is always because yesterday was zero."
+    "heading": "Then you change them",
+    "body": "An auto-created report is an ordinary report. Drag its blocks, change a measure, add one it did not think of. Nothing is regenerated behind you and nothing is locked because it started life automatically."
   }
 ]
 </script>
@@ -63,9 +63,9 @@ const sections = [
       </div>
 
       <div class="p-8 mt-16 rounded-2xl border border-line bg-panel">
-        <h2 class="text-xl font-semibold tracking-tight">Send one event and watch</h2>
+        <h2 class="text-xl font-semibold tracking-tight">Describe one model and watch</h2>
         <p class="mt-2 text-sm leading-relaxed text-muted">
-          The onboarding screen waits for your first event and tells you the moment it lands. If it is an order or a signup, a report is already being built for it.
+          Name an Order or a User in the config file, run the migration, and open the reports. They are already populated, because the data was already there.
         </p>
         <a href="/register" class="inline-block px-4 py-2.5 mt-5 text-sm font-medium no-underline rounded-lg bg-accent text-accent-ink">
           Start free

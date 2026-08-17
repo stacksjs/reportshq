@@ -2,6 +2,8 @@
 
 export { increment, decrement, reset, count } from '../../../resources/functions/counter'
 export { toggleDark, isDark, preferredDark } from '../../../resources/functions/dark'
+export { seriesColor, compact, money, delta, plotArea, niceCeiling, ticks, timeLabels, shortDate, longDate, linePath, areaPath, bars, donut, needsLegend, SERIES_SLOTS, DEFAULT_BOX } from '../../../resources/functions/charts'
+export type { Point, Series, EngineResult, Box, PlotArea, BarRect, DonutSlice } from '../../../resources/functions/charts'
 export { resolveApiBaseUrl } from '../defaults/functions/api-url'
 export { publicApplicationUrl } from '../defaults/functions/public-application-url'
 export { fetchDashboardData } from '../defaults/functions/data'

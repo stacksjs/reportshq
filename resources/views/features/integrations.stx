@@ -26,20 +26,20 @@ const breadcrumbs = [
 
 const sections = [
   {
-    "heading": "Stacks and Laravel, without tracking calls",
-    "body": "Install the package and register the listener. The events your application already emits are translated into the standard taxonomy and forwarded in the background. A conventional commerce or SaaS application produces reports without a single line of instrumentation written by hand, because the interesting things already fire events."
+    "heading": "One package, inside the application",
+    "body": "composer require, a migration, and a config file naming your models. There is nothing to deploy beside it and no second service to keep upgrading in step with the app it reports on."
   },
   {
-    "heading": "Or anything that speaks HTTP",
-    "body": "One endpoint takes JSON, authenticated with a project key that can only append events. Batch up to a few hundred at a time. The key ships inside your application on purpose: the worst thing somebody can do with it is send you events you did not want."
+    "heading": "It reads what you already have",
+    "body": "No tracking calls, no event names to agree on, no schema to keep in sync. Point it at an Order, a Customer, a Subscription. Those already exist, they are already correct, and they are already the thing you would have been describing anyway."
   },
   {
-    "heading": "The same payload everywhere",
-    "body": "Both packages are tested against one shared fixture file, so a Laravel application and a Stacks application send byte-identical payloads for the same event. Sampling uses the same hash of the same subject in both languages, which is what makes a funnel comparable across services written in different stacks."
+    "heading": "Nothing leaves your servers",
+    "body": "Queries run in process, through the ORM the application already uses. There is no connection to hand out, no credential to rotate, and no endpoint to send anything to. The licence check is offline too."
   },
   {
-    "heading": "Rejections are counted, never silent",
-    "body": "An event refused by validation is refused with a machine-readable reason and counted, so the number in your usage meter and the number in the database always have the same explanation. Silently dropping a malformed event is how a report ends up quietly wrong for a month."
+    "heading": "Where it renders",
+    "body": "Standalone pages behind whatever middleware you already use, or inside a Filament panel, or as JSON for a front end of your own. The charts are the same components in all three, so they cannot drift."
   }
 ]
 </script>
@@ -65,7 +65,7 @@ const sections = [
       <div class="p-8 mt-16 rounded-2xl border border-line bg-panel">
         <h2 class="text-xl font-semibold tracking-tight">Start with one endpoint</h2>
         <p class="mt-2 text-sm leading-relaxed text-muted">
-          You can be sending events in a minute with curl, and swap to the package for your framework later. The payload contract is the same either way.
+          One composer require and a config block naming a model. Nothing to sign up to first, and nothing to deploy beside the application it reports on.
         </p>
         <a href="/register" class="inline-block px-4 py-2.5 mt-5 text-sm font-medium no-underline rounded-lg bg-accent text-accent-ink">
           Start free

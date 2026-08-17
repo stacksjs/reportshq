@@ -26,20 +26,24 @@ const breadcrumbs = [
 
 const sections = [
   {
-    "heading": "Looker Studio draws, it does not collect",
-    "body": "It is a dashboard layer over connectors: a warehouse, a spreadsheet, an ads account. That makes it enormously flexible and means the interesting work is upstream of it, in whatever you built to get correct data into the thing it connects to."
+    "heading": "Looker Studio is free and connects to everything",
+    "body": "That is a strong combination, and for reporting across several sources at once, marketing spend beside sales beside a spreadsheet somebody maintains by hand, it is hard to argue against."
   },
   {
-    "heading": "This owns both halves",
-    "body": "Collection and presentation are the same product, so a chart cannot disagree with the data behind it and there is no pipeline to keep alive. The cost is reach: it draws your events and nothing else, so it will never chart your ad spend beside your revenue."
+    "heading": "It needs your data to be reachable",
+    "body": "A connector wants credentials into your database, or an export somewhere it can read. Either way the numbers leave the application, and there is now a copy of them living somewhere with its own access rules."
+  },
+  {
+    "heading": "This never moves the data",
+    "body": "The report runs inside the application, against its own database, in the same process. There is nothing to connect and nothing to export, so there is no second copy to secure and no sync to be stale."
+  },
+  {
+    "heading": "Reports as code",
+    "body": "A report here lives in your repository. It is reviewed in a pull request, deployed with the feature it describes, and it obeys the same scopes as the rest of the app. A dashboard built in a browser is a thing somebody made once and nobody can review."
   },
   {
     "heading": "Where Looker Studio wins",
-    "body": "Pulling several sources into one view, which is exactly what a marketing team needs and exactly what this cannot do. It is also free."
-  },
-  {
-    "heading": "Where this wins",
-    "body": "Nothing to configure before the first report exists, no connector to re-authorise, and a share link that does not depend on a Google account."
+    "body": "Blending sources this cannot see, and giving an analyst somewhere to explore. If the question is about your application's own data, and it is the same question every week, this is the smaller and more honest tool."
   }
 ]
 </script>

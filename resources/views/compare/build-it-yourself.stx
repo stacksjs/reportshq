@@ -26,20 +26,24 @@ const breadcrumbs = [
 
 const sections = [
   {
-    "heading": "The first version really is a weekend",
-    "body": "An events table, an insert, a nightly aggregate and a chart library. Anyone reading this could ship it by Sunday, and for a single number on an internal page that is the correct decision. This page is not going to argue with that."
+    "heading": "Building it is genuinely reasonable",
+    "body": "A handful of queries, a chart library, a Blade view. Two days of work and you own it entirely, with no licence and nobody else's opinions in your codebase. For three fixed charts that never change, this is very likely the right answer."
   },
   {
-    "heading": "The second year is the part to price",
-    "body": "Retention and pruning so the table does not become the largest thing in your database. Rollups, so a report over last year does not scan every row. Timezones, so the daily job does not double-count an hour twice a year. Then a share link somebody outside the company can open, which means auth, revocation, and a decision about caching."
+    "heading": "What it costs later",
+    "body": "The fourth chart wants a comparison range. The fifth wants a different grain. Somebody asks for CSV, then for a link they can send to a client who has no login, then for it in their inbox every Monday. None of those is hard, and all of them are work you did not plan for, arriving one at a time."
   },
   {
-    "heading": "Where building it wins",
-    "body": "Anything specific to your business. If the report you need is a join across three of your own tables with rules only you know, no general tool will express it, and you should write the query."
+    "heading": "The part that bites",
+    "body": "Getting a number wrong quietly. A revenue-per-product chart that joins line items counts an order once per line, and the total is a plausible number nobody questions until it is in a board pack. Knowing which questions cannot be answered honestly is most of what this package is."
   },
   {
-    "heading": "Where this wins",
-    "body": "Everything in the second paragraph is already written, tested and running. And if you decide later that you would rather own it, the source is public and you can."
+    "heading": "What you get instead",
+    "body": "The grid, the drag behaviour, the exports, the share links, the schedules, and a compiler that refuses a query rather than answering it wrongly. Written once, tested, and not your problem on a Friday."
+  },
+  {
+    "heading": "When to build it yourself anyway",
+    "body": "If the reports are few, fixed, and unlikely to be asked about. That is a real situation and this page is not going to pretend otherwise."
   }
 ]
 </script>

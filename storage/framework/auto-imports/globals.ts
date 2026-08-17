@@ -17,6 +17,23 @@ declare global {
   const toggleDark: typeof autoImports.toggleDark
   const isDark: typeof autoImports.isDark
   const preferredDark: typeof autoImports.preferredDark
+  const seriesColor: typeof autoImports.seriesColor
+  const compact: typeof autoImports.compact
+  const money: typeof autoImports.money
+  const delta: typeof autoImports.delta
+  const plotArea: typeof autoImports.plotArea
+  const niceCeiling: typeof autoImports.niceCeiling
+  const ticks: typeof autoImports.ticks
+  const timeLabels: typeof autoImports.timeLabels
+  const shortDate: typeof autoImports.shortDate
+  const longDate: typeof autoImports.longDate
+  const linePath: typeof autoImports.linePath
+  const areaPath: typeof autoImports.areaPath
+  const bars: typeof autoImports.bars
+  const donut: typeof autoImports.donut
+  const needsLegend: typeof autoImports.needsLegend
+  const SERIES_SLOTS: typeof autoImports.SERIES_SLOTS
+  const DEFAULT_BOX: typeof autoImports.DEFAULT_BOX
 }
 
 export {}

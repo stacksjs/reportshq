@@ -26,20 +26,24 @@ const breadcrumbs = [
 
 const sections = [
   {
-    "heading": "A project per client, kept apart",
-    "body": "Each client is a project with its own events, its own key and its own members. Nothing crosses between them, which is the property you need before you can let a client see anything at all."
+    "heading": "One package per client application",
+    "body": "Each client keeps their own data in their own application, and the reports run there. Nothing is pooled, nothing is copied to a central place you would then be responsible for, and no client's numbers can appear in another's report because they were never in the same database."
   },
   {
-    "heading": "A link per stakeholder",
-    "body": "Share links show one published report and nothing else in the project. A client sees their report, not your navigation, and revoking a link when an engagement ends actually stops it working."
+    "heading": "Reporting you deliver rather than resell",
+    "body": "The reports ship inside the application you built, on your client's domain, behind their login. There is no third party for them to sign up to and no separate invoice arriving from a tool they did not choose."
   },
   {
-    "heading": "The monthly report arrives on its own",
-    "body": "Schedule the delivery for the morning of the meeting, with the spreadsheet attached. The alternative is assembling it the night before, which is the single most common billable hour that nobody wants to bill for."
+    "heading": "A link for the people who will never log in",
+    "body": "A published report shared with a stakeholder who has no account, revocable when the engagement ends, with a note saying which link is which."
   },
   {
-    "heading": "Your own footer on the paid tiers",
-    "body": "The top tier removes our footer from shared reports, so what you send a client looks like your work. It is stated on the pricing page rather than discovered after the first client sees it."
+    "heading": "Monday morning without you",
+    "body": "A schedule mails the report from the client's own application, in the client's own timezone. The status update writes itself, which is the part of the retainer nobody enjoys."
+  },
+  {
+    "heading": "Priced per application",
+    "body": "Ten applications on Pro, and the licence is the whole cost. Nothing meters your clients' traffic, because none of it reaches us."
   }
 ]
 </script>

@@ -26,25 +26,25 @@ const breadcrumbs = [
 
 const sections = [
   {
-    heading: 'A grid that settles',
-    body: 'Blocks live on twelve columns. Drag one and the others move out of the way while you hold it; drop it and the server settles the layout before saving, so two blocks can never end up sharing a cell. That last part is done on the server on purpose: a layout agreed by the browser alone is a layout that disagrees with itself the moment two people edit the same report.',
+    "heading": "Blocks on a twelve column grid",
+    "body": "Drag to move, drag a corner to resize, arrow keys to nudge. Everything below what you moved gets out of the way by the full height of what displaced it, so a grid never ends up with a block sitting inside another one."
   },
   {
-    heading: 'Keyboard, not just pointer',
-    body: 'Every move and resize has a keyboard path, and focus stays on the block you were holding. A builder that can only be driven by dragging excludes people who do not drag, and the work to avoid that is a few key handlers.',
+    "heading": "The server decides what a drag meant",
+    "body": "The browser packs the grid so the drag feels immediate, and the server packs it again for the record. The response carries the canonical positions back. That way what is stored and what you saw cannot drift apart, which is the failure that makes a builder feel haunted."
   },
   {
-    heading: 'Draft and published are different things',
-    body: 'Edits go to a draft. The published version is what a teammate opens and what a share link serves, and it does not change until you say so. A half finished experiment is never what somebody else walks into.',
+    "heading": "Each block is a question",
+    "body": "Pick a measure, a dimension, a time grain and a comparison range. The choices come from the models you described, so the panel cannot offer a field the query would then refuse."
   },
   {
-    heading: 'Every block says what it counts',
-    body: 'Each block carries one sentence derived from the query it actually runs, not from a label somebody typed. Two charts both called Revenue can count different things, and a reader deserves to know which one is in front of them before they quote a number in a meeting.',
+    "heading": "A refusal beats a wrong number",
+    "body": "Ask something the data cannot answer honestly and the block says so on its face. A revenue-per-product chart that would count an order once per line item is refused rather than drawn, because a plausible wrong number is worse than an empty tile."
   },
   {
-    heading: 'Duplicating and archiving',
-    body: 'Duplicate a report to try a different cut without risking the one people rely on. Archive the ones you have finished with rather than deleting them, and restore later if it turns out you had not.',
-  },
+    "heading": "Publish when it is right",
+    "body": "A draft is yours until you publish it. Nobody opens a half arranged grid, and a share link never serves one."
+  }
 ]
 </script>
 

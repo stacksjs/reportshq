@@ -26,20 +26,20 @@ const breadcrumbs = [
 
 const sections = [
   {
-    "heading": "Signups, activation, and the gap",
-    "body": "Signup counts are the number everybody has and the number nobody acts on. The useful report is the step after it: how many of those accounts did the thing your product exists to do, and how long it took them."
+    "heading": "Signups, activation and churn from the models you have",
+    "body": "A User with a created-at, a Subscription with a status and a cancelled-at. That is enough for growth over time, active subscriptions right now, and churn by month."
   },
   {
-    "heading": "Funnels that keep whole people",
-    "body": "When data is sampled, sampling is decided per subject rather than per event, using a hash of the subject id. Either all of a person’s events are kept or none are. Sampling events independently is what turns a funnel into nonsense, because a person can then appear at step three and not at step one."
+    "heading": "State, not just events",
+    "body": "How many subscriptions are active today is a question about the current state of a table. An event stream answers it badly, by replaying every change since the beginning and hoping none were missed. Reading the row is simply correct."
   },
   {
-    "heading": "Cohorts by the properties you send",
-    "body": "Filter a whole report by plan, source or any property you attach to the events, and the URL carries the filter, so the narrowed view is the thing you paste into a conversation rather than a screenshot of it."
+    "heading": "Cohorts that follow your own definitions",
+    "body": "Activated means whatever your application says it means, because the report reads the same model your code does. There is no second definition of an activated user living in an analytics tool, slowly disagreeing with the first."
   },
   {
-    "heading": "Comparisons that admit their limits",
-    "body": "A week-on-week comparison against a week that did not exist says so. For a young product, that is most of the comparisons, and inventing percentages for them is how a launch looks like a rocket."
+    "heading": "The numbers do not leave",
+    "body": "Customer records, plan values and email addresses stay in your database. For anyone selling to enterprises or working under a data processing agreement, that is the difference between a procurement conversation and no conversation at all."
   }
 ]
 </script>

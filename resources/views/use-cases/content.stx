@@ -26,20 +26,20 @@ const breadcrumbs = [
 
 const sections = [
   {
-    "heading": "Reads, not just hits",
-    "body": "A view event carries the thing that was viewed, so the report is about articles rather than URLs. That difference matters the first time a piece is republished at a new path and a page-based tool treats it as two unrelated things."
+    "heading": "Posts, authors and engagement",
+    "body": "Name the Post model and its published-at, and posts over time, output per author, and engagement by category follow. If comments or reactions are models too, they are measures like any other."
   },
   {
-    "heading": "Authors and topics",
-    "body": "Group by author, category or tag, using the properties already attached to the events. This is the report an editorial team actually asks for and the one that usually gets assembled by hand in a spreadsheet each month."
+    "heading": "It reports on what you published, not what was viewed",
+    "body": "This reads your own database, so it knows what exists, who wrote it, and what state it is in. Page views come from a tracker on the page, and that is a genuinely different question. Most teams want both, and this is not trying to be the other one."
   },
   {
-    "heading": "What went into Other",
-    "body": "Dimensions are bounded, and the bound is stated. When two hundred tags become the top ten plus Other, the report says how many went into Other rather than letting a reader assume the tail does not exist."
+    "heading": "Drafts, scheduling and soft deletes behave",
+    "body": "A draft is not counted as published because the model says it is a draft. Something soft deleted stays deleted. The report cannot disagree with the CMS, because it is reading the CMS."
   },
   {
-    "heading": "Older ranges still add up",
-    "body": "Raw events are pruned at the end of your retention window, but the daily rollups outlive them. A report over last year still shows correct totals; what goes away is the ability to drill into individual events, and that is said plainly rather than discovered."
+    "heading": "A dashboard for people who never sign in",
+    "body": "A share link gives an editor or a client the numbers with no account, from your own domain, and you can turn it off."
   }
 ]
 </script>

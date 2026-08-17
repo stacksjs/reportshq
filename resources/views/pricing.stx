@@ -134,9 +134,10 @@ const faqs = [
       <div class="max-w-[52ch]">
         <h1 class="text-4xl font-semibold tracking-tighter md:text-5xl">Pricing that reads like the product</h1>
         <p class="mt-4 text-base leading-relaxed text-muted">
-          Every number below is the number the product enforces. There is one plan table in the
-          codebase and this page is rendered from it, so what you read here is what your project
-          gets.
+          There is one plan table in the codebase and this page is rendered from it, so what
+          you read here is what a licence covers. None of it gates a report: the software keeps
+          working past every number below, because a reporting tool that goes dark over a
+          billing state is one nobody can rely on.
         </p>
       </div>
 

@@ -30,7 +30,7 @@ const signedIn = session.user !== null
         </a>
 
         <h1 class="text-2xl font-semibold tracking-tight">Create an account</h1>
-        <p class="mt-1 mb-6 text-sm text-muted">A project, an ingest key, and reports that build themselves.</p>
+        <p class="mt-1 mb-6 text-sm text-muted">A licence key, and reports that run inside your own application.</p>
 
         {{-- A real form, so a password manager recognises it and the enter key
              submits. The script intercepts it; without the script it still

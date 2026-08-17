@@ -26,20 +26,24 @@ const breadcrumbs = [
 
 const sections = [
   {
-    "heading": "The events you already have",
-    "body": "An order created, an order refunded, a cart abandoned. A conventional shop fires all of these already, and the integrations translate them, so the first revenue report exists before anybody has configured a chart."
+    "heading": "Point it at Order and it starts talking",
+    "body": "Revenue over time, orders per day, average order value, and revenue by product, from naming one model and its total. No tracking calls, no event names, no waiting for data to accumulate before a chart means anything."
   },
   {
-    "heading": "Revenue, orders, and the number between them",
-    "body": "Totals and counts are easy. Average order value is where reporting tools quietly disagree with each other, because it depends on whether refunds are subtracted and whether tax is included. Each block states which query it ran, so the answer is checkable rather than a matter of trust."
+    "heading": "The history is already there",
+    "body": "Because it reads your tables, the first report covers everything you have ever sold. A collector starts at zero on the day you install it and cannot tell you about last year."
   },
   {
-    "heading": "Refunds treated as data, not as an asterisk",
-    "body": "Refunds are their own events and can be reported on directly, including as a rate against orders. A revenue chart that silently nets refunds and one that does not are both defensible; a chart that will not say which it is doing is not."
+    "heading": "Refunds and cancellations count correctly",
+    "body": "A refund is a row in your database with a status your domain understands, so it is subtracted where it should be. A stream of events has to be told, and gets it wrong the first time somebody refunds through the admin instead of the API."
   },
   {
-    "heading": "Breaking down without losing the tail",
-    "body": "Group by plan, region or channel, and the bounded dimensions say exactly what went into Other rather than dropping the long tail and letting the total stop adding up."
+    "heading": "Per product, without counting an order twice",
+    "body": "Revenue by product joins line items, and joining multiplies. The compiler knows that measure belongs to the line and refuses to sum an order total across it, which is exactly the mistake a hand written query makes silently."
+  },
+  {
+    "heading": "Send it to whoever needs it",
+    "body": "A weekly total to the founders on Monday morning in their own timezone, a link a supplier can open with no account, or a spreadsheet somebody wants to pivot themselves."
   }
 ]
 </script>

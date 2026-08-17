@@ -188,9 +188,9 @@ const docLinks = [
             </h1>
 
             <p class="mt-6 max-w-[46ch] text-base leading-relaxed text-muted">
-              Send the events your application already emits. The Commerce, Users and Content
-              reports appear with real numbers in them, and the builder is there when you want
-              something of your own.
+              Name the models you already have. The Commerce, Users and Content reports
+              appear with real numbers in them, covering everything in your database rather
+              than starting at zero today.
             </p>
 
             <div class="flex flex-wrap gap-3 items-center mt-8">
@@ -288,8 +288,8 @@ const docLinks = [
           <div>
             <h2 class="text-3xl font-semibold tracking-tight">Written down, not implied</h2>
             <p class="mt-3 max-w-[52ch] text-sm leading-relaxed text-muted">
-              The ingest contract, the event taxonomy and the limits are documented, including
-              the parts that refuse things. Every bound the API enforces is stated.
+              How a model is described, what the compiler will and will not answer, and why it
+              refuses rather than guessing. Every bound the query API enforces is stated.
             </p>
           </div>
           <a href="/docs" class="text-sm no-underline text-accent hover:underline">All documentation</a>

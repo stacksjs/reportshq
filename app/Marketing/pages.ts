@@ -43,7 +43,7 @@ export const HUBS: Record<MarketingGroup, MarketingHub> = {
     group: 'use-cases',
     title: 'Use cases',
     heading: 'What people report on',
-    description: 'Commerce, SaaS users, content and agency work. Each one starts from the events that kind of application already emits, and shows the reports they turn into.',
+    description: 'Commerce, SaaS users, content and agency work. Each one starts from the models that kind of application already has, and shows the reports they turn into.',
   },
   'compare': {
     group: 'compare',
@@ -66,14 +66,14 @@ export const PAGES: MarketingPage[] = [
     slug: 'auto-reports',
     group: 'features',
     title: 'Reports that build themselves',
-    description: 'When a project starts sending events the standard taxonomy recognises, the matching reports are created and published with real numbers already in them. Nothing to configure first.',
+    description: 'Describe a model once, saying which fields are measures and which are dates, and the reports it implies are created with real numbers already in them. Nothing to configure first.',
     icon: 'i-hugeicons-magic-wand-01',
   },
   {
     slug: 'integrations',
     group: 'features',
-    title: 'Sending events from your stack',
-    description: 'Packages for Stacks and Laravel translate the events your application already emits. Anything else posts JSON to one endpoint. Either way you are not writing tracking calls.',
+    title: 'Installing it into your stack',
+    description: 'One composer package, a migration, and a config file naming your models. Nothing to deploy beside it, and no tracking calls to write.',
     icon: 'i-hugeicons-cloud-upload',
   },
   {
@@ -103,7 +103,7 @@ export const PAGES: MarketingPage[] = [
     slug: 'commerce',
     group: 'use-cases',
     title: 'Commerce reporting',
-    description: 'Revenue, orders, average order value and refunds from the order events your shop already fires, with the comparison stated honestly when there was no previous period.',
+    description: 'Revenue, orders, average order value and refunds from the Order model your shop already has, covering everything you have ever sold rather than starting at zero today.',
     icon: 'i-hugeicons-shopping-cart-01',
   },
   {
@@ -116,8 +116,8 @@ export const PAGES: MarketingPage[] = [
   {
     slug: 'content',
     group: 'use-cases',
-    title: 'Content analytics',
-    description: 'Reads, authors and topics from publish and view events, with bounded dimensions that say what went into Other rather than quietly dropping the tail.',
+    title: 'Content reporting',
+    description: 'Posts, authors and topics from the models your CMS already has, with bounded dimensions that say what went into Other rather than quietly dropping the tail.',
     icon: 'i-hugeicons-book-open-01',
   },
   {
