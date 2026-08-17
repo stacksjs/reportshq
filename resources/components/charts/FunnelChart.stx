@@ -1,6 +1,6 @@
-<script server>
+<script>
 import { defineProps } from 'stx'
-import { compact, seriesColor } from '../../../app/Reports/charts'
+import { compact, seriesColor } from '../../functions/charts'
 
 /**
  * Steps, and how many sessions survived each.

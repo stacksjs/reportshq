@@ -1,6 +1,6 @@
-<script server>
+<script>
 import { defineProps, withDefaults } from 'stx'
-import { compact, longDate } from '../../../app/Reports/charts'
+import { compact, longDate } from '../../functions/charts'
 
 /**
  * Magnitude over two dimensions, as a grid of cells.

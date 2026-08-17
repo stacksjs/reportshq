@@ -6,7 +6,7 @@
     than resetting anything, so it cannot fight the panel's own CSS.
 --}}
 <div>
-    <style>{!! ReportsHQ\Laravel\Charts\Assets::css() !!}</style>
+    <style>{!! ReportsHQ\Laravel\Charts\Elements::css() !!}</style>
 
     <div class="rhq-page" style="padding: 0; max-width: none;">
         @if ($report->description)
@@ -29,7 +29,7 @@
                 @foreach ($blocks as $block)
                     <div class="rhq-cell"
                          style="--x: {{ ($block['x'] ?? 0) + 1 }}; --w: {{ $block['w'] ?? 4 }}; --h: {{ $block['h'] ?? 4 }}">
-                        @include(ReportsHQ\Laravel\Charts\Presenter::view($block), ReportsHQ\Laravel\Charts\Presenter::data($block))
+                        {!! ReportsHQ\Laravel\Charts\Elements::render($block) !!}
                     </div>
                 @endforeach
             </div>

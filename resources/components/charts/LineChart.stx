@@ -1,4 +1,4 @@
-<script server>
+<script>
 import { defineProps, withDefaults } from 'stx'
 import {
   DEFAULT_BOX,
@@ -11,7 +11,7 @@ import {
   shortDate,
   ticks,
   timeLabels,
-} from '../../../app/Reports/charts'
+} from '../../functions/charts'
 
 /**
  * A time series, as a line or a filled area.

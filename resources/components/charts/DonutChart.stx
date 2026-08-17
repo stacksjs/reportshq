@@ -1,6 +1,6 @@
-<script server>
+<script>
 import { defineProps, withDefaults } from 'stx'
-import { compact, donut } from '../../../app/Reports/charts'
+import { compact, donut } from '../../functions/charts'
 
 /**
  * A share of a whole, as an annulus.

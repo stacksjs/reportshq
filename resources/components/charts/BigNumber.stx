@@ -1,6 +1,6 @@
-<script server>
+<script>
 import { defineProps, withDefaults } from 'stx'
-import { compact, delta, money } from '../../../app/Reports/charts'
+import { compact, delta, money } from '../../functions/charts'
 
 /**
  * One number, and whether it moved.

@@ -76,6 +76,7 @@
   "dependencies": {
     "@stacksjs/buddy": "^0.70.378",
     "@stacksjs/dtsx": "^0.11.4",
+    "@stacksjs/stx": "0.2.188",
     "@ts-charts/array": "^0.2.7",
     "@ts-charts/format": "^0.2.7",
     "@ts-charts/scale": "^0.2.7",
@@ -85,8 +86,8 @@
     "pickier": "^0.1.51",
     "stacks": "^0.70.378",
     "ts-pantry": "^0.11.21",
-    "ts-spreadsheets": "^0.2.4",
-    "ts-rate-limiter": "^0.4.6"
+    "ts-rate-limiter": "^0.4.6",
+    "ts-spreadsheets": "^0.2.4"
   },
   "workspaces": [
     "storage/framework",
@@ -109,6 +110,6 @@
     "bun-query-builder": "^0.2.35",
     "@stacksjs/bun-router": "^0.0.27",
     "@stacksjs/components": "^0.2.182",
-    "@stacksjs/stx": "^0.2.182"
+    "@stacksjs/stx": "^0.2.188"
   }
 }

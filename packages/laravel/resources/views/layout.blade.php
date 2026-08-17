@@ -20,7 +20,7 @@
          runs on the `web` middleware every application mounts these behind. --}}
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $title ?? 'Reports' }}</title>
-    <style>{!! ReportsHQ\Laravel\Charts\Assets::css() !!}</style>
+    <style>{!! ReportsHQ\Laravel\Charts\Elements::css() !!}</style>
 </head>
 <body>
     <main class="rhq-page">
@@ -33,5 +33,8 @@
             <p class="rhq-license">{{ $notice }}</p>
         @endif
     </main>
+    {{-- The chart components. Inlined so there is no asset pipeline to
+         configure and no second request before a number appears. --}}
+    <script type="module">{!! ReportsHQ\Laravel\Charts\Elements::script() !!}</script>
 </body>
 </html>

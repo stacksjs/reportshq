@@ -1,6 +1,6 @@
-<script server>
+<script>
 import { defineProps, withDefaults } from 'stx'
-import { DEFAULT_BOX, bars, compact, longDate, plotArea, seriesColor, shortDate, ticks, timeLabels } from '../../../app/Reports/charts'
+import { DEFAULT_BOX, bars, compact, longDate, plotArea, seriesColor, shortDate, ticks, timeLabels } from '../../functions/charts'
 
 /**
  * Counts per bucket.

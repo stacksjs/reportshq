@@ -1,6 +1,6 @@
-<script server>
+<script>
 import { defineProps, withDefaults } from 'stx'
-import { compact, seriesColor } from '../../../app/Reports/charts'
+import { compact, seriesColor } from '../../functions/charts'
 
 /**
  * The numbers as numbers.

@@ -1,4 +1,4 @@
-<script server>
+<script>
 import { defineProps } from 'stx'
 
 /**

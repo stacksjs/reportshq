@@ -64,7 +64,7 @@
                                  data-query="{{ json_encode($block['query'] ?? new stdClass) }}"
                                  style="--x: {{ $block['x'] + 1 }}; --w: {{ $block['w'] }}; --h: {{ $block['h'] }}"
                                  aria-label="{{ $block['title'] ?: ucfirst(str_replace('_', ' ', $block['kind'])) }}, column {{ $block['x'] }}, row {{ $block['y'] }}">
-                            @include(ReportsHQ\Laravel\Charts\Presenter::view($block), ReportsHQ\Laravel\Charts\Presenter::data($block))
+                            {!! ReportsHQ\Laravel\Charts\Elements::render($block) !!}
                             <span class="rhq-resize" aria-hidden="true"></span>
                         </article>
                     @endforeach

@@ -42,7 +42,7 @@
             @foreach ($blocks as $block)
                 <div class="rhq-cell"
                      style="--x: {{ ($block['x'] ?? 0) + 1 }}; --w: {{ $block['w'] ?? 4 }}; --h: {{ $block['h'] ?? 4 }}">
-                    @include(ReportsHQ\Laravel\Charts\Presenter::view($block), ReportsHQ\Laravel\Charts\Presenter::data($block))
+                    {!! ReportsHQ\Laravel\Charts\Elements::render($block) !!}
                 </div>
             @endforeach
         </div>
