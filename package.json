@@ -71,7 +71,8 @@
     "docs:links:check": "./buddy docs:links:check",
     "deps:lockfile:check": "bun .github/scripts/check-lockfile-version.ts",
     "bud": "./buddy",
-    "stx": "./buddy"
+    "stx": "./buddy",
+    "build:charts": "buddy build --web-components && cp storage/framework/libs/components/stx/dist/bundle.js public/reportshq-charts.js && cp storage/framework/libs/components/stx/dist/bundle.css public/reportshq-charts.css && cp storage/framework/libs/components/stx/dist/bundle.js packages/laravel/resources/dist/reportshq.js && cp storage/framework/libs/components/stx/dist/bundle.css packages/laravel/resources/dist/reportshq-components.css"
   },
   "dependencies": {
     "@stacksjs/buddy": "^0.70.378",
@@ -87,12 +88,14 @@
     "stacks": "^0.70.378",
     "ts-pantry": "^0.11.21",
     "ts-rate-limiter": "^0.4.6",
-    "ts-spreadsheets": "^0.2.4"
+    "ts-spreadsheets": "^0.2.4",
+    "@reportshq/stacks": "workspace:*"
   },
   "workspaces": [
     "storage/framework",
     "storage/framework/libs/*",
-    "storage/framework/views/*"
+    "storage/framework/views/*",
+    "packages/*"
   ],
   "git-hooks": {
     "pre-commit": {

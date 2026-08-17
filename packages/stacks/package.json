@@ -1,0 +1,50 @@
+{
+  "name": "@reportshq/stacks",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Reports that run inside your own Stacks application, against your own database.",
+  "author": "Chris Breuer <chrisbreuer93@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://reportshq.org",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stacksjs/reportshq.git",
+    "directory": "packages/stacks"
+  },
+  "keywords": [
+    "stacks",
+    "reports",
+    "analytics",
+    "charts",
+    "dashboard"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "bun": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "resources",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir dist --target bun --external '@stacksjs/*' --external 'bun-query-builder' && bunx dtsx generate",
+    "test": "bun test ./tests"
+  },
+  "peerDependencies": {
+    "@stacksjs/database": ">=0.70.0",
+    "@stacksjs/orm": ">=0.70.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.4",
+    "typescript": "^5.9.3"
+  },
+  "module": "dist/index.js"
+}
