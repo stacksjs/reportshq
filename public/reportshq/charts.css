@@ -267,7 +267,7 @@ stacks-heatmap-chart .heat-cell { min-height: 1.25rem; }
    An element is inline with no intrinsic size, and an SVG that sizes itself to
    its container resolves to zero without a width: correct paths, nothing
    visible. Both are stated here rather than discovered again. */
-.rhq-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem; margin-top: 2rem; }
+.rhq-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; grid-auto-rows: 56px; margin-top: 2rem; }
 .rhq-cell { grid-column: var(--x) / span var(--w); grid-row: span var(--h);
   background: var(--panel, #fff); border: 1px solid var(--border, rgba(20,22,28,.12));
   border-radius: 12px; padding: 1rem; min-height: 6rem; }
@@ -295,3 +295,56 @@ stacks-bar-chart > div, stacks-line-chart > div, stacks-donut-chart > div,
 stacks-funnel-chart > div, stacks-table-chart > div { height: 100%; min-height: 0; display: flex; flex-direction: column; }
 .rhq-cell { overflow: hidden; min-width: 0; }
 @media (max-width: 720px) { .rhq-cell { grid-column: 1 / -1; } }
+
+/*
+ * The builder.
+ *
+ * Shipped beside the grid because arranging a report is the same surface as
+ * reading one with handles on it, and a package that draws the grid should draw
+ * the handles too rather than leaving every application to invent them.
+ */
+.rhq-builder-head { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; align-items: flex-start; }
+.rhq-builder-title { margin: 0; font-size: 1.5rem; font-weight: 600; letter-spacing: -.02em; color: var(--text, #14161c); }
+.rhq-builder-sub { margin: .35rem 0 0; font-size: .85rem; color: var(--text-3, #6b7180); }
+.rhq-builder-state { margin-left: .5rem; color: var(--accent, #3a4fd0); }
+.rhq-builder-actions { display: flex; gap: .6rem; align-items: center; }
+
+.rhq-pill { padding: .2rem .55rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em;
+  border-radius: 999px; background: var(--panel, #fff); border: 1px solid var(--border, rgba(20,22,28,.12)); color: var(--text-3, #6b7180); }
+
+.rhq-publish { padding: .5rem .9rem; font-size: .85rem; font-weight: 500; border-radius: .55rem;
+  background: var(--accent, #3a4fd0); color: #fff; border: 0; cursor: pointer; }
+.rhq-publish:active { transform: translateY(1px); }
+
+.rhq-palette { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.25rem; }
+.rhq-add { display: inline-flex; gap: .45rem; align-items: center; padding: .45rem .7rem; font-size: .82rem;
+  border-radius: .55rem; background: var(--panel, #fff); border: 1px solid var(--border, rgba(20,22,28,.12));
+  color: var(--text-2, #4a4f5c); cursor: pointer; }
+.rhq-add:hover { color: var(--text, #14161c); border-color: var(--accent, #3a4fd0); }
+.rhq-add i { width: 1rem; height: 1rem; }
+
+/* A tile being arranged. The cursor says the whole tile is the handle, which is
+   what the drag actually binds, and the corner says where resize lives. */
+.rhq-grid-edit .rhq-tile { position: relative; cursor: grab; }
+.rhq-grid-edit .rhq-tile:focus-visible { outline: 2px solid var(--accent, #3a4fd0); outline-offset: 2px; }
+.rhq-grid-edit .rhq-tile[data-dragging] { cursor: grabbing; z-index: 2; box-shadow: 0 12px 32px rgba(20,22,28,.14); }
+
+.rhq-resize { position: absolute; right: .3rem; bottom: .3rem; width: 1rem; height: 1rem; padding: 0;
+  border: 0; background: transparent; cursor: nwse-resize; opacity: .45; }
+.rhq-resize::after { content: ""; position: absolute; right: .15rem; bottom: .15rem; width: .55rem; height: .55rem;
+  border-right: 2px solid var(--text-3, #6b7180); border-bottom: 2px solid var(--text-3, #6b7180); }
+.rhq-tile:hover .rhq-resize, .rhq-tile:focus-within .rhq-resize { opacity: 1; }
+
+.rhq-remove { position: absolute; top: .3rem; right: .3rem; display: grid; place-items: center;
+  width: 1.4rem; height: 1.4rem; padding: 0; border: 0; border-radius: .35rem; background: transparent;
+  color: var(--text-3, #6b7180); cursor: pointer; opacity: 0; }
+.rhq-tile:hover .rhq-remove, .rhq-tile:focus-within .rhq-remove { opacity: 1; }
+.rhq-remove:hover { background: var(--bg, #f6f5f3); color: var(--neg, #b8336a); }
+
+.rhq-tile-title { margin: 0; font-size: .85rem; font-weight: 500; color: var(--text, #14161c); }
+.rhq-tile-error { margin: .35rem 0 0; font-size: .8rem; line-height: 1.5; color: var(--text-3, #6b7180); }
+
+.rhq-empty-page { padding: 3rem 1rem; text-align: center; border: 1px dashed var(--border, rgba(20,22,28,.12));
+  border-radius: 12px; margin-top: 1.25rem; }
+.rhq-empty-page h2 { margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--text, #14161c); }
+.rhq-empty-page p { margin: .35rem 0 0; font-size: .875rem; color: var(--text-3, #6b7180); }

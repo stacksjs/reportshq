@@ -25,6 +25,7 @@ const SHOTS: Array<{ page: string, out: string | null, viewport: string, settle?
   { page: 'report', out: 'feature-auto-reports.png', viewport: '1240x600' },
   { page: 'share', out: 'feature-sharing.png', viewport: '1180x800' },
   { page: 'integration', out: 'feature-integrations.png', viewport: '900x640', settle: 1500 },
+  { page: 'builder', out: 'feature-builder.png', viewport: '1240x700' },
 ]
 
 await mkdir(MOUNT, { recursive: true })

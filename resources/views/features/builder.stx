@@ -46,6 +46,9 @@ const sections = [
     "body": "A draft is yours until you publish it. Nobody opens a half arranged grid, and a share link never serves one."
   }
 ]
+const shot = '/img/feature-builder.png'
+const shotAlt = 'The report builder: a palette of block kinds above a twelve column grid holding a revenue total, an order count, a donut, a table and a line chart, each with a resize corner'
+const shotCaption = 'The builder, with a block palette and resize corners on every tile. Sample numbers; the grid, the packing and the drag behaviour are the real thing.'
 </script>
 
 <template>
@@ -56,6 +59,8 @@ const sections = [
     <main class="px-6 py-10 mx-auto max-w-3xl">
       <h1 class="text-4xl font-semibold tracking-tighter md:text-5xl">{{ page.title }}</h1>
       <p class="mt-5 text-lg leading-relaxed text-muted">{{ page.description }}</p>
+
+      @include('FeatureShot')
 
       <div class="grid gap-10 mt-14">
         @foreach (sections as section)

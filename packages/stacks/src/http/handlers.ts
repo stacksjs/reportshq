@@ -18,6 +18,16 @@ export interface ReportStore {
   find: (slug: string) => Promise<{ id: number, name: string, slug: string, description?: string, timezone?: string } | null>
   blocks: (reportId: number, published?: boolean) => Promise<StoredBlock[]>
   saveLayout: (reportId: number, blocks: Array<{ id: number, x: number, y: number, w: number, h: number }>) => Promise<void>
+
+  /*
+   * The writes the builder makes. Optional, because a report defined in code
+   * has no editing surface and an application that wants one should not have to
+   * stub four methods to say so.
+   */
+  addBlock?: (reportId: number, kind: string) => Promise<StoredBlock>
+  saveBlock?: (reportId: number, blockId: number, patch: Partial<StoredBlock>) => Promise<void>
+  removeBlock?: (reportId: number, blockId: number) => Promise<void>
+  publish?: (reportId: number) => Promise<void>
 }
 
 export interface Handlers {
@@ -26,9 +36,21 @@ export interface Handlers {
   schema: () => { models: unknown, grains: unknown }
   download: (slug: string, format: string) => Promise<{ body: string, headers: Record<string, string> }>
   saveLayout: (slug: string, blocks: Array<{ id: number, x: number, y: number, w: number, h: number }>) => Promise<{ blocks: RenderedBlock[] }>
+  addBlock: (slug: string, kind: string) => Promise<{ block: StoredBlock }>
+  saveBlock: (slug: string, blockId: number, patch: Record<string, unknown>) => Promise<{ saved: true }>
+  removeBlock: (slug: string, blockId: number) => Promise<{ removed: true }>
+  publish: (slug: string) => Promise<{ published: true }>
+  /** Whether this store can be written to at all, so a page can hide the builder. */
+  editable: boolean
 }
 
+/** A write attempted against a store that does not accept writes. */
+export class ReadOnly extends Error {}
+
 export class NotFound extends Error {}
+
+/** The kinds a block may be. Checked rather than trusted, since it is posted. */
+export const KINDS = ['big_number', 'line', 'area', 'bar', 'donut', 'table', 'funnel', 'heatmap', 'note'] as const as readonly string[]
 
 export function createHandlers(
   store: ReportStore,
@@ -45,7 +67,73 @@ export function createHandlers(
     return report
   }
 
+  const writable = Boolean(store.addBlock && store.saveBlock && store.removeBlock)
+
+  /** The block, if it belongs to this report. Both ids arrive from a browser. */
+  const ownedBlock = async (slug: string, blockId: number) => {
+    const report = await locate(slug)
+    const blocks = await store.blocks(report.id, false)
+
+    if (!blocks.some(block => block.id === blockId))
+      throw new NotFound(`No block ${blockId} on '${slug}'.`)
+
+    return report
+  }
+
+  const mustWrite = () => {
+    if (!writable)
+      throw new ReadOnly('This report is defined in code and is not edited from the browser.')
+  }
+
   return {
+    editable: writable,
+
+    async addBlock(slug, kind) {
+      mustWrite()
+
+      // The kind is matched against the set that exists rather than passed
+      // through: it arrives from a button in a page and ends up in storage.
+      if (!KINDS.includes(kind))
+        throw new NotFound(`'${kind}' is not a block kind.`)
+
+      const report = await locate(slug)
+
+      return { block: await store.addBlock!(report.id, kind) }
+    },
+
+    async saveBlock(slug, blockId, patch) {
+      mustWrite()
+      const report = await ownedBlock(slug, blockId)
+
+      // Only the fields a panel edits. A patch straight from a request would
+      // let a browser set the report id and move a block between reports.
+      const clean: Partial<StoredBlock> = {}
+
+      if (typeof patch.title === 'string') clean.title = patch.title
+      if (typeof patch.body === 'string') clean.body = patch.body
+      if (patch.query && typeof patch.query === 'object') clean.query = readQuery(patch.query as Record<string, unknown>)
+
+      await store.saveBlock!(report.id, blockId, clean)
+
+      return { saved: true as const }
+    },
+
+    async removeBlock(slug, blockId) {
+      mustWrite()
+      const report = await ownedBlock(slug, blockId)
+      await store.removeBlock!(report.id, blockId)
+
+      return { removed: true as const }
+    },
+
+    async publish(slug) {
+      mustWrite()
+      const report = await locate(slug)
+      await store.publish?.(report.id)
+
+      return { published: true as const }
+    },
+
     async index() {
       return { reports: await store.list() }
     },

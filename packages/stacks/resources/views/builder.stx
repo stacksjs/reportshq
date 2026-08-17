@@ -1,0 +1,118 @@
+<script server>
+/**
+ * Arranging a report.
+ *
+ * The drag behaviour is the shared `builder.js`, the same file the Laravel
+ * package ships. One script for both, because a second copy is a second set of
+ * rules about what a drag meant and the two would agree right up until somebody
+ * fixed a bug in one of them.
+ *
+ * That also keeps this file free of the vanilla DOM work the house rules
+ * forbid in an stx script block: the page renders the surface the script
+ * expects and says where to post, and does nothing else.
+ *
+ * The contract with the script is small and worth stating, because it is easy
+ * to break by renaming a class: `.rhq-builder` is the root and carries the
+ * endpoint, `#rhq-choices` holds the schema as JSON, `.rhq-add` buttons add a
+ * kind, and every `.rhq-tile` carries its own `data-id`.
+ */
+import { defineProps } from 'stx'
+
+interface BuilderProps {
+  report: { name: string, slug: string, description?: string, status?: string }
+  tiles: Array<{ id: number, kind: string, title?: string, x: number, y: number, w: number, h: number, html: string, error?: string | null }>
+  choices: unknown
+  endpoint: string
+  csrf?: string
+}
+
+const { report, tiles, choices, endpoint, csrf } = defineProps<BuilderProps>()
+
+// The attribute carries a string; stx escapes it and the browser decodes it,
+// which is the same route the chart payloads take.
+const choicesJson = JSON.stringify(choices)
+
+const palette = [
+  { kind: 'big_number', label: 'Big number', icon: 'i-hugeicons-chart-average' },
+  { kind: 'line', label: 'Line', icon: 'i-hugeicons-chart-line-data-02' },
+  { kind: 'bar', label: 'Bar', icon: 'i-hugeicons-chart-bar-line' },
+  { kind: 'donut', label: 'Donut', icon: 'i-hugeicons-pie-chart' },
+  { kind: 'table', label: 'Table', icon: 'i-hugeicons-table' },
+  { kind: 'funnel', label: 'Funnel', icon: 'i-hugeicons-filter' },
+  { kind: 'note', label: 'Note', icon: 'i-hugeicons-note' },
+]
+</script>
+
+<template>
+  <div class="rhq-builder" data-endpoint="{{ endpoint }}" data-csrf="{{ csrf }}" data-choices="{{ choicesJson }}">
+    
+
+    <header class="rhq-builder-head">
+      <div>
+        <h1 class="rhq-builder-title">{{ report.name }}</h1>
+        <p class="rhq-builder-sub">
+          Drag to move, drag a corner to resize, arrow keys to nudge.
+          <span id="rhq-state" class="rhq-builder-state" role="status" aria-live="polite"></span>
+        </p>
+      </div>
+
+      <div class="rhq-builder-actions">
+        <span id="rhq-drafted" class="rhq-pill">{{ report.status }}</span>
+        <button type="button" class="rhq-publish">Publish</button>
+      </div>
+    </header>
+
+    <div class="rhq-palette" role="group" aria-label="Add a block">
+      @foreach (palette as item)
+        <button type="button" class="rhq-add" data-kind="{{ item.kind }}">
+          <i class="{{ item.icon }}" aria-hidden="true"></i>
+          <span>{{ item.label }}</span>
+        </button>
+      @endforeach
+    </div>
+
+    @if (tiles.length)
+      <div class="rhq-grid rhq-grid-edit" id="rhq-grid">
+        @foreach (tiles as tile)
+          {{-- The script reads geometry from these attributes, not from the
+               CSS variables beside them: a custom property is for layout and
+               cannot be read back reliably mid-drag. Omit them and every origin
+               is NaN, so the tile does not move and nothing is logged. --}}
+          <div
+            class="rhq-cell rhq-tile"
+            data-id="{{ tile.id }}"
+            data-kind="{{ tile.kind }}"
+            data-x="{{ tile.x }}"
+            data-y="{{ tile.y }}"
+            data-w="{{ tile.w }}"
+            data-h="{{ tile.h }}"
+            tabindex="0"
+            role="group"
+            aria-label="{{ tile.title }}"
+            style="--x: {{ tile.x + 1 }}; --w: {{ tile.w }}; --h: {{ tile.h }}"
+          >
+            @if (tile.error)
+              <p class="rhq-tile-title">{{ tile.title }}</p>
+              <p class="rhq-tile-error">{{ tile.error }}</p>
+            @else
+              {!! tile.html !!}
+            @endif
+
+            {{-- The corner is a real control rather than a decoration: it is
+                 what the script binds resize to, and it is focusable so the
+                 keyboard path is not a second-class one. --}}
+            <button type="button" class="rhq-resize" aria-label="Resize {{ tile.title }}"></button>
+            <button type="button" class="rhq-remove" aria-label="Remove {{ tile.title }}">
+              <i class="i-hugeicons-delete-02" aria-hidden="true"></i>
+            </button>
+          </div>
+        @endforeach
+      </div>
+    @else
+      <div class="rhq-empty rhq-empty-page">
+        <h2>An empty report</h2>
+        <p>Add a block from the palette above and it appears here.</p>
+      </div>
+    @endif
+  </div>
+</template>

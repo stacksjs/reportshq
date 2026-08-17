@@ -58,6 +58,30 @@ export function reportRoutes(handlers: Handlers): RouteDescription[] {
     },
     {
       method: 'post',
+      path: '/{slug}/blocks',
+      name: 'reportshq.blocks.add',
+      handle: async ({ params, body }) => handlers.addBlock(params!.slug, String(body?.kind ?? '')),
+    },
+    {
+      method: 'post',
+      path: '/{slug}/blocks/{block}',
+      name: 'reportshq.blocks.save',
+      handle: async ({ params, body }) => handlers.saveBlock(params!.slug, Number(params!.block), body ?? {}),
+    },
+    {
+      method: 'post',
+      path: '/{slug}/blocks/{block}/delete',
+      name: 'reportshq.blocks.remove',
+      handle: async ({ params }) => handlers.removeBlock(params!.slug, Number(params!.block)),
+    },
+    {
+      method: 'post',
+      path: '/{slug}/publish',
+      name: 'reportshq.publish',
+      handle: async ({ params }) => handlers.publish(params!.slug),
+    },
+    {
+      method: 'post',
       path: '/{slug}/layout',
       name: 'reportshq.layout',
       handle: async ({ params, body }) => handlers.saveLayout(params!.slug, body?.blocks ?? []),
