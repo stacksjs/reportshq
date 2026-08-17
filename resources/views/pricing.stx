@@ -9,10 +9,10 @@
 //
 // If a limit changes, this page changes with it. Nothing here is typed twice.
 import { useSeoMeta } from 'stx'
-import { GRACE_FRACTION, PLANS, TIERS } from '../../app/Billing/limits'
+import { PLANS, TIERS } from '../../app/Billing/limits'
 
 const siteUrl = 'https://reportshq.org'
-const pricingDescription = 'Three plans, and every number on the page is the number the product enforces. Free carries 50,000 events a month with no card. Collection continues through a stated grace band rather than stopping at the line.'
+const pricingDescription = 'Three plans, priced per installed application. Free covers one application with unlimited reports and no card. Your data never leaves your servers, and nothing here can stop a report rendering.'
 
 useSeoMeta({
   title: 'Pricing | ReportsHQ',
@@ -77,14 +77,15 @@ const tiers = TIERS.map((tier) => {
     // the sort of thing nobody proofreads.
     cadence: plan.price === 0 ? 'no card needed' : 'per month',
     // The line somebody reads first, so it is the number that decides the plan.
-    headline: `${count(plan.events)} events a month`,
+    headline: `${count(plan.applications)} application${plan.applications === 1 ? '' : 's'}`,
     highlight: tier === 'hobby',
     rows: [
-      `${count(plan.projects)} project${plan.projects === 1 ? '' : 's'}`,
-      `${count(plan.reports)} reports per project`,
-      `${count(plan.members)} member${plan.members === 1 ? '' : 's'} per project`,
-      `${count(plan.shares)} share link${plan.shares === 1 ? '' : 's'}`,
-      `${count(plan.retentionDays)} days of raw events`,
+      `${count(plan.applications)} installed application${plan.applications === 1 ? '' : 's'}`,
+      // Zero means no ceiling, and says so in words. A row reading "0 reports"
+      // is the opposite of what the number means.
+      plan.reports === 0 ? 'Unlimited reports' : `${count(plan.reports)} reports per application`,
+      `${count(plan.seats)} ${plan.seats === 1 ? 'person' : 'people'} on the licence`,
+      'Your data never leaves your servers',
     ],
     capabilities: CAPABILITY_ROWS.map(row => ({
       label: row.label,
@@ -95,34 +96,32 @@ const tiers = TIERS.map((tier) => {
   }
 })
 
-// Stated as a percentage, from the constant the ingest path actually uses.
-const gracePercent = Math.round(GRACE_FRACTION * 100)
-const freeEvents = count(PLANS.free.events)
+const freeApplications = count(PLANS.free.applications)
 
 const faqs = [
   {
-    question: 'What happens when I go over my event quota?',
-    answer: `Nothing, at first. Collection continues through a grace band of ${gracePercent}% past the quota, and the ingest response says you are inside it. Past that, new events are refused with a clear reason and a count of what was dropped, and everything you have already collected keeps working. Reports never stop rendering because of a quota.`,
+    question: 'What counts as an application?',
+    answer: 'One installation of the package: one codebase, one database, one licence key. A staging copy of the same application does not count, and neither does a second environment. If you run three products, that is three applications.',
   },
   {
-    question: 'What counts as an event?',
-    answer: 'One thing that happened in your application: an order, a signup, a page read. Events are counted as they are stored, so anything rejected by validation is not billed. The count resets at the start of each calendar month in your project\'s own timezone.',
+    question: 'What happens if I go over?',
+    answer: 'Nothing stops working. The licence is checked offline and nothing here can blank a dashboard, so an application over its allowance keeps reporting on its own data exactly as before. We will ask you to move up a plan, which is a conversation rather than an outage.',
   },
   {
-    question: 'What happens to my old events?',
-    answer: 'Raw events are kept for your plan\'s retention window and then pruned. Daily rollups outlive them, so a report over an older range still shows correct totals; what goes away is the ability to drill into individual events.',
+    question: 'Why not price per event, or per seat?',
+    answer: 'Per event died with the hosted collector. Your data never reaches us, so there is nothing on our side to count, and metering your database from outside it would mean this tool reporting on how much you sell. Per seat would need the package to know who signs in to your application, which means reaching into your auth and keeping a count of your staff. Neither is something a reporting tool should do.',
   },
   {
-    question: 'Can I self-host it?',
-    answer: 'Yes. ReportsHQ is a Stacks application and the source is public. Leave the billing keys unset and every tier limit falls away, because there is nothing to enforce them against. You are then running your own mail, your own database and your own backups, which is the real cost of self-hosting anything.',
+    question: 'Do you see any of my data?',
+    answer: 'No. The package runs inside your application, queries your database in place, and renders in your own browser. There is no ingest endpoint and no phoning home, including for the licence check. You can read the licence class; it opens no sockets, and a test asserts that.',
   },
   {
-    question: 'Do I need to change my application code?',
-    answer: 'Only to install a package. The Stacks and Laravel integrations listen to the events your application already emits and translate them, so a conventional commerce or SaaS app produces reports without writing any tracking calls. If you would rather be explicit, the HTTP ingest takes JSON.',
+    question: 'What about self-hosting?',
+    answer: 'That is the only shape there is. The package is the product, it runs on your servers, and a licence is what you are buying rather than access to somewhere. Leave the key unset and every limit on this page falls away.',
   },
   {
-    question: 'What if I need more than Pro?',
-    answer: 'Write to hello@reportshq.org. There is no enterprise tier on this page because there is no enterprise product yet, and inventing one to look bigger would waste your time and ours.',
+    question: 'Do I have to write tracking calls?',
+    answer: 'No. The package reads the models you already have. Point it at an order, a customer, a subscription, and it reports on them where they sit, so there is nothing to instrument and nothing to keep in step with your schema.',
   },
 ]
 </script>
@@ -231,7 +230,7 @@ const faqs = [
       <section class="p-8 mt-16 rounded-2xl border border-line bg-panel">
         <h2 class="text-xl font-semibold tracking-tight">Start on Free</h2>
         <p class="mt-2 max-w-[60ch] text-sm leading-relaxed text-muted">
-          {{ freeEvents }} events a month, no card, and the same builder everyone else gets. Send
+          {{ freeApplications }} application, unlimited reports, no card, and the same builder everyone else gets. Install
           one event and the first report builds itself.
         </p>
         <a href="/register" class="inline-block px-4 py-2.5 mt-5 text-sm font-medium no-underline rounded-lg bg-accent text-accent-ink">

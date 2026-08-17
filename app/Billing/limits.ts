@@ -1,21 +1,27 @@
 /**
- * The plan matrix, and the only place that knows what a tier allows.
+ * The plan matrix, and the only place that knows what a licence allows.
  *
- * Every gate reads this, and so does the pricing page. That is the point: a
- * marketing table maintained separately from enforcement is a promise somebody
- * eventually breaks by editing one of them, and the person who finds out is a
- * customer who paid for a number that turns out not to be true.
+ * The pricing page reads this rather than restating it, which is the point: a
+ * marketing table maintained separately is a promise somebody eventually breaks
+ * by editing one of them, and the person who finds out is a customer who paid
+ * for a number that turns out not to be true.
  *
- * Two rules run through the whole file.
+ * **Priced per installed application.** Not per event, and not per seat. Per
+ * event was the old shape and it died with the hosted pipeline: there is no
+ * ingest to count, and metering an application's own database from outside it
+ * would mean the reporting tool phoning home about how much its customer sells.
+ * Per seat needs the package to know who is signing in, which means reaching
+ * into the host application's auth and keeping a count of its staff. Per
+ * application is the one unit that is countable from the outside, obvious to
+ * the buyer, and that grows with the estate rather than with a good quarter.
  *
- * **Limits fail soft.** Being over a quota is a billing conversation, not an
- * outage. Nothing here throws, nothing returns a 500, and the ingest path in
- * particular keeps accepting data through a documented grace band rather than
- * dropping a customer's events the moment they cross a line they cannot see.
- *
- * **Nothing is dropped silently.** Where data is refused, it is refused with a
- * machine-readable reason and counted, so the number in the usage meter and the
- * number in the database always have the same explanation.
+ * **Nothing here gates a report.** These numbers describe what a licence
+ * covers, not what the software will do. An application over its allowance
+ * keeps reporting on its own data exactly as before; the licence notice says
+ * what it says and that is the whole enforcement. A reporting tool that blanks
+ * a dashboard over a billing state is one nobody can rely on for the dashboard,
+ * and an offline licence could not enforce it anyway without the call it
+ * refuses to make. See app/../packages/laravel/src/License.php.
  */
 
 export type Tier = 'free' | 'hobby' | 'pro'
@@ -26,15 +32,17 @@ export type Capability =
   | 'schedules'
   /** Export as XLSX rather than CSV (#15). */
   | 'xlsx'
-  /** Share a report publicly (#16). */
+  /** Share a report publicly. */
   | 'shares'
-  /** Embed a report in an iframe (#16). */
+  /** Embed a report in an iframe. */
   | 'embeds'
   /** Remove the "Made with ReportsHQ" footer from a share. */
   | 'unbranded'
+  /** Priority support, and a person rather than a queue. */
+  | 'support'
 
 /** Things a tier has a countable allowance of. */
-export type Meter = 'events' | 'projects' | 'reports' | 'members' | 'shares'
+export type Meter = 'applications' | 'reports' | 'seats'
 
 export interface Plan {
   tier: Tier
@@ -50,28 +58,23 @@ export interface Plan {
    * discount ends up advertised as larger than it is.
    */
   yearlyPrice: number
-  /** Events per calendar month, per project. */
-  events: number
-  /** Projects per account. */
-  projects: number
-  /** Reports per project. */
+  /** Installed applications the licence covers. */
+  applications: number
+  /** Reports per application. Zero means no ceiling. */
   reports: number
-  /** Members per project, including the owner. */
-  members: number
-  /** Live share links per project. */
-  shares: number
-  /** Days of raw events kept. Rollups outlive this; see docs/limits.md. */
-  retentionDays: number
+  /** People who may be given the licence key, for support rather than enforcement. */
+  seats: number
   capabilities: Capability[]
 }
 
 /**
  * The matrix.
  *
- * Numbers are deliberately round and deliberately generous at the bottom. A
- * free tier that cannot hold a month of a real hobby project's events teaches
- * people the product does not work, which is a worse outcome than the cost of
- * the rows.
+ * Generous at the bottom on purpose. One application free and unlimited is not
+ * a trial: a person running the package on one side project should never meet a
+ * wall, because the only thing a wall teaches is that the product does not
+ * work. What is being sold higher up is a second application, a third, and the
+ * support that comes with running this across an estate.
  */
 export const PLANS: Record<Tier, Plan> = {
   free: {
@@ -79,12 +82,12 @@ export const PLANS: Record<Tier, Plan> = {
     name: 'Free',
     price: 0,
     yearlyPrice: 0,
-    events: 50_000,
-    projects: 1,
-    reports: 5,
-    members: 1,
-    shares: 1,
-    retentionDays: 30,
+    applications: 1,
+    // No ceiling. A report costs us nothing: it runs inside the customer's own
+    // application, against their own database, on their own machine. Charging
+    // by the report would be charging for something we do not provide.
+    reports: 0,
+    seats: 1,
     capabilities: ['shares'],
   },
   hobby: {
@@ -92,41 +95,28 @@ export const PLANS: Record<Tier, Plan> = {
     name: 'Hobby',
     price: 900,
     yearlyPrice: 9000,
-    events: 500_000,
-    projects: 3,
-    reports: 25,
-    members: 3,
-    shares: 10,
-    retentionDays: 90,
-    capabilities: ['shares', 'embeds', 'schedules'],
+    applications: 3,
+    reports: 0,
+    seats: 3,
+    capabilities: ['shares', 'schedules', 'xlsx'],
   },
   pro: {
     tier: 'pro',
     name: 'Pro',
-    price: 2900,
-    yearlyPrice: 29000,
-    events: 5_000_000,
-    projects: 25,
-    reports: 200,
-    members: 25,
-    shares: 100,
-    retentionDays: 365,
-    capabilities: ['shares', 'embeds', 'schedules', 'xlsx', 'unbranded'],
+    price: 4900,
+    yearlyPrice: 49000,
+    // Ten rather than unlimited, so the number means something. An agency with
+    // forty client applications is a conversation worth having rather than a
+    // row in a table.
+    applications: 10,
+    reports: 0,
+    seats: 25,
+    capabilities: ['shares', 'schedules', 'xlsx', 'embeds', 'unbranded', 'support'],
   },
 }
 
 export const TIERS: Tier[] = ['free', 'hobby', 'pro']
 
-/**
- * How far past an event quota a project is carried before anything is refused.
- *
- * Ten percent, once. A project that crosses its limit mid-month is usually
- * having a good week, and cutting its data off at exactly 100% means the report
- * that would have shown them the good week is the one with a hole in it. The
- * band is announced in docs/limits.md and in the meter, so it is a stated
- * allowance rather than a surprise that runs out.
- */
-export const GRACE_FRACTION = 0.1
 
 /** A plan, from whatever the user row holds. Unknown values read as free. */
 export function planFor(tier: unknown): Plan {
@@ -144,16 +134,12 @@ export function allowanceFor(tier: unknown, meter: Meter): number {
   const plan = planFor(tier)
 
   switch (meter) {
-    case 'events':
-      return plan.events
-    case 'projects':
-      return plan.projects
+    case 'applications':
+      return plan.applications
     case 'reports':
       return plan.reports
-    case 'members':
-      return plan.members
-    case 'shares':
-      return plan.shares
+    case 'seats':
+      return plan.seats
   }
 }
 
@@ -195,32 +181,6 @@ export function usageOf(tier: unknown, meter: Meter, used: number): Usage {
 }
 
 export type IngestVerdict = 'accept' | 'grace' | 'reject'
-
-/**
- * What to do with a write from a project at this usage.
- *
- * Three answers rather than two, because the middle one is the whole policy:
- * between the quota and the grace band the data is still accepted, and the
- * caller is told so it can say something. Only past the band is anything
- * refused.
- */
-export function ingestVerdict(tier: unknown, used: number): IngestVerdict {
-  const allowance = allowanceFor(tier, 'events')
-  const ceiling = Math.floor(allowance * (1 + GRACE_FRACTION))
-
-  if (used < allowance)
-    return 'accept'
-
-  if (used < ceiling)
-    return 'grace'
-
-  return 'reject'
-}
-
-/** The event ceiling including grace, for the meter and the docs. */
-export function ingestCeiling(tier: unknown): number {
-  return Math.floor(allowanceFor(tier, 'events') * (1 + GRACE_FRACTION))
-}
 
 /**
  * The cheapest tier that would lift a limit.
