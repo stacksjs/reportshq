@@ -106,7 +106,7 @@ var ve=globalThis.HTMLElement||class{},Ln=(t)=>String(t??"").replaceAll("&","&am
 
 @media (prefers-reduced-motion: reduce) {
   .chart-bar { transition: none; }
-}`,shadowMode:!1,progressive:!0,properties:{result:{type:"object",reflect:!0},title:{type:"object",reflect:!0},height:{type:"number",default:260,reflect:!0}},eventTypes:[],bindings:[]});var Ma=nn;class en extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{result:a,title:s,unit:o="number",currency:l="USD",invert:h=!1}=this._props(),g=o==="currency"?_e(a.total,l):O(a.total),f=a.comparison?.change??null,y=f!==null&&f>0,c=f===null?null:h?!y:y,_=c===null?"text-subtle":c?"text-pos":"text-neg",p=f===null?"":y?"i-hugeicons-arrow-up-right":"i-hugeicons-arrow-down-right",m=a.total===0&&!a.comparison,u="";if(u+=`<div class="flex flex-col justify-center h-full">
+}`,shadowMode:!1,progressive:!0,properties:{result:{type:"object",reflect:!0},title:{type:"string",reflect:!0},height:{type:"number",default:260,reflect:!0}},eventTypes:[],bindings:[]});var Ma=nn;class en extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{result:a,title:s,unit:o="number",currency:l="USD",invert:h=!1}=this._props(),g=o==="currency"?_e(a.total,l):O(a.total),f=a.comparison?.change??null,y=f!==null&&f>0,c=f===null?null:h?!y:y,_=c===null?"text-subtle":c?"text-pos":"text-neg",p=f===null?"":y?"i-hugeicons-arrow-up-right":"i-hugeicons-arrow-down-right",m=a.total===0&&!a.comparison,u="";if(u+=`<div class="flex flex-col justify-center h-full">
         `,s)u+=`
           <p class="text-sm text-muted">`,u+=n(s),u+=`</p>
         `;if(u+='<p class="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl num text-ink">',u+=n(g),u+=`</p>
@@ -146,7 +146,7 @@ var ve=globalThis.HTMLElement||class{},Ln=(t)=>String(t??"").replaceAll("&","&am
     @elseif (empty)
       <p class="mt-2 text-sm text-subtle">No events in this range</p>
     @endif
-  </div>`,styles:"",shadowMode:!1,progressive:!0,properties:{result:{type:"object",reflect:!0},title:{type:"object",reflect:!0},unit:{type:"string",default:"number",reflect:!0},currency:{type:"string",default:"USD",reflect:!0},invert:{type:"boolean",default:!1,reflect:!0}},eventTypes:[],bindings:[]});var wa=en;class rn extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{result:a,title:s,size:o=220}=this._props(),l=o/2-6,h=Me(a,l,Math.max(18,l*0.32)).map((p)=>({...p,display:O(p.value),percentLabel:`${Math.round(p.percent*100)}%`})),g=O(a.series.reduce((p,m)=>p+m.total,0)),f=h.map((p)=>({key:p.key,color:p.color,value:p.percentLabel})),y=h.length===0,c="No data in this range",_="";if(_+=`<figure class="flex flex-col h-full m-0">
+  </div>`,styles:"",shadowMode:!1,progressive:!0,properties:{result:{type:"object",reflect:!0},title:{type:"string",reflect:!0},unit:{type:"string",default:"number",reflect:!0},currency:{type:"string",default:"USD",reflect:!0},invert:{type:"boolean",default:!1,reflect:!0}},eventTypes:[],bindings:[]});var wa=en;class rn extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{result:a,title:s,size:o=220}=this._props(),l=o/2-6,h=Me(a,l,Math.max(18,l*0.32)).map((p)=>({...p,display:O(p.value),percentLabel:`${Math.round(p.percent*100)}%`})),g=O(a.series.reduce((p,m)=>p+m.total,0)),f=h.map((p)=>({key:p.key,color:p.color,value:p.percentLabel})),y=h.length===0,c="No data in this range",_="";if(_+=`<figure class="flex flex-col h-full m-0">
         `,s)_+=`
           <figcaption class="mb-3 text-sm font-medium text-ink">`,_+=n(s),_+=`</figcaption>
         `;if(y)_+=`
@@ -247,7 +247,7 @@ var ve=globalThis.HTMLElement||class{},Ln=(t)=>String(t??"").replaceAll("&","&am
 
 @media (prefers-reduced-motion: reduce) {
   .chart-slice { transition: none; }
-}`,shadowMode:!1,progressive:!0,properties:{result:{type:"object",reflect:!0},title:{type:"object",reflect:!0},size:{type:"number",default:220,reflect:!0}},eventTypes:[],bindings:[]});var ma=rn;class sn extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{result:a,title:s}=this._props(),o=(a.steps??[]).map((f,y,c)=>{let _=y===0?f.count:c[y-1].count;return{name:f.name,count:O(f.count),width:Math.max(2,f.rate*100),ofFirst:`${Math.round(f.rate*100)}%`,ofPrevious:_===0?"-":`${Math.round(f.count/_*100)}%`,dropped:y===0?null:O(Math.max(0,_-f.count)),color:L(y)}}),l=o.length===0||o.every((f)=>f.count==="0"),h=[],g="";if(g+=`<figure class="flex flex-col h-full m-0">
+}`,shadowMode:!1,progressive:!0,properties:{result:{type:"object",reflect:!0},title:{type:"string",reflect:!0},size:{type:"number",default:220,reflect:!0}},eventTypes:[],bindings:[]});var ma=rn;class sn extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{result:a,title:s}=this._props(),o=(a.steps??[]).map((f,y,c)=>{let _=y===0?f.count:c[y-1].count;return{name:f.name,count:O(f.count),width:Math.max(2,f.rate*100),ofFirst:`${Math.round(f.rate*100)}%`,ofPrevious:_===0?"-":`${Math.round(f.count/_*100)}%`,dropped:y===0?null:O(Math.max(0,_-f.count)),color:L(y)}}),l=o.length===0||o.every((f)=>f.count==="0"),h=[],g="";if(g+=`<figure class="flex flex-col h-full m-0">
         `,s)g+=`
           <figcaption class="mb-3 text-sm font-medium text-ink">`,g+=n(s),g+=`</figcaption>
         `;if(l)g+=`
@@ -345,7 +345,7 @@ var ve=globalThis.HTMLElement||class{},Ln=(t)=>String(t??"").replaceAll("&","&am
         </ul>
       @endif
     @endif
-  </figure>`,styles:"",shadowMode:!1,progressive:!0,properties:{result:{type:"object",reflect:!0},title:{type:"object",reflect:!0}},eventTypes:[],bindings:[]});var Ta=sn;class an extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{result:a,title:s,rowLabels:o=[]}=this._props(),l=Math.max(1,...a.series.flatMap((_)=>_.points.map((p)=>p.value))),h=a.series.map((_,p)=>({label:o[p]??(_.key==="total"?"All events":_.key),cells:_.points.map((m)=>({opacity:m.value===0?0:0.15+m.value/l*0.85,value:O(m.value),when:Tt(m.t,a.grain)}))})),g=l<=1&&h.every((_)=>_.cells.every((p)=>p.value==="0")),f=[],y="No data in this range",c="";if(c+=`<figure class="flex flex-col h-full m-0">
+  </figure>`,styles:"",shadowMode:!1,progressive:!0,properties:{result:{type:"object",reflect:!0},title:{type:"string",reflect:!0}},eventTypes:[],bindings:[]});var Ta=sn;class an extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{result:a,title:s,rowLabels:o=[]}=this._props(),l=Math.max(1,...a.series.flatMap((_)=>_.points.map((p)=>p.value))),h=a.series.map((_,p)=>({label:o[p]??(_.key==="total"?"All events":_.key),cells:_.points.map((m)=>({opacity:m.value===0?0:0.15+m.value/l*0.85,value:O(m.value),when:Tt(m.t,a.grain)}))})),g=l<=1&&h.every((_)=>_.cells.every((p)=>p.value==="0")),f=[],y="No data in this range",c="";if(c+=`<figure class="flex flex-col h-full m-0">
         `,s)c+=`
           <figcaption class="mb-3 text-sm font-medium text-ink">`,c+=n(s),c+=`</figcaption>
         `;if(g)c+=`
@@ -466,7 +466,7 @@ var ve=globalThis.HTMLElement||class{},Ln=(t)=>String(t??"").replaceAll("&","&am
 
 @media (prefers-reduced-motion: reduce) {
   .heat-cell { transition: none; }
-}`,shadowMode:!1,progressive:!0,properties:{result:{type:"object",reflect:!0},title:{type:"object",reflect:!0},rowLabels:{type:"object",default:[],reflect:!0}},eventTypes:[],bindings:[]});var ba=an;class on extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{result:a,title:s,variant:o="line",height:l=260}=this._props(),h={...At,height:l},g=Bt(a,h),f=Kt(a,g),y=Qt(a,g,(d)=>tn(d,a.grain)),c=a.series.every((d)=>d.points.every((T)=>T.value===0)),_=a.series.map((d,T)=>({key:d.key,color:L(T,d.key),line:xe(d,g),fill:o==="area"&&a.series.length===1?de(d,g):"",total:O(d.total),points:d.points.map((S,D)=>({cx:g.x(D),cy:g.y(S.value),value:O(S.value),label:Tt(S.t,a.grain)}))})),p=_.map((d)=>({key:d.key,color:d.color,value:d.total})),m="No data in this range",u="";if(u+=`<figure class="flex flex-col h-full m-0">
+}`,shadowMode:!1,progressive:!0,properties:{result:{type:"object",reflect:!0},title:{type:"string",reflect:!0},rowLabels:{type:"object",default:[],reflect:!0}},eventTypes:[],bindings:[]});var ba=an;class on extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{result:a,title:s,variant:o="line",height:l=260}=this._props(),h={...At,height:l},g=Bt(a,h),f=Kt(a,g),y=Qt(a,g,(d)=>tn(d,a.grain)),c=a.series.every((d)=>d.points.every((T)=>T.value===0)),_=a.series.map((d,T)=>({key:d.key,color:L(T,d.key),line:xe(d,g),fill:o==="area"&&a.series.length===1?de(d,g):"",total:O(d.total),points:d.points.map((S,D)=>({cx:g.x(D),cy:g.y(S.value),value:O(S.value),label:Tt(S.t,a.grain)}))})),p=_.map((d)=>({key:d.key,color:d.color,value:d.total})),m="No data in this range",u="";if(u+=`<figure class="flex flex-col h-full m-0">
         `,s)u+=`
           <figcaption class="mb-3 text-sm font-medium text-ink">`,u+=n(s),u+=`</figcaption>
         `;if(c)u+=`
@@ -649,7 +649,7 @@ var ve=globalThis.HTMLElement||class{},Ln=(t)=>String(t??"").replaceAll("&","&am
 
 @media (prefers-reduced-motion: reduce) {
   .chart-dot { transition: none; }
-}`,shadowMode:!1,progressive:!0,properties:{result:{type:"object",reflect:!0},title:{type:"object",reflect:!0},variant:{type:"string",default:"line",reflect:!0},height:{type:"number",default:260,reflect:!0}},eventTypes:[],bindings:[]});var Na=on;class hn extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{result:a,title:s,label:o="Series"}=this._props(),l=a.series.reduce((_,p)=>_+p.total,0),h=a.series.slice().sort((_,p)=>p.total-_.total).map((_,p)=>({key:_.key==="total"?s||"Total":_.key,color:L(p,_.key),value:O(_.total),share:l>0?`${Math.round(_.total/l*100)}%`:"-"})),g=h.length===0||l===0,f=[],y="No data in this range",c="";if(c+=`<figure class="flex flex-col h-full m-0">
+}`,shadowMode:!1,progressive:!0,properties:{result:{type:"object",reflect:!0},title:{type:"string",reflect:!0},variant:{type:"string",default:"line",reflect:!0},height:{type:"number",default:260,reflect:!0}},eventTypes:[],bindings:[]});var Na=on;class hn extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{result:a,title:s,label:o="Series"}=this._props(),l=a.series.reduce((_,p)=>_+p.total,0),h=a.series.slice().sort((_,p)=>p.total-_.total).map((_,p)=>({key:_.key==="total"?s||"Total":_.key,color:L(p,_.key),value:O(_.total),share:l>0?`${Math.round(_.total/l*100)}%`:"-"})),g=h.length===0||l===0,f=[],y="No data in this range",c="";if(c+=`<figure class="flex flex-col h-full m-0">
         `,s)c+=`
           <figcaption class="mb-3 text-sm font-medium text-ink">`,c+=n(s),c+=`</figcaption>
         `;if(g)c+=`
@@ -754,7 +754,7 @@ var ve=globalThis.HTMLElement||class{},Ln=(t)=>String(t??"").replaceAll("&","&am
         </ul>
       @endif
     @endif
-  </figure>`,styles:"",shadowMode:!1,progressive:!0,properties:{result:{type:"object",reflect:!0},title:{type:"object",reflect:!0},label:{type:"string",default:"Series",reflect:!0}},eventTypes:[],bindings:[]});var ka=hn;class ln extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{body:a,title:s}=this._props(),o="";if(o+=`<div class="flex flex-col justify-center h-full">
+  </figure>`,styles:"",shadowMode:!1,progressive:!0,properties:{result:{type:"object",reflect:!0},title:{type:"string",reflect:!0},label:{type:"string",default:"Series",reflect:!0}},eventTypes:[],bindings:[]});var ka=hn;class ln extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{body:a,title:s}=this._props(),o="";if(o+=`<div class="flex flex-col justify-center h-full">
         `,s)o+=`
           <p class="mb-1 text-sm font-medium text-ink">`,o+=n(s),o+=`</p>
         `;return o+='<p class="max-w-[65ch] text-sm text-muted leading-relaxed">',o+=n(a),o+=`</p>
@@ -763,7 +763,7 @@ var ve=globalThis.HTMLElement||class{},Ln=(t)=>String(t??"").replaceAll("&","&am
       <p class="mb-1 text-sm font-medium text-ink">{{ title }}</p>
     @endif
     <p class="max-w-[65ch] text-sm text-muted leading-relaxed">{{ body }}</p>
-  </div>`,styles:"",shadowMode:!1,progressive:!0,properties:{body:{type:"object",reflect:!0},title:{type:"object",reflect:!0}},eventTypes:[],bindings:[]});var $a=ln;class un extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{size:a="md",markOnly:s=!1}=this._props(),o={sm:"h-4 w-4",md:"h-5 w-5",lg:"h-7 w-7"}[a],l={sm:"text-sm",md:"text-base",lg:"text-xl"}[a],h="";if(h+=`
+  </div>`,styles:"",shadowMode:!1,progressive:!0,properties:{body:{type:"string",reflect:!0},title:{type:"string",reflect:!0}},eventTypes:[],bindings:[]});var $a=ln;class un extends A{render(t){let{escape:n,raw:i,values:e,entries:r}=t,{size:a="md",markOnly:s=!1}=this._props(),o={sm:"h-4 w-4",md:"h-5 w-5",lg:"h-7 w-7"}[a],l={sm:"text-sm",md:"text-base",lg:"text-xl"}[a],h="";if(h+=`
       <span class="inline-flex gap-2 items-center select-none">
         <svg
           class="`,h+=n(o),h+=`"
@@ -808,4 +808,4 @@ var ve=globalThis.HTMLElement||class{},Ln=(t)=>String(t??"").replaceAll("&","&am
     @endif
   </span>`,styles:"",shadowMode:!1,progressive:!0,properties:{size:{type:"string",default:"md",reflect:!0},markOnly:{type:"boolean",default:!1,reflect:!0}},eventTypes:[],bindings:[]});var va=un;export{va as WordmarkElement,un as Wordmark,$a as TextBlockElement,ln as TextBlock,ka as TableChartElement,hn as TableChart,Na as LineChartElement,on as LineChart,ba as HeatmapChartElement,an as HeatmapChart,Ta as FunnelChartElement,sn as FunnelChart,ma as DonutChartElement,rn as DonutChart,wa as BigNumberElement,en as BigNumber,Ma as BarChartElement,nn as BarChart};
 
-//# debugId=E83BB2B3EB14FAFF64756E2164756E21
+//# debugId=A59242FB177CD5E064756E2164756E21

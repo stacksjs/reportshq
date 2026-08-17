@@ -179,6 +179,22 @@ const docLinks = [
          In the body because stx generates the head itself; a module script runs
          after parse wherever it sits. --}}
     <link rel="stylesheet" href="/reportshq-charts.css">
+    <style>
+      /* A custom element is inline with no intrinsic size, so a chart that
+         sizes itself to its container collapses to nothing and renders its
+         axis labels into a zero-height box. The package's own stylesheet does
+         this for the report grid; the marketing page lays them out itself and
+         has to say so too. */
+      stacks-big-number, stacks-bar-chart, stacks-line-chart,
+      stacks-donut-chart, stacks-table-chart, stacks-funnel-chart { display: block; }
+      stacks-bar-chart, stacks-line-chart, stacks-donut-chart { min-height: 13rem; }
+      stacks-big-number { min-height: 4.5rem; }
+      /* The chart draws into a viewBox and leaves sizing to its container. An
+         SVG with no width resolves to zero, so the paths are correct and
+         invisible, which looks like a data problem and is not one. */
+      stacks-bar-chart svg, stacks-line-chart svg, stacks-donut-chart svg,
+      stacks-funnel-chart svg { width: 100%; height: 100%; display: block; }
+    </style>
     <script type="module" src="/reportshq-charts.js"></script>
 
     @include('SiteNav')

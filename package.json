@@ -76,7 +76,7 @@
   "dependencies": {
     "@stacksjs/buddy": "^0.70.378",
     "@stacksjs/dtsx": "^0.11.4",
-    "@stacksjs/stx": "0.2.188",
+    "@stacksjs/stx": "0.2.189",
     "@ts-charts/array": "^0.2.7",
     "@ts-charts/format": "^0.2.7",
     "@ts-charts/scale": "^0.2.7",
@@ -110,6 +110,6 @@
     "bun-query-builder": "^0.2.35",
     "@stacksjs/bun-router": "^0.0.27",
     "@stacksjs/components": "^0.2.182",
-    "@stacksjs/stx": "^0.2.188"
+    "@stacksjs/stx": "^0.2.189"
   }
 }
