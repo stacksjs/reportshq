@@ -4,6 +4,13 @@ The pre-launch gate for reportshq.org. Each pass below records what was checked,
 how, and what it found. A tick means somebody ran something and read the output,
 not that the code looked right.
 
+> **Historical.** Every pass below was recorded against the hosted collector,
+> which was retired in August 2026. The ingest checks, the rollup checks and the
+> per-project quota checks describe surfaces that no longer exist. It is kept as
+> a record of what was verified and when, not as a gate to run again. The
+> current gate is `./buddy lint`, `./buddy typecheck` and `./buddy test`, plus
+> the package's own suites under `packages/laravel/tests/`.
+
 Two rules for reading this document. **Findings are listed even when they were
 fixed in the same hour**, because a checklist that only records successes is a
 record of nothing. And **anything still open is stated as open**, with what it

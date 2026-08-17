@@ -21,7 +21,7 @@ racing to write the same systemd unit and rpx fragment on a box shared with a
 dozen other tenants is worse than one slow deploy.
 
 The last step is not decoration: it fails the job unless seven pages return 200
-and an unauthenticated `POST /ingest` returns 401. A deploy exiting 0 does not
+and an unauthenticated request to a guarded route returns 401. A deploy exiting 0 does not
 mean the site works.
 
 ## Where it runs
@@ -198,7 +198,7 @@ would otherwise ship the bad commit again.
 ```bash
 curl -sI https://reportshq.org | head -1
 curl -s https://reportshq.org/sitemap.xml | head -3
-curl -s -o /dev/null -w '%{http_code}\n' -X POST https://reportshq.org/ingest   # expect 401
+curl -s -o /dev/null -w '%{http_code}\n' https://reportshq.org/account          # expect 302
 ```
 
 Check the rendered `APP_URL` is a real origin rather than ciphertext, a known

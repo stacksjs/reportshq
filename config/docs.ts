@@ -19,7 +19,7 @@ const config: BunPressOptions = {
 
   nav: [
     { text: 'Quickstart', link: '/quickstart' },
-    { text: 'Ingestion API', link: '/ingest' },
+    { text: 'Laravel package', link: '/laravel' },
     { text: 'Pricing', link: 'https://reportshq.org/pricing' },
     { text: 'GitHub', link: 'https://github.com/stacksjs/reportshq' },
   ],
@@ -46,12 +46,10 @@ const config: BunPressOptions = {
           ],
         },
         {
-          text: 'Sending events',
+          text: 'Installing it',
           items: [
-            { text: 'Ingestion API', link: '/ingest' },
-            { text: 'Event taxonomy', link: '/events' },
-            { text: 'Stacks package', link: '/stacks' },
             { text: 'Laravel package', link: '/laravel' },
+            { text: 'Query API', link: '/api' },
           ],
         },
         {
@@ -68,7 +66,6 @@ const config: BunPressOptions = {
             { text: 'Self-hosting', link: '/self-hosting' },
             { text: 'Deploying', link: '/deploy' },
             { text: 'Launch checklist', link: '/launch-checklist' },
-            { text: 'On call', link: '/on-call' },
             { text: 'API', link: '/api' },
           ],
         },
@@ -76,7 +73,6 @@ const config: BunPressOptions = {
           text: 'Reference',
           items: [
             { text: 'Design brief', link: '/design-brief' },
-            { text: 'Benchmarks', link: '/benchmarks' },
           ],
         },
       ],

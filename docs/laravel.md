@@ -1,157 +1,114 @@
-# Laravel integration
+# The Laravel package
 
-`reportshq/laravel` sends a Laravel application's own events to ReportsHQ. Your
-app keeps firing the events it already fires; the package listens, translates
-them into [the taxonomy](/docs/events), and ships them after the response has
-gone out.
+`reportshq/laravel` puts the reports inside your application. It reads the
+models you already have, queries them in place through Eloquent, and renders
+through the routes you already guard.
+
+Nothing leaves the application. There is no endpoint to send to, no connection
+to hand out, and the licence check is offline.
 
 ## Install
 
 ```bash
 composer require reportshq/laravel
-```
-
-```bash
-# .env
-REPORTSHQ_KEY=rhq_your_project_key
-```
-
-That is the whole integration for signups and sign-ins: the package listens to
-Laravel's own `Registered`, `Login` and `Logout` events, which your application
-already fires without you writing anything.
-
-For your own models, name them once:
-
-```php
-// app/Providers/AppServiceProvider.php
-use App\Models\Order;
-use ReportsHQ\Laravel\ReportsHQ;
-
-public function boot(): void
-{
-    app(ReportsHQ::class)->observe(Order::class, 'Order');
-}
-```
-
-The second argument is the name in the mapping table, so orders living in
-`App\Models\Purchase` still map onto `commerce.order.created` without renaming
-anything.
-
-## What gets sent
-
-Only the events in [the taxonomy](/docs/events). Anything unmapped is ignored,
-because forwarding an application's whole event stream under invented names
-fills a project with vocabulary no report template can read.
-
-| Your app fires | ReportsHQ receives |
-|---|---|
-| `Illuminate\Auth\Events\Registered` | `user.registered` |
-| `Illuminate\Auth\Events\Login` / `Logout` | `user.login` / `user.logout` |
-| `Order:created` / `:paid` / `:refunded` / `:cancelled` | the matching `commerce.order.*` |
-| `Checkout:started`, `Cart:updated`, `Product:viewed` | `commerce.checkout.started`, `commerce.cart.updated`, `commerce.product.viewed` |
-| `Customer:created` | `commerce.customer.created` |
-| `Subscription:created` / `:cancelled` | `user.subscription.started` / `.cancelled` |
-| `Post:published` / `Post:viewed` / `Comment:created` | the matching `cms.*` |
-
-The subject is taken from `user_key` / `user_id` / `customer_id` and
-`session_key` / `session_id`. Send a **stable internal id**, never an email or a
-name: it is only ever compared for equality, so anything more identifying is
-data nobody needed.
-
-## Configuration
-
-```bash
 php artisan vendor:publish --tag=reportshq-config
+php artisan migrate
 ```
+
+The migration creates the tables the reports live in: reports, blocks,
+revisions, shares and schedules. Your own tables are only ever read.
+
+## Describing a model
 
 ```php
 // config/reportshq.php
-return [
-    'key' => env('REPORTSHQ_KEY', ''),
-    'endpoint' => env('REPORTSHQ_ENDPOINT', 'https://reportshq.org/ingest'),
-    'domains' => ['commerce' => true, 'users' => true, 'cms' => true],
-    'sample_rate' => 1.0,
-    'queue' => env('REPORTSHQ_QUEUE'),
-];
+'models' => [
+    'order' => [
+        'model' => App\Models\Order::class,
+        'measures' => [
+            'revenue' => 'sum:total_amount',
+            'orders' => 'count',
+            'average_order' => 'avg:total_amount',
+        ],
+        'time' => [
+            'placed' => 'created_at',
+            'shipped' => 'shipped_at',
+        ],
+        'dimensions' => [
+            'status' => 'status',
+        ],
+        'relations' => [
+            'items' => 'orderItems',
+        ],
+    ],
+],
 ```
 
-**With no key set, the package registers nothing**: no listeners, no terminating
-callback, no requests. The same code runs in tests and on a laptop without
-sending anything or complaining about it.
+**The description is an allowlist, not a hint.** The compiler will not touch a
+column that is not named here, which is why a password hash cannot become a
+dimension by somebody typing its name into a URL. Adding a field to a model does
+not expose it; adding it to this file does.
 
-## Delivery happens after the response
+`time` is a map because a model usually has more than one meaningful date, and
+"orders per day" means something different for placed than for shipped. Naming
+them forces the report to say which it meant.
 
-PHP has no long-lived process to flush from, so a buffer would otherwise die
-with the request. Events are delivered from Laravel's `terminating` callback,
-which runs after the response has already been sent to the browser: the person
-is looking at the page while this happens.
+## Measures the compiler will refuse
 
-Naming a `queue` moves delivery off the web process entirely, which is what a
-busy application should do. The batch travels as plain arrays rather than as
-models, so what gets queued is exactly what gets sent and cannot change between
-the two.
-
-## It cannot slow your app down
-
-- `track` appends to an in-memory buffer and returns.
-- The buffer is bounded. At the limit the **oldest** events are dropped, because
-  if delivery has been failing, the recent events are the ones describing what
-  is happening now.
-- Failures never throw into your code. A sender that raises is caught, reported
-  through `on_error`, and treated as a failed attempt.
-- `5xx` and `429` retry with backoff. `4xx` does not: a bad key is bad every
-  time, and retrying is a slower way to fail while blocking everything behind
-  it.
-- The queued job does not retry on top of that. Two retry policies multiply out
-  to a lot of requests to an endpoint that has already said no.
-
-## Sampling keeps subjects whole
-
-`sample_rate` keeps a fraction of **subjects**, not of events. Sampling events
-independently is the obvious implementation and it quietly ruins the reports it
-feeds: a funnel asks how many people who viewed a product went on to check out,
-and if each of those events is kept by its own coin flip, the steps stop
-belonging to the same people and every conversion rate becomes noise.
-
-Subjects are hashed with the same FNV-1a the Stacks SDK uses, so the two agree
-about who is in a sample, and an application migrating between them keeps a
-continuous history rather than a step change at the switchover.
-
-## Sending your own events
+A measure belongs to the table it is declared on. Summing an order total across
+joined line items counts the order once per line, so:
 
 ```php
-app(ReportsHQ::class)->track([
-    'name' => 'commerce.order.created',
-    'value' => 4250,
-    'currency' => 'USD',
-    'user_key' => (string) $customer->id,
-    'properties' => ['plan' => 'pro'],
-]);
+// Refused, and says so on the block.
+['model' => 'order', 'measure' => 'revenue', 'dimension' => ['model' => 'product', 'key' => 'name']]
+
+// Correct: the measure belongs to the line, so the join does not multiply it.
+['model' => 'order_item', 'measure' => 'line_revenue', 'dimension' => ['model' => 'product', 'key' => 'name']]
 ```
 
-## Both SDKs produce the same payloads
+The refusal reaches the tile with the reason on it. A plausible wrong number is
+worse than an empty block, because nobody checks a number that looks right.
 
-`docs/fixtures/sdk-events.json` states, for each logical event, the one taxonomy
-payload every SDK must produce. This package asserts it from PHP and the Stacks
-package asserts it from TypeScript. Without that fixture the two drift, and the
-drift is invisible until somebody compares a Laravel application's reports with
-a Stacks application's.
+## It reads the model, not the table
 
-## Tests
+Queries go through Eloquent, so a global scope still applies, a soft delete
+stays deleted, and a status means what your domain says it means. A raw query
+against the same table can quietly disagree with the product; this cannot.
 
-```bash
-php packages/laravel/tests/run.php
+## Timezone
+
+Buckets are computed in the report's timezone, which defaults to the
+application's. A daily chart in the wrong zone is wrong by one bucket at both
+ends, and nobody notices until a total is quoted next to a different total.
+
+## Where it renders
+
+Standalone pages under `/reports`, behind whatever middleware you configure. A
+Filament plugin, if you run one:
+
+```php
+->plugin(\ReportsHQ\Laravel\Filament\ReportsHQPlugin::make())
 ```
 
-A plain runner rather than phpunit, and deliberately: the mapper, sampler,
-config and transport are plain PHP with no Illuminate dependency, which is what
-lets them be tested without booting an application. Running them needs `php` and
-nothing else: no composer install, no vendor directory, no network. The service
-provider's listener registration genuinely needs a booted application and is not
-covered there.
+It mounts at `admin/reportshq` rather than `admin/reports`, because Filament
+resolves a route collision by first registration rather than by complaining: an
+application that already has a Reports page would silently keep it and this one
+would never appear. Change `reportshq.filament.slug` if the nicer path is free.
 
-## See also
+Or [the JSON API](/docs/api), for a front end of your own. The charts are the
+same compiled components in all three, so they cannot drift.
 
-- [Stacks integration](/docs/stacks), which sends the identical payload
-- [Ingestion API](/docs/ingest) for anything that speaks HTTP
-- [Event taxonomy](/docs/events)
+## Exports, sharing, schedules
+
+CSV and XLSX are generated on demand rather than stored and linked. The numbers
+are one query away, so there is nothing to clean up and no way to serve a stale
+copy.
+
+Sharing and scheduling are documented in [sharing](/docs/sharing) and
+[schedules and exports](/docs/schedules-exports).
+
+## Requirements
+
+PHP 8.2+, Laravel 11+. `stacksjs/php-spreadsheets` is a dependency and is not on
+Packagist yet, so your `composer.json` needs its repository entry as well as
+this package's: composer reads repositories only from the root package.

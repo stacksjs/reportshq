@@ -1,101 +1,68 @@
-# Plan limits
+# What a licence covers
 
-What each plan allows, and exactly what happens when a project reaches a limit.
+Priced per installed application. Not per event, and not per seat.
 
-The numbers here are not a copy of the numbers in the product. `app/Billing/limits.ts` is the only place a limit is defined; this page, the pricing page and every gate read that file. A marketing table maintained separately from enforcement is a promise somebody eventually breaks by editing one of them, and the person who finds out is a customer who paid for a number that turned out not to be true.
+Per event is impossible by design now: your data never reaches us, so there is
+nothing on our side to count, and metering your database from outside it would
+mean this tool reporting on how much you sell. Per seat would need the package
+to know who signs in to your application, which means reaching into your auth
+and keeping a count of your staff. Per application is the one unit countable
+from outside, obvious to a buyer, and it grows with an estate rather than with
+a good quarter.
 
 ## The plans
 
 | | Free | Hobby | Pro |
 |---|---|---|---|
-| Price | free | $9/month | $29/month |
-| Events per month, per project | 50,000 | 500,000 | 5,000,000 |
-| Projects | 1 | 3 | 25 |
-| Reports per project | 5 | 25 | 200 |
-| Members per project | 1 | 3 | 25 |
-| Share links per project | 1 | 10 | 100 |
-| Raw events kept | 30 days | 90 days | 365 days |
-| Share links | yes | yes | yes |
-| Embeds | | yes | yes |
-| Scheduled delivery | | yes | yes |
-| XLSX export | | | yes |
-| Unbranded shares | | | yes |
+| Applications | 1 | 3 | 10 |
+| Reports | Unlimited | Unlimited | Unlimited |
+| People on the licence | 1 | 3 | 25 |
+| Share links | Yes | Yes | Yes |
+| Scheduled email | | Yes | Yes |
+| XLSX export | | Yes | Yes |
+| Embeds, unbranded shares | | | Yes |
+| Priority support | | | Yes |
 
-Members include the project owner, who holds no seat row internally but is a person on the project. A plan that said "1 member" and in fact allowed an owner plus one other person would be a limit nobody could reason about.
+`app/Billing/limits.ts` is the only place these numbers live. The pricing page
+renders from it rather than restating it, because a marketing table maintained
+separately is a promise somebody eventually breaks by editing one of them.
 
-## What happens at the event quota
+## Reports are unlimited on every tier
 
-Three states, and the middle one is the whole policy.
+Including free. A report runs inside your application, against your database,
+on your machine. Charging by the report would be charging for something we do
+not provide.
 
-**Below the quota.** Everything is accepted.
+## Nothing here gates a report
 
-**At the quota, and up to 10% past it.** Everything is still accepted, and the ingest response carries a warning:
+This is the part worth reading twice. **An application over its allowance keeps
+working.** Every number above describes what a licence covers, not what the
+software will do.
 
-```json
-{
-  "ok": true,
-  "stored": 50,
-  "warning": "over_quota",
-  "message": "This project is past its 50,000 events for the month and is inside its grace allowance. Collection stops when that runs out."
-}
-```
+Two reasons, and the second is the honest one.
 
-A project that crosses its limit mid-month is usually having a good week, and cutting its data off at exactly 100% means the report that would have shown them the good week is the one with a hole in it. The grace band is a stated allowance, not a surprise.
+A reporting tool that blanks a dashboard over a billing state is a tool nobody
+can rely on for the dashboard. The moment it can go dark for a commercial
+reason, every number it shows carries an asterisk.
 
-**Past the grace band.** Writes are refused with `429` and a machine-readable body:
+And it could not enforce this anyway. The licence is checked offline and there
+is no network call, deliberately: a package that phones home on boot has
+quietly told its vendor which applications are running, how often they restart
+and when they deploy. A licence check is not worth that. So the check verifies
+the key's shape, says so on the page when it does not match, and stops there.
 
-```json
-{
-  "ok": false,
-  "error": "quota_exceeded",
-  "message": "This project has used its 50,000 events for the month, plus its grace allowance. Upgrade to keep collecting.",
-  "plan": "free",
-  "used": 55000,
-  "allowance": 50000,
-  "rejected": 50,
-  "resets_in": 1209600
-}
-```
+See `packages/laravel/src/License.php`. It opens no sockets, and a test asserts
+that by reading the source for anything that could.
 
-`Retry-After` carries `resets_in`, which is the number of seconds until the project's month rolls over **in the project's own timezone**. A project in Auckland has its month end when Auckland says it does.
+## What counts as an application
 
-`rejected` is the number of events in the refused request, and it is counted against the month. Nothing is dropped without being accounted for: the meter and the database always have the same explanation for the difference between what was sent and what was stored.
+One installation: one codebase, one database, one licence key. A staging copy
+of the same application does not count, and neither does a second environment.
+Three products is three applications.
 
-### Quota is not rate limiting
+## Self-hosting
 
-They are different refusals that both return `429`, and the body says which is which:
-
-- `"error": "rate_limited"` means too fast. Retry in seconds.
-- `"error": "quota_exceeded"` means too much this month. Retrying will not help; a larger plan or a new month will.
-
-Conflating them would tell somebody to slow down when what they need is a larger plan.
-
-## What is counted
-
-Events are counted as they are **stored**, not as they are received. A request whose events fail validation is not billed for them.
-
-The count lives in a monthly counter rather than being a `COUNT(*)` over the events table, for two reasons. The ingest path cannot afford a table scan, and the count has to outlive retention: a project that sent four million events in March and had them pruned in June still used four million events in March, and its bill should say so.
-
-Projects, reports, members and shares are counted live from their rows. They are small numbers over indexed columns, and a counter for each would be four more things that can drift from what they claim to describe.
-
-## Months
-
-A month is a calendar month in the project's timezone, so a month boundary means the same thing to the customer as it does to the invoice. Changing a project's timezone changes which month subsequent writes count against; it does not move writes already recorded.
-
-## Retention
-
-Raw events older than the plan's window are pruned by a scheduled job. Daily rollups outlive the raw events they were built from, so a report over a range older than the retention window still shows correct totals; only the ability to drill into individual events goes away.
-
-Downgrading does not delete anything immediately. The next pruning run applies the new, shorter window, and the downgrade is warned about at the time it is made.
-
-## When a limit is reached
-
-Limits fail soft. Being over a quota is a billing conversation, not an outage:
-
-- Nothing throws, and no limit check returns a `500`.
-- Reading is never blocked. A project past its quota keeps serving every report it already has.
-- Creating a report, project, member or share past a limit is refused in the interface with the tier that would lift it named, not with an error page.
-
-## Upgrading
-
-An upgrade takes effect on the next write. The plan lives on the account row, and every gate reads it there rather than asking the payment provider, so a checkout that has completed is a limit that has already moved.
+There is no other kind. The package runs on your servers either way, and a
+licence is what you are buying rather than access to somewhere. Leave
+`REPORTSHQ_LICENSE` unset and every limit above falls away; the pages say the
+installation is unlicensed and nothing else changes.

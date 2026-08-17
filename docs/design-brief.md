@@ -6,7 +6,7 @@ before proposing a change to `public/tokens.css`.
 ## The read
 
 A B2B, developer-facing SaaS for technical buyers who are integrating their own
-application. The person deciding is the person who will paste the ingest snippet.
+application. The person deciding is the person who will run composer require.
 That sets the register: show the product working, do not sell around it.
 
 The visual language is editorial-technical. Restrained layout, confident

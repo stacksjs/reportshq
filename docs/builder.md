@@ -28,7 +28,7 @@ Every block except `text` carries a query with these parts.
 ### events
 
 The event names the block reads. Empty means every event in the project. Names
-come from [the taxonomy](/docs/events) or are your own.
+come from the models you described in `config/reportshq.php`.
 
 ### measure
 

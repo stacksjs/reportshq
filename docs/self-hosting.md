@@ -48,7 +48,7 @@ both, and the test suite runs against both.
 
 ## Ingest hygiene
 
-The ingest endpoint is public by design: it authenticates with a project key
+The share route is public by design: it authenticates with a share token
 that ships inside your application. Two things are worth setting up.
 
 **Retention.** The prune job deletes raw events past their retention window and

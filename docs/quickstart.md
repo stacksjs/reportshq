@@ -1,99 +1,111 @@
 # Quickstart
 
-Account to first report. Every command here is copy-pasteable, and the ones
-that talk to the API are executed by `tests/feature/docs-samples.test.ts`, so
-they cannot rot quietly.
+Empty application to first report, in about five minutes. Nothing here talks to
+a service, because there is not one: everything below runs on your machine
+against your own database.
 
-## 1. Create a project
-
-Sign up at [reportshq.org](https://reportshq.org/register), then create a
-project. A project is one application: its own events, its own ingest key, its
-own members. Nothing crosses between projects.
-
-Copy the ingest key from the project's settings. It looks like
-`rhq_` followed by a long string.
-
-The key is public by design. It ships inside your application, and the only
-thing it can do is append events to that one project. It can never read.
-
-## 2. Send an event
+## 1. Install the package
 
 ```bash
-curl -X POST https://reportshq.org/ingest \
-  -H "X-ReportsHQ-Key: rhq_your_project_key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "events": [
-      {
-        "name": "commerce.order.created",
-        "value": 4250,
-        "currency": "USD",
-        "user_key": "cust_8812",
-        "properties": { "plan": "pro" }
-      }
-    ]
-  }'
+composer require reportshq/laravel
+php artisan vendor:publish --tag=reportshq-config
+php artisan migrate
 ```
 
-A successful call returns what it did with the batch:
+The migration creates the tables the reports themselves live in: the report, its
+blocks, its revisions, its share links and its schedules. Your own tables are
+never touched, read-only or otherwise altered.
 
-```json
-{ "ok": true, "stored": 1, "dropped": 0, "skipped": 0 }
+## 2. Describe a model
+
+Open `config/reportshq.php` and name something you already have.
+
+```php
+'models' => [
+    'order' => [
+        'model' => App\Models\Order::class,
+        'measures' => [
+            'revenue' => 'sum:total_amount',
+            'orders' => 'count',
+        ],
+        'time' => [
+            'placed' => 'created_at',
+        ],
+        'dimensions' => [
+            'status' => 'status',
+        ],
+    ],
+],
 ```
 
-`dropped` is events the validator refused, `skipped` is events past the
-per-request cap. Neither is ever silently non-zero: when something is dropped
-the response carries an `errors` array saying which event and why, so a client
-that logs it can fix its own payload without opening a support conversation.
-See the [ingestion reference](/docs/ingest) for the full contract.
+That is the whole description. A measure says what to add up, a time key says
+which column a date range applies to, and a dimension says what you may group
+by.
 
-To check a key without sending anything:
+**Only what you name is reachable.** The compiler will not touch a column that
+is not in this file, which is why a password hash cannot end up as a dimension
+by somebody typing its name into a URL.
+
+## 3. Open the reports
 
 ```bash
-curl -X POST https://reportshq.org/ingest/verify -H "X-ReportsHQ-Key: rhq_your_project_key"
+php artisan serve
 ```
 
-## 3. Watch the report build itself
+Visit `/reports`. The Commerce report is already there with real numbers in it,
+because everything it needed was in the description above, and your orders were
+already in the database. There is nothing to wait for and no data to accumulate:
+the first report covers everything you have ever sold.
 
-`commerce.order.created` is in [the taxonomy](/docs/events), so the commerce
-reports are created for your project as soon as it arrives, with the number you
-just sent already in them. Open the project and they are there.
+## 4. Build one of your own
 
-Nothing appears from nothing: a report is only created when there is data for
-it. An empty dashboard of placeholder charts is worse than no dashboard.
+Visit `/reports/commerce/edit`. Drag a block from the palette onto the grid,
+pick a measure and a dimension, and it redraws as you change it. Drag a corner
+to resize, or nudge with the arrow keys.
 
-## 4. Send events from your application instead
+Publish when it looks right. A draft stays yours until you do, so a teammate
+never opens a half arranged grid.
 
-Curl is for trying it. In an application, install the package for your
-framework and stop writing tracking calls:
+## 5. Share it, or send it
 
-- [Stacks](/docs/stacks): `bun add @reportshq/stacks`, then `...listen()` in
-  `app/Events.ts`
-- [Laravel](/docs/laravel): `composer require reportshq/laravel`, then the
-  service provider registers itself
+A published report can be given a link that works for somebody with no account:
 
-Both translate the events your application already emits into the taxonomy, and
-both produce byte-identical payloads for the same logical event.
+```php
+use ReportsHQ\Laravel\Reports\Share;
 
-Anything else posts JSON to the same endpoint you just used.
+$share = Share::create([
+    'report_id' => $report->id,
+    'token' => Share::newToken(),
+    'label' => 'For the board',
+    'expires_at' => now()->addDays(30),
+]);
+```
 
-## 5. Make a report of your own
+Or emailed on a cadence, from your own queue, in the report's own timezone:
 
-The automatic reports are a starting point. Open one in the builder, or start
-an empty report, and put blocks on the grid: pick what to count, what to group
-by, and over what period. Every block states in one sentence what it actually
-counts, so two charts called Revenue can never be confused for each other.
+```php
+use ReportsHQ\Laravel\Reports\Schedule;
 
-See the [report builder guide](/docs/builder).
+Schedule::create([
+    'report_id' => $report->id,
+    'cadence' => 'weekly',
+    'hour' => 8,
+    'recipients' => 'ops@example.com',
+    'format' => 'xlsx',
+]);
+```
 
-## Where to go next
+Add the runner to `routes/console.php` and the application does the rest:
 
-| You want to | Read |
-|---|---|
-| The full wire contract and error semantics | [Ingestion API](/docs/ingest) |
-| Which event names build which reports | [Event taxonomy](/docs/events) |
-| Blocks, measures, dimensions, filters | [Report builder](/docs/builder) |
-| A link somebody outside the company can open | [Sharing and embeds](/docs/sharing) |
-| The numbers by email, or as a spreadsheet | [Schedules and exports](/docs/schedules-exports) |
-| What each plan carries | [Limits](/docs/limits) |
-| Running it on your own machines | [Self-hosting](/docs/self-hosting) |
+```php
+Schedule::command('reportshq:send')->hourly();
+```
+
+It is registered by the package but scheduled by you, on purpose. A package that
+adds itself to your scheduler is a package that sends email nobody asked for.
+
+## What next
+
+- [The Laravel package](/docs/laravel) for the full description format.
+- [The query API](/docs/api) for the JSON the charts read.
+- [What a licence covers](/docs/limits), and why none of it gates a report.
