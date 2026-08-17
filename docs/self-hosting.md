@@ -1,87 +1,89 @@
 # Self-hosting
 
-ReportsHQ is a Stacks application and the source is public, including the parts
-that enforce billing. What you run yourself is the same code, not a hobbled
-community edition with the useful half removed.
+There is no other kind, and that is the whole point.
+
+The package runs inside your application, on your servers, against your
+database. Nothing is hosted on our side, nothing is sent anywhere, and the
+licence is checked offline. What follows is therefore not a special deployment
+mode: it is a description of what you already have once you install it.
+
+If you are looking for how to deploy `reportshq.org`, the marketing site and
+account pages, that is [deploying](/docs/deploy) and it has nothing to do with
+running reports.
+
+## What you are actually running
+
+Your application. That is it.
+
+```bash
+composer require reportshq/laravel
+php artisan migrate
+```
+
+The package adds routes, views, a console command and five tables. It does not
+add a service, a daemon, a queue worker of its own, or a port to open. If your
+application deploys, the reports deploy with it.
 
 ## Requirements
 
-- Bun 1.3 or newer
-- SQLite 3.47.2 or newer, or Postgres
-- A mail server, if you want scheduled delivery to work
+PHP 8.2+, Laravel 11+, and whatever database you already use. The queries are
+built through Eloquent, so anything Laravel supports works, including SQLite.
 
-## Getting it running
+## Without a licence key
 
-```bash
-git clone https://github.com/stacksjs/reportshq
-cd reportshq
-bun install
-cp .env.example .env
-./buddy key:generate
-./buddy migrate
-./buddy dev
-```
+Leave `REPORTSHQ_LICENSE` unset and every limit falls away. Unlimited
+applications, unlimited reports, everything the Pro tier lists.
 
-`buddy migrate` creates the schema from the models. Migrations are generated
-from `app/Models/`, so there is no hand-written SQL to keep in step.
+Nothing about the software changes. The pages say the installation is
+unlicensed and that is the entire difference. This is deliberate: an offline
+check cannot enforce a limit without the network call it refuses to make, and a
+reporting tool that blanks a dashboard over a billing state is one nobody can
+rely on for the dashboard.
 
-## Every limit falls away
+If you are running this commercially, buy a licence because the work was worth
+paying for, not because something will stop.
 
-Leave the billing keys unset and no tier limit applies.
+## The data never moves
 
-This is not generosity. The gates read a plan, the plan comes from a billing
-provider, and with no provider configured there is nothing to enforce a limit
-against. Pretending otherwise would just be a nag screen in software you are
-already running.
+Worth stating explicitly, because it is the property most self-hosting is
+chasing.
 
-What that means concretely: no event quota, no project or report caps, and
-every capability available, including scheduled delivery, XLSX export and
-unbranded shares.
+Queries run in process, through your own ORM, against your own connection. There
+is no ingest endpoint, no export to a third party, and no telemetry. The licence
+class opens no sockets, and a test asserts that by reading its source for
+anything that could.
 
-## Database
+For anyone under a data processing agreement, this is usually the shortest
+section of a security review you will ever write.
 
-SQLite is the default and is genuinely fine for a single project of moderate
-volume. Events are the table that grows, and retention pruning keeps it bounded.
+## The share route is public by design
 
-For anything busy, point `DATABASE_URL` at Postgres. The query builder targets
-both, and the test suite runs against both.
+One route is deliberately unauthenticated: `/reports/shared/{token}`. That is
+the point of a share link, and the token is the whole credential.
 
-## Ingest hygiene
+Two things follow. Put it behind whatever rate limiting your application already
+applies to public routes, and treat a token in a log or an error report the way
+you would treat a session cookie.
 
-The share route is public by design: it authenticates with a share token
-that ships inside your application. Two things are worth setting up.
+`reportshq.routes.share_middleware` controls what guards it. Adding an auth
+guard there does not make it safer; it makes the link stop working for the people
+it was sent to, and it fails silently because whoever sent it can still see the
+report themselves.
 
-**Retention.** The prune job deletes raw events past their retention window and
-leaves the daily rollups, so old reports still show correct totals. Without a
-plan there is no configured window, so set one deliberately rather than letting
-the table grow forever.
+## Backups
 
-**A rate limit at the edge.** The application bounds batch sizes and payloads,
-but a reverse proxy is the right place to stop a flood before it reaches Bun.
+Your database backup already covers this. The reports live in five ordinary
+tables beside everything else, so there is no separate thing to remember.
 
-## Mail
-
-Scheduled delivery, quota notices and password resets all need mail. Configure
-`config/email.ts` with your SMTP details. Without it, the application runs
-normally and those features do not send.
+The only note worth making: a report is a definition, not a copy of the numbers.
+Restoring the database restores the reports, and they recompute from whatever
+data was restored with them.
 
 ## Upgrades
 
-```bash
-git pull
-bun install
-./buddy migrate
-```
+`composer update reportshq/laravel`, then `php artisan migrate`. Read the
+changelog for anything with a `!` in the commit subject, which is how a breaking
+change is marked.
 
-Migrations are additive and generated from the models. Review the generated
-file before applying it in production, the same as you would any migration.
-
-## What you take on
-
-Your own database, your own backups, your own mail server, and your own
-upgrades. That is the real cost of self-hosting anything, and it is worth
-stating plainly rather than letting somebody discover it the first time a
-report fails to send.
-
-The hosted plans exist so that this is somebody else's evening. Both are
-legitimate choices.
+The charts ship as a compiled bundle inside the package, so there is no asset
+build on your side and nothing to rebuild after an upgrade.

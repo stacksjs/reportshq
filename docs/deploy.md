@@ -1,5 +1,11 @@
 # Deploying
 
+**This is about `reportshq.org`, not about running reports.** The site is a
+marketing site, an account, and a licence. Reports run inside the customer's own
+application through [the package](/docs/laravel), which deploys with their app
+and needs nothing here. If you arrived looking for how to run this yourself, you
+want [self-hosting](/docs/self-hosting).
+
 `reportshq.org` deploys on every push to `main`. There is nothing to run by
 hand, and running it by hand is worse than not: `buddy deploy` builds its
 release tarball from the **working directory, not the commit**, so a deploy
@@ -94,21 +100,24 @@ su - postgres -c "psql -d reportshq"
 
 ## Persistent state
 
-The database is not a file, so the only shared paths are the two directories the
-app itself writes:
+The database is not a file, so the only shared path is the one the app itself
+writes:
 
 ```
-storage/exports         → /var/lib/reportshq/exports
 storage/backups/database → /var/lib/reportshq/backups
 ```
 
-ts-cloud keeps the real directory outside the releases and symlinks it into each
-one, so the release pruner cannot delete a generated export or a night's dump.
+`storage/exports` used to sit beside it, holding generated CSV and XLSX files
+for the hosted reports. Exports now happen inside the customer's application and
+are streamed rather than stored, so there is nothing here to keep.
 
-The targets are absolute because `main` and `api` are two sites of one project
-and each gets its own `shared/` directory; a plain-string entry would give them
-two separate directories. `seed: true` marks `main` as the one site allowed to
-create and populate them.
+ts-cloud keeps the real directory outside the releases and symlinks it into each
+one, so the release pruner cannot delete a night's dump.
+
+The target is absolute because `main` and `api` are two sites of one project and
+each gets its own `shared/` directory; a plain-string entry would give them two
+separate directories. `seed: true` marks `main` as the one site allowed to
+create and populate it.
 
 ## Backups
 

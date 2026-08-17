@@ -33,14 +33,15 @@ const PORT_API = 3158
  * empty directory.
  *
  * The database is not here: it is Postgres on the box, reached over loopback.
- * These are the two directories the app itself writes, generated exports and
- * nightly dumps, both of which a release pruner would otherwise delete.
+ * This is the one directory the app itself writes, the nightly dumps, which a
+ * release pruner would otherwise delete. `storage/exports` used to sit beside
+ * it, holding generated CSV and XLSX for the hosted reports; exports now happen
+ * inside the customer's own application and are streamed rather than stored.
  *
  * The paths stay release-relative because that is where the symlink lands; the
  * `target` is where the bytes actually live.
  */
 const STATE_DIR = '/var/lib/reportshq'
-const EXPORT_DIR = 'storage/exports'
 const BACKUP_DIR = 'storage/backups/database'
 
 /**
@@ -60,7 +61,6 @@ const BACKUP_DIR = 'storage/backups/database'
  */
 function sharedState(seed: boolean) {
   return [
-    { path: EXPORT_DIR, target: `${STATE_DIR}/exports`, seed },
     // Nightly dumps. A backup written inside a release is deleted by the
     // release pruner, so it would disappear at exactly the moment the release
     // it could have been restored alongside did.
@@ -157,7 +157,6 @@ export const tsCloud: TsCloudConfig = {
         // Database credentials come from the encrypted .env.production, not
         // from here: a value set in this block becomes the authoritative
         // runtime environment and would override them.
-        EXPORT_DIR,
         BACKUP_DIR,
       },
     },
@@ -175,7 +174,6 @@ export const tsCloud: TsCloudConfig = {
         NODE_ENV: 'production',
         // Both processes read the same Postgres database, from the same
         // encrypted .env.production. Nothing about the database is set here.
-        EXPORT_DIR,
         BACKUP_DIR,
       },
     },
