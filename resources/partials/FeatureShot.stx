@@ -1,0 +1,25 @@
+{{-- A screenshot of the product.
+
+     Real output: the components, the compiler and the grid that ship, captured
+     from a running page. The rows behind it are a sample dataset and the
+     caption says so, because a marketing image that implies somebody's real
+     revenue is a different kind of claim.
+
+     `shot`, `shotAlt` and `shotCaption` come from the page's own server script.
+     Partials are included into the page's scope, so they are read directly:
+     passing them as props would arrive empty, since stx drops props between
+     components in this version. --}}
+<figure class="mt-12">
+  <div class="overflow-hidden rounded-xl border border-line bg-panel">
+    <img
+      src="{{ shot }}"
+      alt="{{ shotAlt }}"
+      width="1240"
+      height="600"
+      loading="lazy"
+      decoding="async"
+      class="block w-full h-auto"
+    >
+  </div>
+  <figcaption class="mt-3 text-xs text-subtle">{{ shotCaption }}</figcaption>
+</figure>

@@ -46,6 +46,52 @@ const sections = [
     "body": "Blending sources this cannot see, and giving an analyst somewhere to explore. If the question is about your application's own data, and it is the same question every week, this is the smaller and more honest tool."
   }
 ]
+const compareWith = "Looker Studio"
+
+/*
+ * The comparison, row by row.
+ *
+ * Written so a reader can find the row they came for and stop. Where the other
+ * tool is better, the row says so: a comparison page that never concedes a
+ * point is an advert, and readers can tell.
+ */
+const compare = [
+  {
+    "about": "Where your data goes",
+    "ours": "Nowhere. Queried in place, in your own process.",
+    "theirs": "Reachable by a connector, or exported somewhere it can read."
+  },
+  {
+    "about": "Blending several sources",
+    "ours": "One application at a time. It does not try to be this.",
+    "theirs": "Many sources at once. This is what it is for."
+  },
+  {
+    "about": "Freshness",
+    "ours": "Live, because it queries the table when you open the page.",
+    "theirs": "As fresh as the last connector run."
+  },
+  {
+    "about": "Reports as code",
+    "ours": "Reviewed in a pull request, deployed with the app.",
+    "theirs": "Built in a browser, versioned by nobody."
+  },
+  {
+    "about": "Access control",
+    "ours": "Your application's own login.",
+    "theirs": "Google accounts and sharing settings."
+  },
+  {
+    "about": "Working offline or air-gapped",
+    "ours": "Yes. No outbound call, including the licence check.",
+    "theirs": "No. It is a hosted product."
+  },
+  {
+    "about": "Cost",
+    "ours": "Per installed application.",
+    "theirs": "Free."
+  }
+]
 </script>
 
 <template>
@@ -56,6 +102,8 @@ const sections = [
     <main class="px-6 py-10 mx-auto max-w-3xl">
       <h1 class="text-4xl font-semibold tracking-tighter md:text-5xl">{{ page.title }}</h1>
       <p class="mt-5 text-lg leading-relaxed text-muted">{{ page.description }}</p>
+
+      @include('CompareTable')
 
       <div class="grid gap-10 mt-14">
         @foreach (sections as section)

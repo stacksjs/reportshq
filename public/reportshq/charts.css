@@ -22,5 +22,13 @@ stacks-big-number p + p { margin-top: 0.35rem; }
 stacks-big-number .num { font-size: 1.875rem; font-weight: 600; letter-spacing: -0.02em; }
 stacks-big-number .text-muted, stacks-text-block .text-muted { font-size: 0.8rem; color: var(--text-3, #6b7180); }
 stacks-bar-chart svg, stacks-line-chart svg, stacks-donut-chart svg,
-stacks-funnel-chart svg { width: 100%; height: 100%; display: block; }
+stacks-funnel-chart svg { width: 100%; height: auto; max-height: 100%; display: block; }
+
+/* The chain that makes `height: 100%` mean anything. A percentage height
+   resolves against a parent with a definite height, so without these the
+   component's own wrapper is auto-height, the SVG falls back to its natural
+   size, and a wide cell renders a donut taller than the card holding it. */
+stacks-bar-chart > div, stacks-line-chart > div, stacks-donut-chart > div,
+stacks-funnel-chart > div, stacks-table-chart > div { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.rhq-cell { overflow: hidden; min-width: 0; }
 @media (max-width: 720px) { .rhq-cell { grid-column: 1 / -1; } }

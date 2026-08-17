@@ -1,0 +1,35 @@
+{{-- A comparison, as a table.
+
+     Prose describing who wins where makes a reader hold two columns in their
+     head while they read. A table lets them scan the row they care about and
+     stop, which is what somebody comparing two tools is actually doing.
+
+     The `verdict` column carries a word rather than a filled progress bar or a
+     score out of ten. Those imply a measurement nobody took, and the honest
+     answer to most of these rows is "both, differently".
+
+     Rows come from `compare` in the page's own server script. Partials are
+     included into the page's scope, so this reads that binding directly:
+     passing it as a prop would arrive empty, since stx drops props between
+     components in this version. --}}
+<div class="overflow-x-auto mt-12 -mx-6 px-6">
+  <table class="w-full min-w-[36rem] border-collapse text-left">
+    <caption class="sr-only">How ReportsHQ and {{ compareWith }} differ, feature by feature</caption>
+    <thead>
+      <tr class="border-b border-line">
+        <th scope="col" class="py-3 pr-4 text-xs font-medium uppercase tracking-wide text-subtle">What you are comparing</th>
+        <th scope="col" class="py-3 px-4 text-xs font-medium uppercase tracking-wide text-subtle">ReportsHQ</th>
+        <th scope="col" class="py-3 pl-4 text-xs font-medium uppercase tracking-wide text-subtle">{{ compareWith }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      @foreach (compare as row)
+        <tr class="border-b border-line/60 align-top">
+          <th scope="row" class="py-4 pr-4 text-sm font-medium text-ink">{{ row.about }}</th>
+          <td class="py-4 px-4 text-sm leading-relaxed text-muted">{{ row.ours }}</td>
+          <td class="py-4 pl-4 text-sm leading-relaxed text-muted">{{ row.theirs }}</td>
+        </tr>
+      @endforeach
+    </tbody>
+  </table>
+</div>

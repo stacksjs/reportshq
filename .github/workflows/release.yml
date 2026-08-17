@@ -36,6 +36,30 @@ jobs:
       - name: Install Dependencies
         run: bun install
 
+      - name: Build the Stacks package
+        working-directory: packages/stacks
+        run: bun run build
+
+      - name: Verify the built package
+        # A published build that does not export what it claims is worse than a
+        # failed release: it installs, and fails at the first import in
+        # somebody else's application. This imports the artefact rather than
+        # the source, so a stale or partial build stops here.
+        run: >-
+          bun -e "import { Registry, Compiler, Runner, elementHtml, reportRoutes } from './packages/stacks/dist/index.js';
+          const r = new Registry({ o: { table: 'o', measures: { c: { aggregate: 'count' } }, time: {}, dimensions: {} } });
+          if (!r.has('o') || typeof elementHtml !== 'function' || typeof reportRoutes !== 'function')
+          throw new Error('published package build is stale')"
+
+      - name: Publish the Stacks package
+        working-directory: packages/stacks
+        # `pantry publish` rather than `npm publish`, matching the other
+        # packages in the org: it reads the same manifest and applies the same
+        # access and provenance flags everywhere.
+        run: pantry publish --npm --access public
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Create GitHub Release
         uses: stacksjs/action-releaser@v1.2.9
         env:

@@ -50,6 +50,57 @@ const sections = [
     "body": "A share link serves one published report to somebody with no account and no database access, from your own domain. In Metabase that is a public link from a service you also have to keep running."
   }
 ]
+const compareWith = "Metabase"
+
+/*
+ * The comparison, row by row.
+ *
+ * Written so a reader can find the row they came for and stop. Where the other
+ * tool is better, the row says so: a comparison page that never concedes a
+ * point is an advert, and readers can tell.
+ */
+const compare = [
+  {
+    "about": "Where it runs",
+    "ours": "A package inside your application. Nothing else to deploy.",
+    "theirs": "A service beside it, with its own deployment and upgrades."
+  },
+  {
+    "about": "Your database connection",
+    "ours": "Queried in process through your own ORM. No new credential.",
+    "theirs": "Needs credentials into production, to rotate and firewall."
+  },
+  {
+    "about": "Who can see what",
+    "ours": "The routes and middleware your application already has.",
+    "theirs": "Its own users, groups and permissions to keep in step."
+  },
+  {
+    "about": "Ad hoc questions",
+    "ours": "Only what the compiler can express. It refuses the rest.",
+    "theirs": "Any SQL you can write. This is where it wins outright."
+  },
+  {
+    "about": "Reports as code",
+    "ours": "A report lives in your repository and ships with the feature.",
+    "theirs": "A dashboard built in a browser, reviewed by nobody."
+  },
+  {
+    "about": "Business rules",
+    "ours": "Reads your models, so scopes and soft deletes still apply.",
+    "theirs": "Reads tables, so the rules live twice and can disagree."
+  },
+  {
+    "about": "Sharing outside the team",
+    "ours": "A signed link from your own domain.",
+    "theirs": "A public link from a service you also keep running."
+  },
+  {
+    "about": "Cost shape",
+    "ours": "Per installed application.",
+    "theirs": "Free to self-host, paid cloud tiers."
+  }
+]
 </script>
 
 <template>
@@ -60,6 +111,8 @@ const sections = [
     <main class="px-6 py-10 mx-auto max-w-3xl">
       <h1 class="text-4xl font-semibold tracking-tighter md:text-5xl">{{ page.title }}</h1>
       <p class="mt-5 text-lg leading-relaxed text-muted">{{ page.description }}</p>
+
+      @include('CompareTable')
 
       <div class="grid gap-10 mt-14">
         @foreach (sections as section)

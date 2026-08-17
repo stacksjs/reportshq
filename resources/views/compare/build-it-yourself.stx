@@ -46,6 +46,57 @@ const sections = [
     "body": "If the reports are few, fixed, and unlikely to be asked about. That is a real situation and this page is not going to pretend otherwise."
   }
 ]
+const compareWith = "Building it yourself"
+
+/*
+ * The comparison, row by row.
+ *
+ * Written so a reader can find the row they came for and stop. Where the other
+ * tool is better, the row says so: a comparison page that never concedes a
+ * point is an advert, and readers can tell.
+ */
+const compare = [
+  {
+    "about": "The first three charts",
+    "ours": "About an hour once a model is described.",
+    "theirs": "A day or two, and you own every line."
+  },
+  {
+    "about": "The fifteenth chart",
+    "ours": "Same as the first. Describe, drag, publish.",
+    "theirs": "Each one is more code, and they start to diverge."
+  },
+  {
+    "about": "Getting a number wrong",
+    "ours": "Refuses a query it cannot answer honestly.",
+    "theirs": "Answers whatever you wrote, including the wrong join."
+  },
+  {
+    "about": "Comparison ranges and grains",
+    "ours": "Built in, including the empty previous period.",
+    "theirs": "Yours to write, and easy to get subtly wrong."
+  },
+  {
+    "about": "Exports and share links",
+    "ours": "Included, with revocation and expiry.",
+    "theirs": "Another feature, arriving when somebody asks."
+  },
+  {
+    "about": "Scheduled email",
+    "ours": "A row and a console command.",
+    "theirs": "A queue, a mailable, and a way not to send twice."
+  },
+  {
+    "about": "Dependencies",
+    "ours": "One package and a licence.",
+    "theirs": "None. This is the real advantage."
+  },
+  {
+    "about": "When it is the right call",
+    "ours": "When reporting is not the thing you want to maintain.",
+    "theirs": "When the reports are few, fixed, and unlikely to be asked about."
+  }
+]
 </script>
 
 <template>
@@ -56,6 +107,8 @@ const sections = [
     <main class="px-6 py-10 mx-auto max-w-3xl">
       <h1 class="text-4xl font-semibold tracking-tighter md:text-5xl">{{ page.title }}</h1>
       <p class="mt-5 text-lg leading-relaxed text-muted">{{ page.description }}</p>
+
+      @include('CompareTable')
 
       <div class="grid gap-10 mt-14">
         @foreach (sections as section)

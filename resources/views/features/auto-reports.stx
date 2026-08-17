@@ -42,6 +42,9 @@ const sections = [
     "body": "An auto-created report is an ordinary report. Drag its blocks, change a measure, add one it did not think of. Nothing is regenerated behind you and nothing is locked because it started life automatically."
   }
 ]
+const shot = '/img/feature-auto-reports.png'
+const shotAlt = 'A Commerce report showing revenue, order count, revenue by status as a donut and a table, and revenue per day as a line chart'
+const shotCaption = 'A Commerce report, drawn by the components that ship. The numbers come from a sample dataset; the charts, the totals and the layout are the real thing.'
 </script>
 
 <template>
@@ -52,6 +55,8 @@ const sections = [
     <main class="px-6 py-10 mx-auto max-w-3xl">
       <h1 class="text-4xl font-semibold tracking-tighter md:text-5xl">{{ page.title }}</h1>
       <p class="mt-5 text-lg leading-relaxed text-muted">{{ page.description }}</p>
+
+      @include('FeatureShot')
 
       <div class="grid gap-10 mt-14">
         @foreach (sections as section)
