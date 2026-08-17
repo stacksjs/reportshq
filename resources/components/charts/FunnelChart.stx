@@ -30,20 +30,46 @@ interface FunnelChartProps {
 
 const { result, title } = defineProps<FunnelChartProps>()
 
-const steps = (result.steps ?? []).map((step: any, index: number, all: any[]) => {
-  const previous = index === 0 ? step.count : all[index - 1].count
+/*
+ * Steps come from the series, in the order the query returned them.
+ *
+ * This used to read `result.steps`, a shape the hosted event pipeline produced
+ * and nothing produces now. It therefore always fell through to its empty
+ * branch, which referenced an `emptyMessage` that was never declared here, and
+ * an undefined reference in a compiled render throws: the element drew nothing
+ * at all. Both halves were invisible to the unit tests, which assert numbers
+ * and never look at what a component draws.
+ */
+const raw = (result.series ?? []).map((series: any) => ({
+  name: series.key,
+  value: series.total ?? 0,
+}))
+
+// Largest first. A funnel that does not descend is not a funnel, and the
+// compiler orders a dimensioned query by value already; this makes it true
+// even when a caller hands the series over in another order.
+raw.sort((a: any, b: any) => b.value - a.value)
+
+const first = raw[0]?.value ?? 0
+
+const steps = raw.map((step: any, index: number) => {
+  const previous = index === 0 ? step.value : raw[index - 1].value
+
   return {
     name: step.name,
-    count: compact(step.count),
-    width: Math.max(2, step.rate * 100),
-    ofFirst: `${Math.round(step.rate * 100)}%`,
-    ofPrevious: previous === 0 ? '-' : `${Math.round((step.count / previous) * 100)}%`,
-    dropped: index === 0 ? null : compact(Math.max(0, previous - step.count)),
+    count: compact(step.value),
+    // Never zero width: a step that kept nothing still needs a row somebody
+    // can see and read a label against.
+    width: first === 0 ? 2 : Math.max(2, (step.value / first) * 100),
+    ofFirst: first === 0 ? '-' : `${Math.round((step.value / first) * 100)}%`,
+    ofPrevious: previous === 0 ? '-' : `${Math.round((step.value / previous) * 100)}%`,
+    dropped: index === 0 ? null : compact(Math.max(0, previous - step.value)),
     color: seriesColor(index),
   }
 })
 
-const empty = steps.length === 0 || steps.every((step: any) => step.count === '0')
+const empty = steps.length === 0 || first === 0
+const emptyMessage = 'No data in this range'
 const legend: Array<{ key: string, color: string, value?: string }> = []
 </script>
 

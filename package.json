@@ -72,7 +72,8 @@
     "deps:lockfile:check": "bun .github/scripts/check-lockfile-version.ts",
     "bud": "./buddy",
     "stx": "./buddy",
-    "build:charts": "buddy build --web-components && cp storage/framework/libs/components/stx/dist/bundle.js public/reportshq-charts.js && cp storage/framework/libs/components/stx/dist/bundle.css public/reportshq-charts.css && cp storage/framework/libs/components/stx/dist/bundle.js packages/laravel/resources/dist/reportshq.js && cp storage/framework/libs/components/stx/dist/bundle.css packages/laravel/resources/dist/reportshq-components.css && mkdir -p public/reportshq && cp storage/framework/libs/components/stx/dist/bundle.js public/reportshq/charts.js"
+    "build:charts": "buddy build --web-components && mkdir -p public/reportshq packages/laravel/resources/dist && cat storage/framework/libs/components/stx/dist/bundle.css resources/components/charts/charts.css > public/reportshq/charts.css.tmp && cat public/reportshq/charts.css.tmp resources/components/charts/grid.css > public/reportshq/charts.css && rm public/reportshq/charts.css.tmp && cp storage/framework/libs/components/stx/dist/bundle.js public/reportshq/charts.js && cp storage/framework/libs/components/stx/dist/bundle.js public/reportshq-charts.js && cp public/reportshq/charts.css public/reportshq-charts.css && cp storage/framework/libs/components/stx/dist/bundle.js packages/laravel/resources/dist/reportshq.js && cp public/reportshq/charts.css packages/laravel/resources/dist/reportshq-components.css",
+    "shots": "bun tools/shots/capture.ts"
   },
   "dependencies": {
     "@stacksjs/buddy": "^0.70.378",

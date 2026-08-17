@@ -1,0 +1,48 @@
+<script server>
+/**
+ * What installing it actually looks like.
+ *
+ * The config is the real shape the compiler reads, copied from this
+ * application's own `config/reportshq.ts`, so the image cannot drift from the
+ * format without the format changing first.
+ */
+const install = `composer require reportshq/laravel
+php artisan vendor:publish --tag=reportshq-config
+php artisan migrate`
+
+const config = `'models' => [
+    'order' => [
+        'model' => App\\Models\\Order::class,
+        'measures' => [
+            'revenue' => 'sum:total_amount',
+            'orders'  => 'count',
+        ],
+        'time' => [
+            'placed' => 'created_at',
+        ],
+        'dimensions' => [
+            'status' => 'status',
+        ],
+    ],
+],`
+</script>
+
+<template>
+  <div class="p-10 min-h-[100dvh] bg-canvas">
+    <div class="grid gap-5 mx-auto max-w-3xl">
+      <div class="overflow-hidden rounded-xl border border-line bg-panel">
+        <p class="px-5 py-3 text-xs border-b border-line text-subtle">Terminal</p>
+        <pre class="px-5 py-4 m-0 text-sm leading-relaxed num text-ink" style="white-space: pre-wrap">{{ install }}</pre>
+      </div>
+
+      <div class="overflow-hidden rounded-xl border border-line bg-panel">
+        <p class="px-5 py-3 text-xs border-b border-line text-subtle">config/reportshq.php</p>
+        <pre class="px-5 py-4 m-0 text-sm leading-relaxed num text-ink" style="white-space: pre-wrap">{{ config }}</pre>
+      </div>
+
+      <p class="text-sm text-muted">
+        That is the whole installation. The reports read the models named above, in place, and nothing is sent anywhere.
+      </p>
+    </div>
+  </div>
+</template>

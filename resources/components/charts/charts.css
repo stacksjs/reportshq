@@ -1,4 +1,3 @@
-@scope (stacks-bar-chart){.chart-bar{transition:opacity 0.12s ease}.chart-bar:hover{opacity:0.82}@media (prefers-reduced-motion:reduce){.chart-bar{transition:none}}}@scope (stacks-donut-chart){.donut-total{font-family:var(--mono);font-size:20px;font-weight:600;fill:var(--text)}.donut-caption{font-size:11px;fill:var(--text-3)}.chart-slice{transition:opacity 0.12s ease}.chart-slice:hover{opacity:0.82}@media (prefers-reduced-motion:reduce){.chart-slice{transition:none}}}@scope (stacks-heatmap-chart){.heat-cell{transition:outline-color 0.12s ease;outline:2px solid transparent}.heat-cell:hover{outline-color:var(--accent)}@media (prefers-reduced-motion:reduce){.heat-cell{transition:none}}}@scope (stacks-line-chart){.chart-dot{opacity:0;transition:opacity 0.12s ease;pointer-events:none}.chart-hit:hover + .chart-dot{opacity:1}@media (prefers-reduced-motion:reduce){.chart-dot{transition:none}}}
 /*
  * The chart components' own styles.
  *
@@ -256,42 +255,3 @@ stacks-heatmap-chart .heat-cell { min-height: 1.25rem; }
   & .text-pos { color: var(--pos, #1f7a6b); }
   & .text-neg { color: var(--neg, #b8336a); }
 }
-/*
- * The report grid.
- *
- * The host page's concern rather than the components': a component draws a
- * chart, the page decides where it sits. Kept beside them so the two ship
- * together and a consumer gets a working layout out of the box.
- */
-/* The grid, and the sizing a custom element does not have on its own.
-   An element is inline with no intrinsic size, and an SVG that sizes itself to
-   its container resolves to zero without a width: correct paths, nothing
-   visible. Both are stated here rather than discovered again. */
-.rhq-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 1rem; margin-top: 2rem; }
-.rhq-cell { grid-column: var(--x) / span var(--w); grid-row: span var(--h);
-  background: var(--panel, #fff); border: 1px solid var(--border, rgba(20,22,28,.12));
-  border-radius: 12px; padding: 1rem; min-height: 6rem; }
-stacks-big-number, stacks-bar-chart, stacks-line-chart, stacks-donut-chart,
-stacks-table-chart, stacks-funnel-chart, stacks-text-block { display: block; height: 100%; }
-
-/* The components lay themselves out with utility classes the host page may not
-   generate: Crosswind extracts utilities from rendered HTML, and these elements
-   render after that pass. So the few the charts depend on are stated here
-   rather than hoped for. Without this the title and the number sit on one line
-   and read as "Total accounts8". */
-stacks-big-number > div, stacks-text-block > div { display: flex; flex-direction: column; justify-content: center; height: 100%; }
-stacks-big-number p, stacks-text-block p { margin: 0; }
-stacks-big-number p + p { margin-top: 0.35rem; }
-stacks-big-number .num { font-size: 1.875rem; font-weight: 600; letter-spacing: -0.02em; }
-stacks-big-number .text-muted, stacks-text-block .text-muted { font-size: 0.8rem; color: var(--text-3, #6b7180); }
-stacks-bar-chart svg, stacks-line-chart svg, stacks-donut-chart svg,
-stacks-funnel-chart svg { width: 100%; height: auto; max-height: 100%; display: block; }
-
-/* The chain that makes `height: 100%` mean anything. A percentage height
-   resolves against a parent with a definite height, so without these the
-   component's own wrapper is auto-height, the SVG falls back to its natural
-   size, and a wide cell renders a donut taller than the card holding it. */
-stacks-bar-chart > div, stacks-line-chart > div, stacks-donut-chart > div,
-stacks-funnel-chart > div, stacks-table-chart > div { height: 100%; min-height: 0; display: flex; flex-direction: column; }
-.rhq-cell { overflow: hidden; min-width: 0; }
-@media (max-width: 720px) { .rhq-cell { grid-column: 1 / -1; } }

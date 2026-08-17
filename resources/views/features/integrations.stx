@@ -42,6 +42,9 @@ const sections = [
     "body": "Standalone pages behind whatever middleware you already use, or inside a Filament panel, or as JSON for a front end of your own. The charts are the same components in all three, so they cannot drift."
   }
 ]
+const shot = '/img/feature-integrations.png'
+const shotAlt = 'A terminal showing three install commands, and a config file naming an Order model with its measures, time keys and dimensions'
+const shotCaption = 'The whole installation, and the config the compiler reads. Copied from a working application rather than written for the page.'
 </script>
 
 <template>
@@ -52,6 +55,8 @@ const sections = [
     <main class="px-6 py-10 mx-auto max-w-3xl">
       <h1 class="text-4xl font-semibold tracking-tighter md:text-5xl">{{ page.title }}</h1>
       <p class="mt-5 text-lg leading-relaxed text-muted">{{ page.description }}</p>
+
+      @include('FeatureShot')
 
       <div class="grid gap-10 mt-14">
         @foreach (sections as section)

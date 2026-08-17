@@ -1,0 +1,64 @@
+<script server>
+/**
+ * A shared report, as somebody with no account sees it.
+ *
+ * No navigation and no links back into the application, because the reader has
+ * neither an account nor a reason to be offered one.
+ */
+import { Database } from 'bun:sqlite'
+import { Compiler, elementHtml, Registry, Runner } from '@reportshq/stacks'
+
+const sqlite = new Database(':memory:')
+sqlite.run(`CREATE TABLE orders (id INTEGER PRIMARY KEY, total INTEGER, channel TEXT, created_at TEXT)`)
+let day = 3
+for (const total of [4200, 5100, 3900, 6800, 7400, 5900, 8200, 7100, 9400, 8800, 10200, 9100]) {
+  const date = `2026-08-${String(day).padStart(2, '0')}T10:00:00Z`
+  sqlite.run(`INSERT INTO orders (total, channel, created_at) VALUES (?, ?, ?)`, [total, 'web', date])
+  sqlite.run(`INSERT INTO orders (total, channel, created_at) VALUES (?, ?, ?)`, [Math.round(total * 0.5), 'app', date])
+  day++
+}
+
+const registry = new Registry({
+  order: {
+    table: 'orders',
+    measures: { revenue: { aggregate: 'sum', column: 'total' } },
+    time: { placed: 'created_at' },
+    dimensions: { channel: 'channel' },
+  },
+})
+
+const db = { unsafe: async (q: string, v: unknown[] = []) => sqlite.query(q).all(...(v as any[])) as any[] }
+const runner = new Runner(new Compiler(registry, db, 'sqlite'))
+
+const tiles = (await runner.report([
+  { id: 1, kind: 'big_number', title: 'Revenue this month', x: 0, y: 0, w: 4, h: 3, query: { model: 'order', measure: 'revenue' } },
+  { id: 2, kind: 'line', title: 'Revenue per day', x: 4, y: 0, w: 8, h: 6, query: { model: 'order', measure: 'revenue', time: { key: 'placed' }, grain: 'day' } },
+  { id: 3, kind: 'donut', title: 'By channel', x: 0, y: 3, w: 4, h: 5, query: { model: 'order', measure: 'revenue', dimension: { key: 'channel' } } },
+], 'UTC')).map((block: any) => ({ ...block, html: elementHtml(block) }))
+</script>
+
+<template>
+  <div class="p-10 min-h-[100dvh] bg-canvas">
+    <link rel="stylesheet" href="/reportshq/charts.css">
+    <script type="module" src="/reportshq/charts.js"></script>
+
+    <div class="mx-auto max-w-4xl">
+      <header>
+        <h1 class="text-2xl font-semibold tracking-tight text-ink">Commerce, August</h1>
+        <p class="mt-1 text-sm text-muted">Shared by Priya Raghunathan. Published 16 August 2026.</p>
+      </header>
+
+      <div class="rhq-grid" style="grid-auto-rows: 3.4rem">
+        @foreach (tiles as tile)
+          <div class="rhq-cell" style="--x: {{ tile.x + 1 }}; --w: {{ tile.w }}; --h: {{ tile.h }}">
+            {!! tile.html !!}
+          </div>
+        @endforeach
+      </div>
+
+      <p class="pt-4 mt-10 text-xs border-t border-line text-subtle">
+        A published report, shared with a link. It shows this report and nothing else, and whoever shared it can turn the link off.
+      </p>
+    </div>
+  </div>
+</template>

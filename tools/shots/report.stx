@@ -1,0 +1,68 @@
+<script server>
+/**
+ * A report as the product draws it.
+ *
+ * Real components, real compiler, real grid. The rows are a sample dataset in
+ * its own in-memory database: writing sample orders into the application's own
+ * tables to take a marketing screenshot would be a strange thing to do to real
+ * data, and the page using the image says the numbers are a sample.
+ */
+import { Database } from 'bun:sqlite'
+import { Compiler, elementHtml, Registry, Runner } from '@reportshq/stacks'
+
+const sqlite = new Database(':memory:')
+sqlite.run(`CREATE TABLE orders (id INTEGER PRIMARY KEY, total INTEGER, status TEXT, created_at TEXT)`)
+
+let day = 3
+for (const total of [4200, 5100, 3900, 6800, 7400, 5900, 8200, 7100, 9400, 8800, 10200, 9100, 11800, 10400]) {
+  const date = `2026-08-${String(day).padStart(2, '0')}T10:00:00Z`
+  sqlite.run(`INSERT INTO orders (total, status, created_at) VALUES (?, ?, ?)`, [total, 'paid', date])
+  sqlite.run(`INSERT INTO orders (total, status, created_at) VALUES (?, ?, ?)`, [Math.round(total * 0.6), 'paid', date])
+  day++
+}
+sqlite.run(`INSERT INTO orders (total, status, created_at) VALUES (?, ?, ?)`, [3100, 'refunded', '2026-08-09T10:00:00Z'])
+
+const registry = new Registry({
+  order: {
+    table: 'orders',
+    measures: { revenue: { aggregate: 'sum', column: 'total' }, orders: { aggregate: 'count' } },
+    time: { placed: 'created_at' },
+    dimensions: { status: 'status' },
+  },
+})
+
+const db = { unsafe: async (q: string, v: unknown[] = []) => sqlite.query(q).all(...(v as any[])) as any[] }
+const runner = new Runner(new Compiler(registry, db, 'sqlite'))
+
+const byStatus = { model: 'order', measure: 'revenue', dimension: { key: 'status' } }
+
+const tiles = (await runner.report([
+  { id: 1, kind: 'big_number', title: 'Revenue', x: 0, y: 0, w: 3, h: 2, query: { model: 'order', measure: 'revenue' } },
+  { id: 2, kind: 'big_number', title: 'Orders', x: 3, y: 0, w: 3, h: 2, query: { model: 'order', measure: 'orders' } },
+  { id: 3, kind: 'line', title: 'Revenue per day', x: 6, y: 0, w: 6, h: 7, query: { model: 'order', measure: 'revenue', time: { key: 'placed' }, grain: 'day' } },
+  // A donut wants a roughly square cell, or the circle clips no matter how the
+  // SVG is sized.
+  { id: 4, kind: 'donut', title: 'By status', x: 0, y: 2, w: 3, h: 5, query: byStatus },
+  { id: 5, kind: 'table', title: 'Revenue by status', x: 3, y: 2, w: 3, h: 5, query: byStatus },
+], 'UTC')).map((block: any) => ({ ...block, html: elementHtml(block) }))
+</script>
+
+<template>
+  <div class="p-8 min-h-[100dvh] bg-canvas">
+    <link rel="stylesheet" href="/reportshq/charts.css">
+    <script type="module" src="/reportshq/charts.js"></script>
+
+    <div class="mx-auto max-w-5xl">
+      <h1 class="text-2xl font-semibold tracking-tight text-ink">Commerce</h1>
+      <p class="mt-1 text-sm text-muted">Revenue, orders and status, from the Order model.</p>
+
+      <div class="rhq-grid" style="grid-auto-rows: 3.4rem">
+        @foreach (tiles as tile)
+          <div class="rhq-cell" style="--x: {{ tile.x + 1 }}; --w: {{ tile.w }}; --h: {{ tile.h }}">
+            {!! tile.html !!}
+          </div>
+        @endforeach
+      </div>
+    </div>
+  </div>
+</template>

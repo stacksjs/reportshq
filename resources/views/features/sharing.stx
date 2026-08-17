@@ -42,6 +42,9 @@ const sections = [
     "body": "Views are recorded against the link, so you know whether the weekly report anybody asked for is being opened. It is a small thing that settles a lot of arguments about what to keep producing."
   }
 ]
+const shot = '/img/feature-sharing.png'
+const shotAlt = 'A shared report showing revenue, revenue per day as a line chart and revenue by channel as a donut, with no navigation'
+const shotCaption = 'A published report as somebody with no account sees it. Sample numbers; the page, the charts and the link behaviour are the real thing.'
 </script>
 
 <template>
@@ -52,6 +55,8 @@ const sections = [
     <main class="px-6 py-10 mx-auto max-w-3xl">
       <h1 class="text-4xl font-semibold tracking-tighter md:text-5xl">{{ page.title }}</h1>
       <p class="mt-5 text-lg leading-relaxed text-muted">{{ page.description }}</p>
+
+      @include('FeatureShot')
 
       <div class="grid gap-10 mt-14">
         @foreach (sections as section)
