@@ -69,6 +69,12 @@ function resolves(path: string): boolean {
   if (clean.startsWith('docs/'))
     return existsSync(join(docs, `${clean.slice('docs/'.length)}.md`))
 
+  // A static asset is a real URL too. Without this the guard reports a
+  // stylesheet or a script as a dead link, which is the opposite of true and
+  // sends whoever sees it looking for a missing page.
+  if (existsSync(join(root, 'public', clean)))
+    return true
+
   return existsSync(join(views, `${clean}.stx`)) || existsSync(join(views, clean, 'index.stx'))
 }
 
