@@ -95,6 +95,32 @@ a bucket spanning a daylight-saving transition, where one hour lands on the
 wrong side. Postgres and MySQL use their own zone handling and do not have this
 limit. It is stated rather than silent.
 
+## Pages and routes
+
+The package ships stx views and describes its routes; the application mounts
+them. A package that calls the router has decided the prefix and the middleware
+on the application's behalf, and a Stacks app has its own opinions about both.
+
+```ts
+import { createHandlers, reportRoutes } from '@reportshq/stacks'
+import { route } from '@stacksjs/router'
+
+const handlers = createHandlers(store, runner, registry)
+
+for (const r of reportRoutes(handlers))
+  route[r.method](r.path, r.handle)
+```
+
+The views render the same compiled chart components the Laravel package ships
+and the marketing site loads, so a chart is written once in stx and drawn
+everywhere rather than once per host language.
+
+One thing worth knowing if you write your own view: the element is built in the
+server script with `elementHtml(block)` and printed with `{!! !!}`, not written
+as a tag in the template. A template cannot interpolate a tag name, and
+`<div is="{{ tag }}">` is the customized-built-in form, which renders a plain
+div with an attribute nobody reads.
+
 ## Licence
 
 Checked offline, and nothing gates a report. An unlicensed application reports

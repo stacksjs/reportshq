@@ -58,8 +58,16 @@ describe('framework resolution', () => {
       for (const match of code(file).matchAll(/from\s+['"]([^'"]+)['"]/g)) {
         const specifier = match[1]
 
-        // Either a bare specifier, or a sibling inside this package.
-        expect(specifier.startsWith('.') ? specifier.startsWith('./') : true).toBe(true)
+        if (!specifier.startsWith('.'))
+          continue
+
+        // A relative import is fine as long as it stays inside the package.
+        // `../` reaching a sibling directory is ordinary structure; `../../`
+        // is climbing out into the host application's layout, which is the
+        // thing that differs between vendored and unvendored.
+        const escapes = specifier.startsWith('../../')
+
+        expect(escapes).toBe(false)
       }
     }
   })

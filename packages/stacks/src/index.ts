@@ -17,7 +17,10 @@
 
 export { Compiler, type Db } from './compiler'
 export { defaults, type ReportsHQConfig, resolveConfig } from './config'
+export { elementHtml, tagFor } from './elements'
 export { csv, filename, HEADINGS, toRows } from './export'
+export { createHandlers, type Handlers, NotFound, readQuery, type ReportStore } from './http/handlers'
+export { isNotFound, reportRoutes, type RouteDescription } from './http/routes'
 export { COLUMNS, pack } from './layout'
 export { License, LICENSE_PREFIX } from './license'
 export { Registry, SemanticError } from './semantic'

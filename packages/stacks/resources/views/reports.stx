@@ -1,0 +1,46 @@
+<script server>
+import { defineProps } from 'stx'
+
+interface ReportsPageProps {
+  reports: Array<{ name: string, slug: string, description?: string, status?: string }>
+  notice?: string
+}
+
+const { reports, notice } = defineProps<ReportsPageProps>()
+</script>
+
+<template>
+  <div class="rhq">
+    <link rel="stylesheet" href="/reportshq/assets/charts.css">
+
+    <header class="rhq-header">
+      <h1>Reports</h1>
+      <p class="rhq-lede">Everything this application reports on, from its own data.</p>
+    </header>
+
+    @if (reports.length)
+      <ul class="rhq-list">
+        @foreach (reports as report)
+          <li>
+            <a href="/reports/{{ report.slug }}">
+              <span class="rhq-list-name">{{ report.name }}</span>
+              @if (report.description)
+                <span class="rhq-list-desc">{{ report.description }}</span>
+              @endif
+            </a>
+            <span class="rhq-pill">{{ report.status }}</span>
+          </li>
+        @endforeach
+      </ul>
+    @else
+      <div class="rhq-empty">
+        <h2>No reports yet</h2>
+        <p>Describe a model in your config and the first ones appear here.</p>
+      </div>
+    @endif
+
+    @if (notice)
+      <p class="rhq-license">{{ notice }}</p>
+    @endif
+  </div>
+</template>

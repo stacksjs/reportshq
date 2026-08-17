@@ -1,0 +1,75 @@
+<script server>
+/**
+ * One report.
+ *
+ * The charts are the compiled web components, the same bundle the Laravel
+ * package ships and the same one the marketing site loads. That is the whole
+ * reason the components were compiled: a chart is written once in stx and drawn
+ * everywhere, rather than once per host language.
+ *
+ * The payload rides in an attribute rather than a script block. An object
+ * property deserializes from its attribute, so an element is complete the
+ * moment the parser reaches it: no hydration pass, and a block is readable in
+ * view-source, which is where somebody looks when a number seems wrong.
+ */
+import { defineProps } from 'stx'
+import { elementHtml } from '@reportshq/stacks'
+
+interface ReportPageProps {
+  report: { name: string, description?: string, timezone?: string, published_at?: string }
+  blocks: any[]
+  notice?: string
+}
+
+const { report, blocks, notice } = defineProps<ReportPageProps>()
+
+// The element is built here rather than in the template, because a template
+// cannot interpolate a tag name. See src/elements.ts.
+const tiles = blocks.map(block => ({ ...block, html: elementHtml(block) }))
+</script>
+
+<template>
+  <div class="rhq">
+    <link rel="stylesheet" href="/reportshq/assets/charts.css">
+    <script type="module" src="/reportshq/assets/charts.js"></script>
+
+    <header class="rhq-header">
+      <h1>{{ report.name }}</h1>
+      @if (report.description)
+        <p class="rhq-lede">{{ report.description }}</p>
+      @endif
+      <p class="rhq-meta">
+        Numbers are for {{ report.timezone }}.
+        <a href="./download/csv">Download CSV</a>
+      </p>
+    </header>
+
+    @if (tiles.length)
+      <div class="rhq-grid">
+        @foreach (tiles as tile)
+          <div class="rhq-cell" style="--x: {{ tile.x + 1 }}; --w: {{ tile.w }}; --h: {{ tile.h }}">
+            @if (tile.error)
+              {{-- The refusal goes on the tile's face. A blank cell reads as a
+                   quiet week to whoever opens the page. --}}
+              <div class="rhq-refusal">
+                <p class="rhq-refusal-title">{{ tile.title }}</p>
+                <p class="rhq-refusal-body">{{ tile.error }}</p>
+              </div>
+            @else
+              {!! tile.html !!}
+            @endif
+          </div>
+        @endforeach
+      </div>
+    @else
+      <div class="rhq-empty">
+        <h2>An empty report</h2>
+        <p>Nothing has been added to this one yet.</p>
+      </div>
+    @endif
+
+    @if (notice)
+      <p class="rhq-license">{{ notice }}</p>
+    @endif
+  </div>
+</template>
