@@ -109,7 +109,11 @@ describe('route gates', () => {
     // Guards the audit itself. If the regex stops matching, every assertion
     // below passes over an empty list and this file quietly stops testing
     // anything, which is worse than failing.
-    expect(all.length).toBeGreaterThan(20)
+    // Lower since the hosted pipeline was retired: ingest, the builder API
+    // and project tenancy were most of the route table, and what is left is
+    // signing in and out. The guard still catches the regex breaking, which is
+    // all it was ever for.
+    expect(all.length).toBeGreaterThan(3)
   })
 
   for (const handler of all) {

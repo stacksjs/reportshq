@@ -88,3 +88,21 @@ export async function resetSigninLimits(email: string, ip: string): Promise<void
   if (ip)
     await addressLimiter.reset(`signin-ip:${ip}`)
 }
+
+/**
+ * The address a request came from.
+ *
+ * Lived in the ingest limiter, which is gone with the rest of the pipeline. It
+ * moves here rather than disappearing because sign-in still rate limits by
+ * address, and that is the last thing on this side that needs to know.
+ */
+export function clientAddress(request: { headers?: { get?: (name: string) => string | null } }): string {
+  const forwarded = request.headers?.get?.('x-forwarded-for')
+
+  // The first entry is the client; the rest are proxies that appended
+  // themselves. Trusting the last one rate limits the load balancer.
+  if (forwarded)
+    return forwarded.split(',')[0]!.trim()
+
+  return request.headers?.get?.('x-real-ip')?.trim() || 'unknown'
+}

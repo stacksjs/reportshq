@@ -16,8 +16,7 @@
  * @see https://docs.stacksjs.com/routing
  */
 
-// This app's own API lives in routes/projects.ts, routes/reports.ts,
-// routes/ingest.ts and routes/auth.ts, each mounted with its own prefix and
+// This app's own API lives in routes/auth.ts, mounted with its own prefix and
 // middleware from app/Routes.ts. Nothing belongs at a bare `/api/*` path.
 //
 // `GET /api/health` is NOT defined here on purpose: the framework already

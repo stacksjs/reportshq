@@ -13,24 +13,16 @@ export default {
   // proxy forwards.
   'api': 'api',
 
-  // The public write endpoint, at the document root and deliberately not
-  // behind `auth`: it authenticates with a project's ingest key, which ships
-  // inside the customer's application and can only append events. Declared
-  // with an empty prefix so the documented URL is `/ingest` rather than
-  // `/ingest/ingest`.
-  'ingest': { path: 'ingest', prefix: '' },
-
-  // The builder's write surface. Behind `auth` for the same reason as
-  // projects, and every handler resolves the project before touching a report,
-  // so a report id from another tenant never resolves to anything.
-  'reports': { path: 'reports', prefix: '/api/reports', middleware: ['auth'] },
-
-  // Project tenancy: creation, membership, invites, ingest key rotation.
-  // Behind `auth` at the registry level rather than per route, so a route added
-  // to that file later cannot be published unauthenticated by omission. Every
-  // handler still resolves per-project permission through app/Support/access.ts,
-  // because being signed in says nothing about which projects are yours.
-  'projects': { path: 'projects', prefix: '/api/projects', middleware: ['auth'] },
+  /*
+   * The write endpoint, the builder's API and project tenancy all lived here
+   * and are gone. They belonged to the hosted pipeline: events arrived over
+   * `/ingest`, were rolled up, and were read back through `/api/reports`
+   * against a project that owned them.
+   *
+   * None of that is how the product works now. An application keeps its own
+   * data and reports on it in place, through reportshq/laravel, so there is no
+   * endpoint here to send anything to and no tenant to send it as.
+   */
 
   // Signing in, up and out. The one surface deliberately not behind `auth`,
   // since requiring a session to create one would be a short conversation. It

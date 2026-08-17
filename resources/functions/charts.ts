@@ -15,7 +15,24 @@
  * npm (the subpackages are), so the imports below are per-package. Worth fixing
  * upstream; it is also the better import either way.
  */
-import type { EngineResult, Point, Series } from './engine'
+/*
+ * The shapes a chart draws, declared here rather than imported.
+ *
+ * They used to come from the hosted engine, which is gone. Owning them makes
+ * this file self-contained, which it has to be: it ships inside the component
+ * bundle to applications that have never heard of that engine and describe
+ * their own data. The JSON API answers in exactly this shape.
+ */
+export interface Point { t: string, value: number }
+/** A series always carries its own total: every consumer needs it and the
+ * alternative is each of them re-summing the points. */
+export interface Series { key: string, total: number, points: Point[] }
+export interface EngineResult {
+  series: Series[]
+  total?: number
+  grain?: string
+  comparison?: { change: number | null } | null
+}
 import { format } from '@ts-charts/format'
 import { scaleLinear } from '@ts-charts/scale'
 import { area, curveMonotoneX, line } from '@ts-charts/shape'
