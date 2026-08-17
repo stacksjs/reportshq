@@ -24,6 +24,12 @@ export default {
    * endpoint here to send anything to and no tenant to send it as.
    */
 
+  // Our own reports, through our own package. Behind `auth` at the registry
+  // level rather than per route, so a route added to that file later cannot be
+  // published unauthenticated by omission. The pages themselves are stx views
+  // under resources/views/reports/, since in a Stacks app a view is the route.
+  'reports': { path: 'reports', prefix: '/api/reports', middleware: ['auth'] },
+
   // Signing in, up and out. The one surface deliberately not behind `auth`,
   // since requiring a session to create one would be a short conversation. It
   // carries its own rate limits instead; see app/Support/signin-limits.ts.

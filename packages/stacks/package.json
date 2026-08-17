@@ -35,7 +35,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir dist --target bun --external '@stacksjs/*' --external 'bun-query-builder' && bunx dtsx generate",
+    "build": "bun build ./src/index.ts --outdir dist --target bun --external '@stacksjs/*' --external 'bun-query-builder' && bunx tsc -p tsconfig.json",
     "test": "bun test ./tests"
   },
   "peerDependencies": {

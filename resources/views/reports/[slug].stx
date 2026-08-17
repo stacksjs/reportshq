@@ -1,0 +1,107 @@
+<script server>
+/**
+ * One report.
+ *
+ * The charts are the compiled web components, the same bundle the Laravel
+ * package ships and the marketing site loads. A chart is written once in stx
+ * and drawn everywhere, which is what compiling them was for.
+ *
+ * The element is built here and printed with `{!! !!}` rather than written as a
+ * tag: stx cannot interpolate a tag name, and `<div is="{{ tag }}">` is the
+ * customized-built-in form, which renders a plain div carrying an attribute
+ * nobody reads. That failure is silent, which is why it is worth a comment.
+ */
+import { elementHtml, License } from '@reportshq/stacks'
+import { sessionFrom } from '../../../app/Support/session'
+import { reportHandlers } from '../../../app/Support/reports'
+
+const session = await sessionFrom(cookies)
+const user = session.user
+const authPending = session.stale
+
+const requested = String(typeof slug !== 'undefined' && slug ? slug : '')
+
+let report: any = null
+let tiles: any[] = []
+let missing = false
+
+try {
+  // A visitor the server could not identify gets no query and no numbers.
+  if (!user)
+    throw new Error('unauthenticated')
+
+  const result = await reportHandlers.show(requested)
+
+  report = result.report
+  tiles = result.blocks.map((block: any) => ({ ...block, html: elementHtml(block) }))
+}
+catch {
+  // A report nobody has defined is a 404 for the reader, not a stack trace.
+  // Caught here because an error in a server script blanks every binding in
+  // the view and reports it as an unrelated [Foreach Error].
+  missing = true
+}
+
+const notice = new License(process.env.REPORTSHQ_LICENSE).notice()
+</script>
+
+<template>
+  @include('AuthGuard')
+
+  <div class="min-h-[100dvh] bg-canvas text-ink">
+    {{-- What the guard reads. The server is the only side that can see the
+         HttpOnly session cookie, so it is the side that decides. Rendering the
+         numbers and hiding them client-side would still serve them to curl. --}}
+    @if (!user)
+      <div id="auth-required" hidden></div>
+    @endif
+    @if (authPending)
+      <div id="auth-pending" hidden></div>
+    @endif
+
+    @include('AppNav')
+
+    <link rel="stylesheet" href="/reportshq/charts.css">
+    <script type="module" src="/reportshq/charts.js"></script>
+
+    <main class="px-6 py-10 mx-auto max-w-6xl">
+      @if (missing)
+        <h1 class="text-3xl font-semibold tracking-tight">No such report</h1>
+        <p class="mt-2 text-muted">There is no report called "{{ requested }}".</p>
+        <p class="mt-6"><a href="/reports" class="text-accent">Back to reports</a></p>
+      @else
+        <header>
+          <h1 class="text-3xl font-semibold tracking-tight">{{ report.name }}</h1>
+          @if (report.description)
+            <p class="mt-2 text-muted">{{ report.description }}</p>
+          @endif
+          <p class="mt-3 text-sm text-subtle">
+            {{-- The API prefix, not the page one: the download is a route from
+                 routes/reports.ts, and the page is an stx view. They share a
+                 name and not a path. --}}
+            <a href="/api/reports/{{ report.slug }}/download/csv" class="text-accent">Download CSV</a>
+          </p>
+        </header>
+
+        <div class="rhq-grid">
+          @foreach (tiles as tile)
+            <div class="rhq-cell" style="--x: {{ tile.x + 1 }}; --w: {{ tile.w }}; --h: {{ tile.h }}">
+              @if (tile.error)
+                {{-- The refusal goes on the tile's face. A blank cell reads as
+                     a quiet week to whoever opens the page. --}}
+                <p class="text-sm font-medium text-ink">{{ tile.title }}</p>
+                <p class="mt-1 text-sm text-muted">{{ tile.error }}</p>
+              @else
+                {!! tile.html !!}
+              @endif
+            </div>
+          @endforeach
+        </div>
+      @endif
+
+      @if (notice)
+        <p class="pt-4 mt-12 text-xs border-t border-line text-subtle">{{ notice }}</p>
+      @endif
+    </main>
+  </div>
+</template>

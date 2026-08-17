@@ -6,12 +6,12 @@
      bindings directly and cannot lose them. --}}
 <header class="border-b border-line bg-panel">
   <div class="flex gap-4 justify-between items-center px-6 py-3 mx-auto max-w-7xl">
-    <a href="/projects" class="flex gap-6 items-center no-underline">
+    <a href="/reports" class="flex gap-6 items-center no-underline">
       <Wordmark />
     </a>
 
     <nav class="flex gap-1 items-center">
-      <a href="/projects" class="px-3 py-1.5 text-sm rounded-lg text-muted hover:text-ink">Projects</a>
+      <a href="/reports" class="px-3 py-1.5 text-sm rounded-lg text-muted hover:text-ink">Reports</a>
       <a href="/account" class="px-3 py-1.5 text-sm rounded-lg text-muted hover:text-ink">Account</a>
       <button
         type="button"

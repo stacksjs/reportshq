@@ -1,0 +1,67 @@
+<script server>
+/**
+ * The reports this application publishes.
+ *
+ * A page reads its own data rather than taking props, because stx drops props
+ * passed from one component to another in this version. Page to component works
+ * fine, which is what makes that easy to miss.
+ */
+import { sessionFrom } from '../../../app/Support/session'
+import { reportHandlers } from '../../../app/Support/reports'
+import { License } from '@reportshq/stacks'
+
+const session = await sessionFrom(cookies)
+const user = session.user
+const authPending = session.stale
+
+// Nothing is read for a visitor the server could not identify.
+const reports = user ? (await reportHandlers.index()).reports : []
+const notice = new License(process.env.REPORTSHQ_LICENSE).notice()
+</script>
+
+<template>
+  @include('AuthGuard')
+
+  <div class="min-h-[100dvh] bg-canvas text-ink">
+    {{-- What the guard reads. The server is the only side that can see the
+         HttpOnly session cookie, so it is the side that decides. Rendering the
+         numbers and hiding them client-side would still serve them to curl. --}}
+    @if (!user)
+      <div id="auth-required" hidden></div>
+    @endif
+    @if (authPending)
+      <div id="auth-pending" hidden></div>
+    @endif
+
+    @include('AppNav')
+
+    <main class="px-6 py-10 mx-auto max-w-4xl">
+      <h1 class="text-3xl font-semibold tracking-tight">Reports</h1>
+      <p class="mt-2 text-muted">Everything this application reports on, from its own tables.</p>
+
+      @if (reports.length)
+        <ul class="grid gap-3 mt-8 list-none">
+          @foreach (reports as report)
+            <li class="rounded-xl border border-line bg-panel">
+              <a href="/reports/{{ report.slug }}" class="flex gap-4 justify-between items-baseline p-5 no-underline">
+                <span>
+                  <span class="block font-medium text-ink">{{ report.name }}</span>
+                  @if (report.description)
+                    <span class="block mt-1 text-sm text-muted">{{ report.description }}</span>
+                  @endif
+                </span>
+                <span class="text-xs uppercase tracking-wide text-subtle">{{ report.status }}</span>
+              </a>
+            </li>
+          @endforeach
+        </ul>
+      @else
+        <p class="mt-8 text-muted">Nothing described yet. Add a model to config/reportshq.ts.</p>
+      @endif
+
+      @if (notice)
+        <p class="pt-4 mt-12 text-xs border-t border-line text-subtle">{{ notice }}</p>
+      @endif
+    </main>
+  </div>
+</template>

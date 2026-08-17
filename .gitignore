@@ -157,3 +157,4 @@ storage/framework/core/defaults/*
 # A build artefact: regenerate it rather than editing or reviewing it.
 public/reportshq-charts.js
 public/reportshq-charts.css
+public/reportshq/charts.js
