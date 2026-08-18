@@ -78,20 +78,20 @@
     "build:artifacts": "bun run build:packages && bun run build:charts"
   },
   "dependencies": {
-    "@stacksjs/buddy": "^0.70.378",
-    "@stacksjs/dtsx": "^0.11.4",
-    "@stacksjs/stx": "0.2.189",
+    "@stacksjs/buddy": "^0.72.20",
+    "@stacksjs/dtsx": "^0.11.5",
+    "@stacksjs/stx": "0.2.192",
     "@ts-charts/array": "^0.2.7",
     "@ts-charts/format": "^0.2.7",
     "@ts-charts/scale": "^0.2.7",
     "@ts-charts/shape": "^0.2.7",
-    "bun-plugin-dtsx": "^0.11.4",
-    "bun-query-builder": "^0.2.35",
-    "pickier": "^0.1.51",
-    "stacks": "^0.70.378",
-    "ts-pantry": "^0.11.21",
+    "bun-plugin-dtsx": "^0.11.5",
+    "bun-query-builder": "^0.2.45",
+    "pickier": "^0.1.57",
+    "stacks": "^0.72.20",
+    "ts-pantry": "^0.11.30",
     "ts-rate-limiter": "^0.4.6",
-    "ts-spreadsheets": "^0.2.4",
+    "ts-spreadsheets": "^0.2.5",
     "@reportshq/stacks": "workspace:*"
   },
   "workspaces": [
@@ -109,13 +109,13 @@
     "commit-msg": "bun x gitlint --edit \"$1\""
   },
   "devDependencies": {
-    "better-dx": "^0.2.17"
+    "better-dx": "^0.2.23"
   },
   "overrides": {
-    "pickier": "^0.1.51",
-    "bun-query-builder": "^0.2.43",
+    "pickier": "^0.1.57",
+    "bun-query-builder": "^0.2.45",
     "@stacksjs/bun-router": "^0.0.27",
-    "@stacksjs/components": "^0.2.182",
-    "@stacksjs/stx": "^0.2.189"
+    "@stacksjs/components": "^0.2.192",
+    "@stacksjs/stx": "^0.2.192"
   }
 }
