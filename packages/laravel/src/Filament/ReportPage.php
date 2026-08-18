@@ -29,6 +29,24 @@ class ReportPage extends Page
         return config('reportshq.filament.slug', 'reportshq').'/{slug}';
     }
 
+    /**
+     * Whether this caller may see this report.
+     *
+     * Needed here even though the page is kept out of the navigation:
+     * $shouldRegisterNavigation only hides the link, and the route stays
+     * mounted, so without this anybody who guesses a slug reads the report.
+     *
+     * Filament's default is true for anybody the panel admits, and a panel
+     * usually admits more people than a report should: an agent or a carrier
+     * admin signing into the same panel could read a total covering every
+     * carrier. The package cannot know which of an application's roles that
+     * describes, so it asks the application — see ReportsHQPlugin::authorize().
+     */
+    public static function canAccess(): bool
+    {
+        return ReportsHQPlugin::allows();
+    }
+
     protected string $view = 'reportshq::filament.report';
 
     /**

@@ -11,7 +11,14 @@
             <ul class="rhq-list">
                 @foreach ($reports as $report)
                     <li>
-                        <a href="{{ \Filament\Facades\Filament::getCurrentPanel()->getUrl().'/reports/'.$report->slug }}">
+                        {{-- The page's own URL, not a hand-built one. This
+                             concatenation hardcoded a `/reports/` segment while
+                             ReportPage registers at `filament.slug` (default
+                             `reportshq`), so every row 404'd in every
+                             configuration but the one the config warns against.
+                             getUrl() reads the same getSlug() the route was
+                             built from, and carries the panel path with it. --}}
+                        <a href="{{ \ReportsHQ\Laravel\Filament\ReportPage::getUrl(['slug' => $report->slug]) }}">
                             <span class="rhq-list-name">{{ $report->name }}</span>
                             @if ($report->description)
                                 <span class="rhq-list-desc">{{ $report->description }}</span>
