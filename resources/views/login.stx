@@ -3,7 +3,7 @@
 //
 // The one page in the app that must render for a stranger, so it carries no
 // AuthGuard and no app chrome. It does the opposite check instead: somebody who
-// already has a session is sent to their projects rather than shown a form
+// already has a session is sent to their reports rather than shown a form
 // asking them to do something they have already done.
 import { sessionCookieName, sessionFrom } from '../../app/Support/session'
 
@@ -17,7 +17,7 @@ const signedIn = session.user !== null
     {{-- Already signed in: bounce before anything paints, the same way the
          guard does in the other direction. --}}
     @if (signedIn)
-      <script>window.location.replace('/projects')</script>
+      <script>window.location.replace('/reports')</script>
     @endif
 
     <script>document.documentElement.setAttribute('data-session-cookie', {{ cookieName }})</script>
@@ -121,7 +121,7 @@ const signedIn = session.user !== null
       if (res.ok) {
         // replace, not assign: the back button should not return to a sign-in
         // form the person has already used.
-        window.location.replace('/projects')
+        window.location.replace('/reports')
         return
       }
 

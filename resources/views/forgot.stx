@@ -16,7 +16,7 @@ const signedIn = session.user !== null
     {{-- Already signed in: bounce before anything paints, the same way the
          guard does in the other direction. --}}
     @if (signedIn)
-      <script>window.location.replace('/projects')</script>
+      <script>window.location.replace('/reports')</script>
     @endif
 
     <script>document.documentElement.setAttribute('data-session-cookie', {{ cookieName }})</script>

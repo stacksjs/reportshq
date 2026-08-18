@@ -7,6 +7,15 @@
  * rendered, the links were styled, and they returned the 404 page when clicked.
  * A dead internal link is invisible to everyone except the person following it.
  *
+ * A `window.location.replace(...)` counts as a link here, and reading only
+ * `href` is how five of them survived: login, register and forgot all bounced
+ * to `/projects` for months after the page was deleted, on both the
+ * already-signed-in path and the just-signed-in one. Nothing caught it. This
+ * file read attributes and skipped scripts; the deploy check probes `/` and the
+ * marketing pages and never signs in; and the live site kept answering 200
+ * because the release predated the deletion. The first correct deploy would
+ * have sent every person who signed in to a 404.
+ *
  * Resolution mirrors how the app serves things: a view at
  * `resources/views/<path>.stx` or `resources/views/<path>/index.stx`, or a
  * document at `docs/<path>.md`.
@@ -27,6 +36,16 @@ function publicTemplates(): string[] {
     join(views, 'pricing.stx'),
     join(partials, 'SiteNav.stx'),
     join(partials, 'SiteFooter.stx'),
+    // The auth pages are public in the sense that matters here: they render for
+    // a stranger, and they are where a link is most expensive to get wrong.
+    // Somebody following a dead marketing link tries another; somebody bounced
+    // to a dead page by signing in has no way forward at all.
+    join(views, 'login.stx'),
+    join(views, 'register.stx'),
+    join(views, 'forgot.stx'),
+    join(views, 'reset.stx'),
+    join(views, 'account.stx'),
+    join(partials, 'AuthGuard.stx'),
   ]
 
   for (const group of ['features', 'use-cases', 'compare']) {
@@ -38,19 +57,34 @@ function publicTemplates(): string[] {
   return files
 }
 
-/** Static hrefs only. A binding is resolved at render time and cannot be read here. */
-function hrefsIn(file: string): string[] {
+/**
+ * Every internal destination a template names, whether the browser follows it
+ * on a click or on load.
+ *
+ * Static only. A binding is resolved at render time and cannot be read here.
+ */
+function linksIn(file: string): string[] {
   const source = readFileSync(file, 'utf8')
   const found = new Set<string>()
 
-  for (const match of source.matchAll(/href="([^"{}]+)"/g)) {
-    const href = match[1]!
+  const patterns = [
+    /href="([^"{}]+)"/g,
+    // A redirect is a link the visitor never chose, which makes a dead one
+    // worse rather than better: there is nothing to not-click.
+    /location\.replace\(\s*['"]([^'"]+)['"]\s*\)/g,
+    /location\.href\s*=\s*['"]([^'"]+)['"]/g,
+  ]
 
-    // External, mail and in-page links are somebody else's problem.
-    if (href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('#'))
-      continue
+  for (const pattern of patterns) {
+    for (const match of source.matchAll(pattern)) {
+      const href = match[1]!
 
-    found.add(href.split('#')[0]!.split('?')[0]!)
+      // External, mail and in-page links are somebody else's problem.
+      if (href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('#'))
+        continue
+
+      found.add(href.split('#')[0]!.split('?')[0]!)
+    }
   }
 
   return [...found]
@@ -91,7 +125,7 @@ describe('internal links on the public pages', () => {
     const name = file.replace(`${root}/`, '')
 
     it(`${name} links only to pages that exist`, () => {
-      const dead = hrefsIn(file).filter(href => !resolves(href))
+      const dead = linksIn(file).filter(href => !resolves(href))
 
       expect(dead).toEqual([])
     })
