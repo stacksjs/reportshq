@@ -142,6 +142,15 @@ export const tsCloud: TsCloudConfig = {
       preStart: [
         'echo "[reportshq] preStart: install"',
         'bun install --frozen-lockfile',
+        // `@reportshq/stacks` is a workspace package whose `exports` point at
+        // `dist`, and `dist` is gitignored, so it is not in the release. The
+        // install above links the workspace and stops there, which resolves to
+        // a directory with nothing in it — Bun reports that as "Cannot find
+        // module", so it reads as a missing dependency rather than a missing
+        // build. CI hit the identical thing before it had a build step; this is
+        // the same fix one layer out, on the box.
+        'echo "[reportshq] preStart: build packages"',
+        'bun run build:packages',
         'echo "[reportshq] preStart: migrate"',
         // `buddy deploy` splices a `db:backup --before-migrations` in front of
         // this line, deriving the invocation from it, so how this is written
@@ -167,7 +176,13 @@ export const tsCloud: TsCloudConfig = {
       port: PORT_API,
       // Same files as main, and explicitly NOT the seeder.
       sharedPaths: sharedState(false),
-      preStart: ['bun install --frozen-lockfile'],
+      // Same build as main, and this is the site that proved it necessary:
+      // only the api process loads `routes/reports.ts`, so only it imported the
+      // package at boot and refused to start.
+      preStart: [
+        'bun install --frozen-lockfile',
+        'bun run build:packages',
+      ],
       env: {
         HOST: '127.0.0.1',
         APP_ENV: 'production',
