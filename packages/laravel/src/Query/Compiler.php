@@ -307,7 +307,20 @@ final class Compiler
     {
         try {
             $zone = new \DateTimeZone($timezone);
-        } catch (\Exception) {
+        } catch (\Throwable) {
+            /*
+             * Throwable, not Exception.
+             *
+             * The promise here is that a stored report carrying a zone that has
+             * since been renamed still draws, in UTC, rather than failing to
+             * draw — and `Exception` does not deliver that. With xdebug loaded,
+             * constructing DateInvalidTimeZoneException is itself an Error,
+             * because xdebug attaches $xdebug_message to it and the class takes
+             * no dynamic properties. An Error is not an Exception, so the
+             * fallback was skipped and the report died on the very input this
+             * exists to survive. Anything thrown here means the zone is
+             * unusable, and the answer to an unusable zone is UTC.
+             */
             return 0.0;
         }
 
