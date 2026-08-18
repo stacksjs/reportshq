@@ -76,6 +76,16 @@ jobs:
       - name: Set Application Key
         run: bun buddy key:generate
 
+      # `packages/stacks/dist` and the chart bundles are build outputs, and both
+      # are gitignored, so a fresh checkout has neither. Skipping this does not
+      # look like a missing build: `@reportshq/stacks` fails to resolve, which
+      # reads as a missing dependency. It cost four "Cannot find module" errors
+      # in typecheck, a route registry that could not load `routes/reports.ts`
+      # at all — taking every test that touches a route down with it — and a
+      # dead `/reportshq-charts.css` on the landing page.
+      - name: Build artifacts
+        run: bun run build:artifacts
+
       - name: Typecheck
         run: bun buddy test:types
 
@@ -109,6 +119,10 @@ jobs:
 
       - name: Set Application Key
         run: bun buddy key:generate
+
+      # The gitignored build outputs. See the typecheck job.
+      - name: Build artifacts
+        run: bun run build:artifacts
 
       # Feature tests query real tables, and a fresh checkout has no database
       # file at all (it is gitignored, being machine-local state). Without this
@@ -189,6 +203,14 @@ jobs:
       - name: Install Dependencies
         run: bun install
 
+      # Before `buddy deploy`, which tars the WORKING DIRECTORY: an artifact
+      # that has not been built by this point is simply absent from the
+      # release. That is not a broken asset but a broken site — `routes/reports.ts`
+      # cannot import a package that was never built, and a route file that
+      # throws takes the whole registry with it.
+      - name: Build artifacts
+        run: bun run build:artifacts
+
       # ts-cloud reads the PUBLIC key off disk to register it, so it is derived
       # from the private one rather than stored as a second secret. Two secrets
       # that have to agree eventually stop agreeing.
@@ -228,11 +250,11 @@ jobs:
           set -uo pipefail
           fail=0
 
-          # One helper, so every check retries the same way. The POST below
-          # used to be written out longhand without the retry flags, and a
-          # single connection blip after seven successful requests failed a
-          # deploy that had already succeeded. A verification step that cries
-          # wolf is worse than none: the next red run gets waved through.
+          # One helper, so every check retries the same way. One of these was
+          # once written out longhand without the retry flags, and a single
+          # connection blip after seven successful requests failed a deploy
+          # that had already succeeded. A verification step that cries wolf is
+          # worse than none: the next red run gets waved through.
           #
           # `-w` prints 000 itself when the connection never happened, so there
           # is no `|| echo` fallback here. Having both printed 000000, which
@@ -248,11 +270,12 @@ jobs:
             [ "$code" = "200" ] || fail=1
           done
 
-          # An unauthenticated write must be refused rather than accepted or
-          # 404'd. 401 is the healthy answer here.
-          code=$(probe -X POST https://reportshq.org/ingest)
-          printf '%-24s %s (expect 401)\n' "POST /ingest" "$code"
-          [ "$code" = "401" ] || fail=1
+          # There was a POST /ingest probe here, asserting the 401 that a
+          # write-only key endpoint owes an anonymous caller. The hosted
+          # pipeline it belonged to was retired in b3dbf0b and `routes/` no
+          # longer has an ingest file, so the check now asserts a 401 from a
+          # route that answers 404. Reports read this application's own
+          # database; there is no write surface left to probe.
 
           exit $fail
 
@@ -319,6 +342,10 @@ jobs:
 
       - name: Set Application Key
         run: bun buddy key:generate
+
+      # The gitignored build outputs. See the typecheck job.
+      - name: Build artifacts
+        run: bun run build:artifacts
 
       # --force because this database is created from nothing in this job, a
       # few seconds earlier, so there is nothing a destructive change could
