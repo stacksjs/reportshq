@@ -155,8 +155,18 @@ jobs:
       # nothing else: no composer install, no vendor directory, no network. It
       # runs the same docs/fixtures/sdk-events.json contract the Stacks package
       # asserts, which is what stops the two SDKs drifting.
+      #
+      # Every suite, not just run.php. compiler, layout, license and semantic
+      # were written and then never run here — 84 assertions that could go red
+      # without anything saying so, which is indistinguishable from not having
+      # them. tests/server.php is deliberately absent: it is a fake ingest that
+      # run.php spawns under `php -S`, not a suite.
       - name: Laravel package
-        run: php packages/laravel/tests/run.php
+        run: |
+          for suite in run compiler layout license semantic filament; do
+            echo "--- $suite"
+            php "packages/laravel/tests/$suite.php"
+          done
 
       # The design system has no types and no tests of its own: a renamed custom
       # property resolves to the property's initial value rather than erroring,

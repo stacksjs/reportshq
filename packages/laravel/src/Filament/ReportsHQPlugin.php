@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ReportsHQ\Laravel\Filament;
 
+use Closure;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 
@@ -24,12 +25,75 @@ use Filament\Panel;
  * // app/Providers/Filament/AdminPanelProvider.php
  * ->plugin(\ReportsHQ\Laravel\Filament\ReportsHQPlugin::make())
  * ```
+ *
+ * A panel usually admits more people than a report should. Pass a callback and
+ * both pages ask it before they will render:
+ *
+ * ```php
+ * ->plugin(ReportsHQPlugin::make()->authorize(
+ *     fn () => auth()->user()?->hasRole('admin') ?? false,
+ * ))
+ * ```
+ *
+ * A callback rather than a config value, because this is a decision in PHP
+ * about the application's own roles: a closure in a config file is not
+ * serialisable and disappears the moment somebody runs `config:cache`.
  */
 class ReportsHQPlugin implements Plugin
 {
+    /**
+     * Who may see the reports, or null for anybody the panel already admits.
+     *
+     * Static because Filament asks the PAGES, through a static `canAccess()`,
+     * and a static has no instance to ask. Reaching back through
+     * `Filament::getCurrentPanel()->getPlugin('reportshq')` would tie the
+     * answer to the plugin being registered as a plugin, and a page mounted
+     * directly with `->pages([...])` — which is how an application subclasses
+     * these — would then throw rather than answer.
+     */
+    protected static ?Closure $authorize = null;
+
     public function getId(): string
     {
         return 'reportshq';
+    }
+
+    /**
+     * Restrict both pages to the callers this callback approves.
+     *
+     * Returning false hides the navigation item AND refuses the URL: Filament
+     * enforces `canAccess()` on mount and on every Livewire hydration, which is
+     * what makes this different from hiding a nav entry.
+     */
+    public function authorize(Closure $callback): static
+    {
+        static::$authorize = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Whether the current caller may see the reports.
+     *
+     * Defaults to true, which is what the pages did before this existed. A
+     * package that cannot see an application's roles has no business inventing
+     * a stricter answer and locking out the installs that are working today;
+     * it can only make the decision reachable, and say so loudly in the README.
+     */
+    public static function allows(): bool
+    {
+        $callback = static::$authorize;
+
+        return $callback === null || (bool) $callback();
+    }
+
+    /**
+     * Forget the callback. For tests, which would otherwise leak one case's
+     * answer into the next.
+     */
+    public static function forgetAuthorization(): void
+    {
+        static::$authorize = null;
     }
 
     public function register(Panel $panel): void

@@ -13,11 +13,23 @@
             <p class="rhq-lede">{{ $report->description }}</p>
         @endif
 
-        <p class="rhq-downloads">
-            <span>Download</span>
-            <a href="{{ route('reportshq.download', [$report->slug, 'csv']) }}">CSV</a>
-            <a href="{{ route('reportshq.download', [$report->slug, 'xlsx']) }}">XLSX</a>
-        </p>
+        {{-- Only when the standalone routes are mounted.
+
+             `reportshq.download` lives in routes/reportshq.php, which the
+             provider loads only when `routes.enabled` is true — and a panel
+             install is precisely the one that leaves it false. Calling route()
+             unconditionally here threw RouteNotFoundException before a single
+             block rendered, so every report in the panel was a 500 rather than
+             a page missing two links. Blade rethrows it wrapped in a
+             ViewException, which slips past a handler's client-error
+             allow-list, so it paged on every render too. --}}
+        @if (\Illuminate\Support\Facades\Route::has('reportshq.download'))
+            <p class="rhq-downloads">
+                <span>Download</span>
+                <a href="{{ route('reportshq.download', [$report->slug, 'csv']) }}">CSV</a>
+                <a href="{{ route('reportshq.download', [$report->slug, 'xlsx']) }}">XLSX</a>
+            </p>
+        @endif
 
         @if (empty($blocks))
             <div class="rhq-empty rhq-empty-page">
@@ -35,4 +47,13 @@
             </div>
         @endif
     </div>
+
+    {{-- The chart components.
+
+         Elements::render() emits a bare custom element with no fallback
+         children, so without this the grid reserves each block's footprint and
+         draws nothing — which reads as a data problem rather than a missing
+         script. The standalone layout has always inlined it; this view simply
+         never did. --}}
+    <script type="module">{!! ReportsHQ\Laravel\Charts\Elements::script() !!}</script>
 </div>
