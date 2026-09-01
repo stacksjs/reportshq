@@ -21,11 +21,12 @@ const { log } = logging
  * not what wiring up logging should cost.
  *
  * So `install()` takes the other seam it supports: it wraps the `log` singleton
- * in place, and every existing `log.info` / `log.error` / `log.struct` call site
- * starts shipping without being touched. Verified against this app's actual
- * installed version: `activeSeam()` reports `{ seam: 'tee', via: 'log.*' }`, and
- * lines logged after it land in a `POST /logs` batch carrying the right level,
- * message, channel and environment.
+ * in place, and every existing `log.info` / `log.error` call site starts
+ * shipping without being touched. Verified against this app's actual installed
+ * version: `activeSeam()` reports `{ seam: 'tee', via: 'log.*' }`, and lines
+ * logged after it land in a `POST /logs` batch carrying the right level,
+ * message, channel and environment. `log.struct` is deliberately excluded — see
+ * `captureStruct` below.
  *
  * Two consequences of the tee worth knowing:
  *
@@ -53,7 +54,17 @@ export function installLoghq(): LogHQClient {
     host: text(env.LOGHQ_HOST),
     environment: env.APP_ENV,
     channel: 'reportshq',
-    captureStruct: true,
+    // Off here, unlike the sibling apps, because this version mangles the
+    // events. Driving `log.struct` on 0.70.378 through the tee produced
+    // `job.undefined` as an event name, and `db.query` and `cache.*` did not
+    // arrive at all. `http.request` came through intact, which is the shape
+    // that makes this worth a comment rather than a silent `false`: partial
+    // success is how a broken feed gets mistaken for a working one.
+    //
+    // Nothing in this framework version emits struct events anyway — verified,
+    // no `@stacksjs/*` package calls `log.struct.*` — so this costs nothing
+    // today and is worth revisiting only if that changes or the app upgrades.
+    captureStruct: false,
     // Hand the logger over rather than letting it be discovered, so the wrap is
     // in place before this module finishes evaluating. See above.
     logger: logging,
