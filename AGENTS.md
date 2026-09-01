@@ -195,6 +195,16 @@ one.
 - **`buddy migrate:fresh` is broken on this scaffold** (stacksjs/stacks#2323): it
   fails partway and leaves duplicate migrations behind. To reset the local
   database, `rm database/stacks.sqlite && ./buddy migrate`.
+- **loghq attaches differently here, and it is not a mistake to correct.** The
+  sibling apps declare it as a transport in `config/logging.ts`. Adding a
+  `transports` key here fails `typecheck:app` with `TS2353`: this app is on
+  `@stacksjs/logging` 0.70.378, which has no such field and no
+  `registerTransport`. The attachment lives in `app/Support/loghq.ts`, wired
+  through a `bunfig.toml` preload, and wraps the `log` singleton in place. It
+  must stay a preload: a wrap only captures what is logged after it, so anything
+  later has already let the framework's own startup lines past. `captureStruct`
+  is off for the same version reason - `log.struct` events arrive mangled here
+  (`job.undefined`) or not at all.
 
 ## 5. Known upstream state
 
