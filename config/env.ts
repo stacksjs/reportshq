@@ -248,4 +248,19 @@ export default {
     validation: schema.string(),
     default: '',
   },
+
+  // Streams this app's logs to loghq. Empty disables the client rather than
+  // failing: it reports "no ingest key, client disabled" and every log.* call
+  // carries on writing to the console and the log file as before.
+  LOGHQ_KEY: {
+    validation: schema.string(),
+    default: '',
+  },
+
+  // Override only to point at a loghq other than the hosted one, e.g. a local
+  // dev server. Empty means the SDK's own default host.
+  LOGHQ_HOST: {
+    validation: schema.string(),
+    default: '',
+  },
 } satisfies EnvConfig

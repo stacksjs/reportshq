@@ -6,9 +6,15 @@
 #      loader, preloader, user routes — reads plaintext from process.env.
 #   2. main preloader wires auto-imports + framework plugins; safe to run
 #      after the env layer because it can now read decrypted secrets too.
+#   3. loghq attaches to the `log` singleton by wrapping it, so it has to be in
+#      place before anything logs — and after the env layer, since it reads
+#      LOGHQ_KEY. It is a separate entry rather than a line in the preloader
+#      above because that preloader is the vendored framework one and is not
+#      ours to edit.
 preload = [
   "@stacksjs/env/plugin.js",
   "./storage/framework/defaults/resources/plugins/preloader.ts",
+  "./resources/plugins/loghq.ts",
 ]
 
 [test]

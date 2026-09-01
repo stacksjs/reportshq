@@ -28,4 +28,12 @@ export default {
    * @default 'storage/logs/deployments.log'
    */
   deploymentsPath: storagePath('logs/deployments.log'),
+
+  // Looking for where logs get shipped off the box? Not here.
+  //
+  // This app streams to loghq, but it cannot be declared in this file: the
+  // `LoggingConfig` shipped by @stacksjs/logging 0.70.378 has no `transports`
+  // field, and adding one fails `typecheck:app`. The attachment lives in
+  // `app/Support/loghq.ts`, wired in through `bunfig.toml`'s preload, and that
+  // file explains the trade.
 } satisfies LoggingConfig
