@@ -1,0 +1,4 @@
+# Composer's install output. This package is a library: the lock file is the
+# consuming application's to own, and vendor/ is rebuilt by `composer install`.
+/vendor/
+/composer.lock

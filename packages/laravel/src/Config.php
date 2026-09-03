@@ -21,7 +21,7 @@ final class Config
      */
     public function __construct(
         public string $key = '',
-        public string $endpoint = 'https://reportshq.org/ingest',
+        public string $endpoint = '',
         public array $domains = ['commerce' => true, 'users' => true, 'cms' => true],
         public float $sampleRate = 1.0,
         public int $batchSize = 50,
@@ -51,7 +51,7 @@ final class Config
 
         return new self(
             key: (string) ($values['key'] ?? ''),
-            endpoint: (string) ($values['endpoint'] ?? '') ?: 'https://reportshq.org/ingest',
+            endpoint: (string) ($values['endpoint'] ?? ''),
             domains: [
                 'commerce' => (bool) ($domains['commerce'] ?? true),
                 'users' => (bool) ($domains['users'] ?? true),
@@ -72,9 +72,17 @@ final class Config
      *
      * A rate of zero counts as off, like an absent key: there is equally
      * nothing to do, and neither should cost the application anything.
+     *
+     * An endpoint is required for the same reason, and it used to default to
+     * the hosted collector at reportshq.org. That endpoint no longer answers,
+     * so the default became a way to queue a job per login that posts into a
+     * 404 and reports nothing: `onError` fires inside a queued job, where an
+     * application that never configured a failed-job handler never sees it.
+     * An unset endpoint now switches the event side off exactly as an unset
+     * key does. Set it explicitly to send anywhere.
      */
     public function enabled(): bool
     {
-        return $this->key !== '' && $this->sampleRate > 0;
+        return $this->key !== '' && $this->endpoint !== '' && $this->sampleRate > 0;
     }
 }

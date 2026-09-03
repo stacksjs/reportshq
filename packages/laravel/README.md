@@ -1,6 +1,12 @@
 # reportshq/laravel
 
-Send a Laravel application's own events to [ReportsHQ](https://reportshq.org). Your app keeps firing the events it already fires; this package listens, translates them into the reserved taxonomy, and ships them after the response has gone out. Then the reports build themselves.
+Two independent halves, and an application may use either, both or neither.
+
+**Reports** run inside your own application, against your own database. Nothing leaves the machine: the query engine compiles a block to SQL, the charts are compiled components rendered in the reader's browser, and the licence is checked offline. This half needs no key, no account and no network.
+
+**Events** translate the events your app already fires into the reserved taxonomy and ship them to a collector. This half needs somewhere to send them.
+
+> **The hosted collector is not currently accepting events.** `https://reportshq.org/ingest` used to be the default destination and no longer answers. The event half therefore stays switched off unless you set `REPORTSHQ_ENDPOINT` to a collector you run. Until then a key alone registers nothing, which is deliberate: the previous default meant one queued job per login posting into a 404, reported through `onError` inside a queued job where an application without a failed-job handler never saw it. The reports half is unaffected and needs none of this.
 
 ## Install
 
@@ -8,12 +14,17 @@ Send a Laravel application's own events to [ReportsHQ](https://reportshq.org). Y
 composer require reportshq/laravel
 ```
 
+For reports, nothing else is required — see [Reports](#reports) below, which run entirely inside your application.
+
+For events, both variables are needed:
+
 ```bash
 # .env
 REPORTSHQ_KEY=rhq_your_project_key
+REPORTSHQ_ENDPOINT=https://collector.example.com/ingest
 ```
 
-That is the whole integration for signups and sign-ins: the package listens to Laravel's own `Registered`, `Login` and `Logout` events, which your application already fires without writing anything.
+With those set, that is the whole integration for signups and sign-ins: the package listens to Laravel's own `Registered`, `Login` and `Logout` events, which your application already fires without writing anything.
 
 For your own models, name them once:
 
@@ -29,6 +40,43 @@ public function boot(): void
 ```
 
 The second argument is the name in the mapping table, so orders living in `App\Models\Purchase` still map onto `commerce.order.created` without renaming anything.
+
+## Reports
+
+Reports read your application's own database, in process. No key, no account and no network.
+
+Name the tables you are willing to report on:
+
+```php
+// config/reportshq.php
+'models' => [
+    'order' => [
+        'class' => App\Models\Order::class,
+        'label' => 'Order',
+        'grain' => 'one row per order',
+        'dimensions' => ['status' => ['label' => 'Status', 'type' => 'string']],
+        'measures' => [
+            'revenue' => ['label' => 'Revenue', 'aggregate' => 'sum', 'column' => 'total_amount'],
+        ],
+    ],
+],
+```
+
+Nothing is reportable until it is listed. A report is a `SELECT` with a drag handle on it, so the package asks you to say what may be exposed rather than discovering that everything already is.
+
+`php artisan reportshq:discover` writes a draft of that block from your Eloquent models, leaving out anything that looks sensitive. Treat it as a starting point: it can see that a column is an integer, not that the integer is cents, nor which of two foreign keys is the customer.
+
+Then pick a surface. All three are off until asked for:
+
+| Surface | Switch it on with |
+|---|---|
+| Filament plugin | register the plugin; the panel slug defaults to `reportshq` |
+| Standalone pages | `REPORTSHQ_ROUTES=true`, and set `routes.middleware` to your own authorisation |
+| Query engine only | resolve `ReportsHQ\Laravel\Reports\Runner` and use it directly |
+
+The routes stay off by default because a package that mounts pages unasked publishes something you find out about from a security review. When you do switch them on, `routes.middleware` is where you say who may read a total of everybody's orders — the package cannot know, so it does not guess.
+
+`REPORTSHQ_LICENSE` is checked offline and never sent anywhere. It gates nothing: an unlicensed application reports on its own data exactly as a licensed one does, and the pages say they are unlicensed. A reporting tool that blanks a dashboard over a billing state is one nobody can rely on for the dashboard.
 
 ## What gets sent
 

@@ -11,9 +11,17 @@ return [
     'key' => env('REPORTSHQ_KEY', ''),
 
     /*
-     * Where events go. Override for a self-hosted install.
+     * Where events go. Required: the event side stays unregistered until this
+     * is set, exactly as it does without a key.
+     *
+     * It defaulted to the hosted collector at reportshq.org until that
+     * endpoint stopped answering. A default nobody serves is worse than none,
+     * because the failure lands in a queued job and an application that has
+     * not configured a failed-job handler never learns its events went
+     * nowhere. Point this at whatever receives the taxonomy in
+     * docs/fixtures/sdk-events.json.
      */
-    'endpoint' => env('REPORTSHQ_ENDPOINT', 'https://reportshq.org/ingest'),
+    'endpoint' => env('REPORTSHQ_ENDPOINT', ''),
 
     /*
      * Which families of events to forward. Turning one off means its listeners

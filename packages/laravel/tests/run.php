@@ -352,7 +352,7 @@ $run->test('flushing an empty buffer sends nothing', function (Runner $run): voi
 });
 
 $run->test('taking the buffer empties it, so the queued job cannot double send', function (Runner $run): void {
-    $transport = new Transport(new Config(key: 'k'), static fn (): int => 201);
+    $transport = new Transport(new Config(key: 'k', endpoint: 'https://example.invalid/ingest'), static fn (): int => 201);
     $transport->track(['name' => 'user.login']);
 
     $run->same(1, count($transport->take()), 'expected the batch');
@@ -427,9 +427,21 @@ $run->test('nonsense values fall back rather than breaking delivery', function (
 });
 
 $run->test('a rate of zero switches the integration off entirely', function (Runner $run): void {
-    $run->assert(! (new Config(key: 'k', sampleRate: 0.0))->enabled(), 'expected disabled');
-    $run->assert(! (new Config(key: ''))->enabled(), 'expected disabled without a key');
-    $run->assert((new Config(key: 'k'))->enabled(), 'expected enabled');
+    $endpoint = 'https://example.invalid/ingest';
+
+    $run->assert(! (new Config(key: 'k', endpoint: $endpoint, sampleRate: 0.0))->enabled(), 'expected disabled');
+    $run->assert(! (new Config(key: '', endpoint: $endpoint))->enabled(), 'expected disabled without a key');
+    $run->assert((new Config(key: 'k', endpoint: $endpoint))->enabled(), 'expected enabled');
+});
+
+$run->test('without an endpoint nothing is sent, rather than sent nowhere', function (Runner $run): void {
+    // The endpoint defaulted to the hosted collector until that stopped
+    // answering, which turned every configured install into one queued job per
+    // login posting into a 404. The failure surfaced through `onError` inside a
+    // queued job, so an application without a failed-job handler saw nothing.
+    // A key alone is no longer enough to start sending.
+    $run->assert(! (new Config(key: 'k'))->enabled(), 'expected disabled without an endpoint');
+    $run->assert(! Config::fromArray(['key' => 'rhq_x'])->enabled(), 'expected disabled from an array too');
 });
 
 $run->test('config comes out of an array the way Laravel stores it', function (Runner $run): void {
@@ -442,8 +454,11 @@ $run->test('config comes out of an array the way Laravel stores it', function (R
     ]);
 
     $run->same('rhq_x', $config->key, 'expected the key');
-    // An empty endpoint means "unset", not "post to nowhere".
-    $run->assert(str_contains($config->endpoint, 'reportshq.org'), 'expected the default endpoint');
+    // An empty endpoint means "unset", not "post to nowhere" — so it stays
+    // empty and switches the event side off, rather than falling back to a
+    // host this package does not run.
+    $run->same('', $config->endpoint, 'expected an empty endpoint to stay empty');
+    $run->assert(! $config->enabled(), 'expected no endpoint to mean disabled');
     $run->same(false, $config->domains['cms'], 'expected cms off');
     $run->same(true, $config->domains['users'], 'expected users to default on');
     $run->same(null, $config->queue, 'expected an empty queue to read as none');

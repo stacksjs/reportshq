@@ -1,60 +1,60 @@
 {
-  "name": "reportshq/laravel",
-  "description": "Send a Laravel application's own events to ReportsHQ, as the standard taxonomy.",
-  "type": "library",
-  "license": "MIT",
-  "homepage": "https://reportshq.org",
-  "keywords": [
-    "reportshq",
-    "analytics",
-    "laravel",
-    "events"
-  ],
-  "authors": [
-    {
-      "name": "Chris Breuer"
-    }
-  ],
-  "require": {
-    "php": "^8.2",
-    "stacksjs/php-spreadsheets": "^0.1.0"
-  },
-  "require-dev": {
-    "illuminate/support": "^11.0 || ^12.0",
-    "illuminate/events": "^11.0 || ^12.0",
-    "phpunit/phpunit": "^11.0"
-  },
-  "suggest": {
-    "illuminate/support": "Required to use the service provider and the shipped listeners.",
-    "filament/filament": "Required only for the panel plugin; everything else works without it."
-  },
-  "autoload": {
-    "psr-4": {
-      "ReportsHQ\\Laravel\\": "src/"
-    }
-  },
-  "autoload-dev": {
-    "psr-4": {
-      "ReportsHQ\\Laravel\\Tests\\": "tests/"
-    }
-  },
-  "extra": {
-    "laravel": {
-      "providers": [
-        "ReportsHQ\\Laravel\\ReportsHQServiceProvider"
-      ]
-    }
-  },
-  "config": {
-    "sort-packages": true
-  },
-  "minimum-stability": "stable",
-  "prefer-stable": true,
-  "repositories": [
-    {
-      "comment": "stacksjs/php-spreadsheets is not on Packagist yet. An application installing this package needs the same entry in its own composer.json, since composer reads repositories only from the root package.",
-      "type": "vcs",
-      "url": "https://github.com/stacksjs/php-spreadsheets"
-    }
-  ]
+    "name": "reportshq/laravel",
+    "description": "Reports that run inside your own Laravel application against your own database, plus an optional event forwarder.",
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://reportshq.org",
+    "keywords": [
+        "reportshq",
+        "analytics",
+        "laravel",
+        "events"
+    ],
+    "authors": [
+        {
+            "name": "Chris Breuer"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "stacksjs/php-spreadsheets": "^0.1.0"
+    },
+    "require-dev": {
+        "illuminate/support": "^11.0 || ^12.0",
+        "illuminate/events": "^11.0 || ^12.0",
+        "phpunit/phpunit": "^11.0"
+    },
+    "suggest": {
+        "illuminate/support": "Required to use the service provider and the shipped listeners.",
+        "filament/filament": "Required only for the panel plugin; everything else works without it."
+    },
+    "autoload": {
+        "psr-4": {
+            "ReportsHQ\\Laravel\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ReportsHQ\\Laravel\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "ReportsHQ\\Laravel\\ReportsHQServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "repositories": [
+        {
+            "comment": "stacksjs/php-spreadsheets is not on Packagist yet. An application installing this package needs the same entry in its own composer.json, since composer reads repositories only from the root package.",
+            "type": "vcs",
+            "url": "https://github.com/stacksjs/php-spreadsheets"
+        }
+    ]
 }
