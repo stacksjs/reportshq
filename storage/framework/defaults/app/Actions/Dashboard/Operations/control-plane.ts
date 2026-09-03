@@ -2,9 +2,12 @@ import type { RequestInstance } from '@stacksjs/types'
 import type {
   ControlPlaneActor,
   ControlPlaneOperation,
-  DashboardControlPlane,
   JsonValue,
 } from '@stacksjs/ts-cloud'
+// Lives on the `/deploy` entry alongside `initializeDashboardControlPlane`,
+// not on the package root - importing it from the root silently produced
+// `any`, and every caller of this helper inherited that.
+import type { DashboardControlPlane } from '@stacksjs/ts-cloud/deploy'
 import process from 'node:process'
 import { setStateDir } from '@stacksjs/ts-cloud'
 import { initializeDashboardControlPlane } from '@stacksjs/ts-cloud/deploy'
@@ -48,7 +51,16 @@ export function operationsEnvironment(controlPlane = operationsControlPlane()) {
     ?? controlPlane.environments.values().next().value
 }
 
-export async function trackOperatorOperation<T extends JsonValue>(
+/**
+ * `T` is only required to be serializable, not to BE a `JsonValue`.
+ *
+ * An interface without an index signature - `Alert`, `ReconcileResult` - never
+ * satisfies `{ [key: string]: JsonValue }` structurally, however plainly
+ * JSON-shaped its fields are. Constraining the result that way meant the
+ * honest callers were the ones that failed to typecheck, so the constraint is
+ * dropped here and the value is narrowed once, where it is actually recorded.
+ */
+export async function trackOperatorOperation<T>(
   request: RequestInstance,
   kind: string,
   input: JsonValue,
@@ -83,7 +95,7 @@ export async function trackOperatorOperation<T extends JsonValue>(
     operation = controlPlane.store.transitionOperation(operation.id, {
       to: 'succeeded',
       expectedVersion: operation.version,
-      output: result,
+      output: result as JsonValue,
     })
     controlPlane.store.appendEvent({
       organizationId: controlPlane.organization.id,
@@ -92,7 +104,7 @@ export async function trackOperatorOperation<T extends JsonValue>(
       actorId: actor.id,
       correlationId: operation.correlationId,
       type: `${kind}.succeeded`,
-      payload: result,
+      payload: result as JsonValue,
     })
     return { result, operation }
   }

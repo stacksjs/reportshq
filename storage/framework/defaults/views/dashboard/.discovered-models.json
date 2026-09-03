@@ -8,6 +8,28 @@
       "category": "data"
     },
     {
+      "id": "auction",
+      "name": "Auction",
+      "icon": "i-hugeicons-auction",
+      "hasDedicatedPage": false,
+      "category": "commerce",
+      "dashboard": {
+        "icon": "i-hugeicons-auction",
+        "label": "Auctions"
+      }
+    },
+    {
+      "id": "auction-item",
+      "name": "AuctionItem",
+      "icon": "i-hugeicons-package",
+      "hasDedicatedPage": false,
+      "category": "commerce",
+      "dashboard": {
+        "icon": "i-hugeicons-package",
+        "label": "Lots"
+      }
+    },
+    {
       "id": "author",
       "name": "Author",
       "icon": "person.text.rectangle.fill",
@@ -15,6 +37,17 @@
       "category": "content",
       "dashboard": {
         "highlight": true
+      }
+    },
+    {
+      "id": "bid",
+      "name": "Bid",
+      "icon": "i-hugeicons-hand-pointing-right-01",
+      "hasDedicatedPage": false,
+      "category": "commerce",
+      "dashboard": {
+        "icon": "i-hugeicons-hand-pointing-right-01",
+        "label": "Bids"
       }
     },
     {
@@ -119,6 +152,23 @@
       }
     },
     {
+      "id": "courier",
+      "name": "Courier",
+      "icon": "car.fill",
+      "hasDedicatedPage": false,
+      "category": "commerce",
+      "dashboard": {
+        "highlight": true
+      }
+    },
+    {
+      "id": "courier-ping",
+      "name": "CourierPing",
+      "icon": "tablecells.fill",
+      "hasDedicatedPage": false,
+      "category": "commerce"
+    },
+    {
       "id": "customer",
       "name": "Customer",
       "icon": "person.crop.circle.fill",
@@ -167,23 +217,6 @@
       "dashboard": {
         "highlight": true
       }
-    },
-    {
-      "id": "driver",
-      "name": "Driver",
-      "icon": "car.fill",
-      "hasDedicatedPage": false,
-      "category": "commerce",
-      "dashboard": {
-        "highlight": true
-      }
-    },
-    {
-      "id": "driver-ping",
-      "name": "DriverPing",
-      "icon": "tablecells.fill",
-      "hasDedicatedPage": false,
-      "category": "commerce"
     },
     {
       "id": "email-idempotency",
@@ -388,6 +421,17 @@
       "icon": "creditcard.fill",
       "hasDedicatedPage": false,
       "category": "commerce"
+    },
+    {
+      "id": "pledge",
+      "name": "Pledge",
+      "icon": "i-hugeicons-give-blood",
+      "hasDedicatedPage": false,
+      "category": "commerce",
+      "dashboard": {
+        "icon": "i-hugeicons-give-blood",
+        "label": "Pledges"
+      }
     },
     {
       "id": "post",
@@ -650,5 +694,6 @@
       "subscribers": true,
       "allModels": true
     }
-  }
+  },
+  "nav": []
 }

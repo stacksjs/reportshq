@@ -1,6 +1,6 @@
 ---
 name: stacks-payments
-description: Use when implementing payment processing in Stacks — Stripe charges, subscriptions, checkout sessions, customer management, payment methods, invoices, coupons, promo codes, products, prices, webhooks, or the Payment facade. Covers @stacksjs/payments and config/payment.ts.
+description: Use when implementing payment processing in Stacks - Stripe charges, subscriptions, checkout sessions, customer management, payment methods, invoices, coupons, promo codes, products, prices, webhooks, or the Payment facade. Covers @stacksjs/payments and config/payment.ts.
 license: MIT
 compatibility: Bun >= 1.3.0, TypeScript
 allowed-tools: Read Edit Write Bash Grep Glob
@@ -25,6 +25,7 @@ Full Stripe integration via the Payment facade. Uses Stripe API version `2026-01
 - All billable modules (`manageCharge`, `manageCustomer`, `manageSubscription`, etc.)
 - `stripe` -- raw Stripe SDK instance
 - `Stripe` -- re-exported Stripe types namespace
+- `stacksIdempotencyKey`, `freshIdempotencyKey` -- see Idempotency below
 
 ## Payment Facade
 
@@ -276,14 +277,31 @@ Supported webhook event types: `payment_intent.succeeded`, `payment_intent.payme
 
 ### Setup Products from SaaS Config
 
-```typescript
-import { createStripeProduct } from '@stacksjs/payments'
+Prefer the command; it is what an app author can discover:
 
-const result = await createStripeProduct()
-// Creates Stripe products and prices from config/saas.ts plans
+```bash
+buddy stripe:setup --dry-run   # report the plan of record, write nothing
+buddy stripe:setup             # apply it
 ```
 
-This iterates `saas.plans`, creates a Stripe product per plan, then creates prices for each pricing option using `lookup_key` from the `key` field.
+```typescript
+import { createStripeProduct, formatSetupReport } from '@stacksjs/payments'
+
+const result = await createStripeProduct({ dryRun: true })
+if (!result.isErr)
+  console.log(formatSetupReport(result.value).join('\n'))
+```
+
+This iterates `saas.plans` and reconciles each one against the live account: a
+product is matched by name and reused, and each pricing option is matched by its
+`lookup_key` (from the `key` field). Prices are immutable in Stripe, so a changed
+amount is applied by creating a new price with `transfer_lookup_key: true`, which
+moves the key atomically and leaves the superseded price active so existing
+subscriptions keep billing.
+
+Re-running is safe and converges. It does not use `products.search` on purpose:
+that index is eventually consistent, so a second run inside the lag window would
+find nothing and create a duplicate.
 
 ### Utility Functions
 
@@ -329,6 +347,39 @@ The aggregate always returns persisted `PaymentTransaction` records for the
 authenticated user. Subscription and payment-method reads are provider-backed
 and may be unavailable when the application User override is not billable.
 Render that as an explicit unavailable state, not sample plans or fake cards.
+
+## Idempotency
+
+Stripe calls that **create or attach** a resource are not idempotent by default.
+The classic failure: `createStripeCustomer(user)` succeeds at Stripe, the
+follow-up `user.update({ stripe_id })` fails, the next request sees no
+`stripe_id` and creates a second Stripe customer with no link to the local user.
+
+Pass an idempotency key on every create, attach or update call. Stripe caches
+the response under that key for 24 hours, so a retry returns the original object
+instead of making a new one.
+
+```typescript
+import { stacksIdempotencyKey } from '@stacksjs/payments'
+
+await stripe.customers.create(params, {
+  idempotencyKey: stacksIdempotencyKey('customer.create', user.id),
+})
+```
+
+Keys are built as `stacks:<scope>:<parts...>:v1`, hashed when they would exceed
+Stripe's 255-character limit, and deterministic: the same inputs always produce
+the same key, which is the whole point.
+
+- **`stacksIdempotencyKey(scope, ...parts)`** is the one to reach for. `scope` is
+  a stable operation name and never user input; `parts` scope it within the
+  user's lifetime.
+- **`freshIdempotencyKey(scope, ...parts)`** appends randomness, so it does *not*
+  deduplicate. Use it only when a repeat call is genuinely a new operation (a
+  second, deliberate charge of the same amount), never as a way to get past a
+  cached response.
+- Bump the `v1` suffix in `idempotency.ts` when an operation's parameters change
+  in a way that should not collide with a cached response.
 
 ## config/payment.ts
 

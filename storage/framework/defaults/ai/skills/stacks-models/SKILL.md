@@ -1,6 +1,6 @@
 ---
 name: stacks-models
-description: Use when working with data models in Stacks — the defineModel() API, model attributes with validation and factories, relationships (hasOne/hasMany/belongsTo/belongsToMany), traits (useAuth, useUuid, useTimestamps, useSearch, useApi, billable, taggable, categorizable, commentable, likeable, observe), computed properties (get/set), model generation, and the 50+ built-in framework models. Covers model definitions and storage/framework/defaults/app/Models/.
+description: Use when working with data models in Stacks - the defineModel() API, model attributes with validation and factories, relationships (hasOne/hasMany/belongsTo/belongsToMany), traits (useAuth, useUuid, useTimestamps, useSearch, useApi, billable, taggable, categorizable, commentable, likeable, observe), computed properties (get/set), model generation, and the 50+ built-in framework models. Covers model definitions and storage/framework/defaults/app/Models/.
 license: MIT
 compatibility: Bun >= 1.3.0, TypeScript, SQLite >= 3.47.2
 allowed-tools: Read Edit Write Bash Grep Glob
@@ -244,7 +244,10 @@ traits: {
 ```
 
 `buddy seed` walks every model carrying the trait and fills its table from the
-attribute factories. Nothing else is needed - no seeder files, no registration.
+attribute factories. Model fixture data needs no separate seeder or registration.
+Idempotent application bootstrap work can live in `database/seeders` as a
+default-exported class extending `Seeder` from `@stacksjs/database`. Buddy runs
+those application seeders after the model factories.
 
 ```bash
 buddy seed                       # every model with a useSeeder trait

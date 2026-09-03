@@ -10,13 +10,6 @@ Object.assign(globalThis, autoImports)
 
 // TypeScript declarations
 declare global {
-  const increment: typeof autoImports.increment
-  const decrement: typeof autoImports.decrement
-  const reset: typeof autoImports.reset
-  const count: typeof autoImports.count
-  const toggleDark: typeof autoImports.toggleDark
-  const isDark: typeof autoImports.isDark
-  const preferredDark: typeof autoImports.preferredDark
   const seriesColor: typeof autoImports.seriesColor
   const compact: typeof autoImports.compact
   const money: typeof autoImports.money
@@ -34,6 +27,13 @@ declare global {
   const needsLegend: typeof autoImports.needsLegend
   const SERIES_SLOTS: typeof autoImports.SERIES_SLOTS
   const DEFAULT_BOX: typeof autoImports.DEFAULT_BOX
+  const increment: typeof autoImports.increment
+  const decrement: typeof autoImports.decrement
+  const reset: typeof autoImports.reset
+  const count: typeof autoImports.count
+  const toggleDark: typeof autoImports.toggleDark
+  const isDark: typeof autoImports.isDark
+  const preferredDark: typeof autoImports.preferredDark
 }
 
 export {}

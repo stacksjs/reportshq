@@ -1,3 +1,4 @@
+import type { ReadableRecord } from '@stacksjs/orm'
 export type AnalyticsRange = 'day' | 'week' | 'month' | 'year'
 export type AnalyticsScope = 'all' | 'blog' | 'commerce'
 
@@ -11,9 +12,8 @@ export interface RequestAnalyticsRow {
   createdAt: string
 }
 
-export interface AnalyticsModelRecord {
-  get: (key: string) => unknown
-}
+/** The shared shape, kept under this name for the helpers below. */
+export type AnalyticsModelRecord = ReadableRecord
 
 interface TrafficBucket {
   date: string

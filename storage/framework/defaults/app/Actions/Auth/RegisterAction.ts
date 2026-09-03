@@ -12,15 +12,15 @@ export default new Action({
 
   validations: {
     email: {
-      rule: schema.string().email(),
+      rule: schema.string().email().required(),
       message: 'Email must be a valid email address.',
     },
     password: {
-      rule: schema.string().min(PASSWORD_MIN_LENGTH).max(PASSWORD_MAX_LENGTH),
+      rule: schema.string().min(PASSWORD_MIN_LENGTH).max(PASSWORD_MAX_LENGTH).required(),
       message: PASSWORD_POLICY_MESSAGE,
     },
     name: {
-      rule: schema.string().min(2).max(255),
+      rule: schema.string().min(2).max(255).required(),
       message: 'Name must be between 2 and 255 characters.',
     },
   },
@@ -40,11 +40,14 @@ export default new Action({
       // — listener errors are caught by the wildcard handler so a flaky
       // welcome email doesn't fail registration. The `to` alias matches
       // the contract SendWelcomeEmail expects.
+      // `to` is what SendWelcomeEmail addresses the mail to, so it has to be
+      // a string; the registering address is the honest fallback if the
+      // freshly-created user could not be read back.
       dispatch('user:registered', {
         id: user?.id,
-        email: user?.email,
+        email: user?.email ?? email,
         name: user?.name,
-        to: user?.email,
+        to: user?.email ?? email,
       })
 
       // Same OAuth2-compatible payload LoginAction returns, so a client can

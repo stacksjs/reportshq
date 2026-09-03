@@ -1,6 +1,6 @@
-export interface KanbanModelRecord {
-  get: (key: string) => unknown
-}
+import type { ReadableRecord } from '@stacksjs/orm'
+/** The shared shape, kept under this name for the helpers below. */
+export type KanbanModelRecord = ReadableRecord
 
 export interface RefreshableKanbanModelRecord extends KanbanModelRecord {
   fresh: () => Promise<KanbanModelRecord | null>

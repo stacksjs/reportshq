@@ -1,4 +1,5 @@
 <script client>
+import type { RegisterCredentials } from '../../../../types/dashboard'
 import { describeAuthError, useAuth } from '../../../../functions/auth'
 
 const { register } = useAuth()
@@ -12,7 +13,7 @@ function safeRedirect(): string {
   return redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/'
 }
 
-async function handleRegister(credentials) {
+async function handleRegister(credentials: RegisterCredentials): Promise<void> {
   isLoading.set(true)
   error.set('')
 
@@ -41,5 +42,9 @@ async function handleRegister(credentials) {
     :isLoading="isLoading()"
     :error="error()"
     :data-auth-status="isLoading() ? 'loading' : 'ready'"
-  />
+  >
+    <!-- Forwarded so the page mounting this container can put social
+         sign-in inside the card. -->
+    <template #social><slot name="social" /></template>
+  </Register>
 </template>

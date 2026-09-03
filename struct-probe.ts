@@ -1,4 +1,4 @@
-import { install, installedClient, uninstall } from '@loghq/stacks'
+import { install, uninstall } from '@loghq/stacks'
 import * as logging from '@stacksjs/logging'
 
 uninstall()

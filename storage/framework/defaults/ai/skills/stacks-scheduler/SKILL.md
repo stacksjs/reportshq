@@ -1,6 +1,6 @@
 ---
 name: stacks-scheduler
-description: Use when scheduling tasks in a Stacks application — defining scheduled tasks, cron-like scheduling, or task automation. Covers @stacksjs/scheduler, @stacksjs/cron, and app/Scheduler.ts.
+description: Use when scheduling tasks in a Stacks application - defining scheduled tasks, cron-like scheduling, or task automation. Covers @stacksjs/scheduler, @stacksjs/cron, and app/Scheduler.ts.
 license: MIT
 compatibility: Bun >= 1.3.0, TypeScript
 allowed-tools: Read Edit Write Bash Grep Glob
@@ -47,7 +47,7 @@ The `Schedule` class is the core scheduling API. The lowercase `schedule` export
 import { schedule } from '@stacksjs/scheduler'
 
 // Static factory methods — each returns UntimedSchedule
-schedule.job(name: string): UntimedSchedule      // Runs a job by name via runJob()
+schedule.job(name: JobName): UntimedSchedule     // Runs a job by name via runJob()
 schedule.action(name: string): UntimedSchedule    // Runs an action by name via runAction()
 schedule.command(cmd: string): UntimedSchedule    // Runs a shell command via runCommand()
 

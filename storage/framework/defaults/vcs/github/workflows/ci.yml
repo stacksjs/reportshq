@@ -9,6 +9,9 @@ on:
     branches:
       - main
 
+  # So a maintainer can ship without pushing an empty commit.
+  workflow_dispatch:
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
@@ -109,6 +112,13 @@ jobs:
 
       - name: Set Application Key
         run: bun buddy key:generate
+
+      # Feature tests query real tables, and a fresh checkout has no database
+      # file at all: it is gitignored, being machine-local state. Without this
+      # the suite fails in beforeAll with "no such table", which reads like a
+      # broken test rather than a missing schema.
+      - name: Migrate the database
+        run: bun buddy migrate
 
       - name: Test Suite
         run: bun run test

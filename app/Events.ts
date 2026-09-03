@@ -9,6 +9,11 @@ import type { Events } from '@stacksjs/types'
  */
 export default {
   // eventName: ['Listener1', 'Listener2'] -> listeners default to ./app/actions/*
+  // Only the framework's own event names are valid here: 0.74 closed the
+  // `Events` type, which is what surfaced a second entry for 'user:created'.
+  // No such framework event exists and nothing in this app dispatched it, so
+  // that listener had never once run. Removed rather than re-pointed —
+  // NotifyUser stays, callable directly, and wiring it to a real event is a
+  // decision rather than a rename.
   'user:registered': ['SendWelcomeEmail'],
-  'user:created': ['NotifyUser'],
 } satisfies Events

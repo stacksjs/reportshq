@@ -22,6 +22,11 @@ export default defineModel({
     },
   ],
 
+  // An infrastructure table: rows are written by the system, not on behalf of a
+  // caller, so no row has a per-caller owner to scope by. Writes are gated by
+  // `middleware` instead. Declared rather than left silent (stacksjs/stacks#2375).
+  ownership: false,
+
   traits: {
     useTimestamps: true,
     useSoftDeletes: true,
@@ -31,7 +36,10 @@ export default defineModel({
     useApi: {
       uri: 'requests',
       routes: ['index', 'store', 'show', 'update', 'destroy'],
-      middleware: ['auth'],
+      // Reads stay as they were; writes need an admin.
+      // request logs are an audit trail, and carry whatever the request carried,
+      // so `auth` alone let any signed-in caller do it (stacksjs/stacks#2412).
+      middleware: { read: ['auth'], write: ['auth', 'role:admin'] },
     },
   },
 

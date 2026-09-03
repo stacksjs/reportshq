@@ -8,7 +8,7 @@
  *
  * Commands:
  *   bun browse.ts navigate   <url>
- *   bun browse.ts screenshot <url> [--viewport WxH] [--full] [--element SEL] [--scale N] [--out PATH]
+ *   bun browse.ts screenshot <url> [--viewport WxH] [--full | --element SEL | --scroll-y N] [--scale N] [--out PATH]
  *   bun browse.ts responsive <url> [--out-dir DIR]
  *   bun browse.ts monitor    <url> [--ms 5000]
  *   bun browse.ts snapshot   <url>
@@ -313,7 +313,7 @@ interface PageState {
   mainStatus: number | null
 }
 
-async function gotoAndInstrument(cdp: Cdp, url: string, opts: { viewport?: { w: number, h: number }, scale?: number, timeoutMs?: number, cookies?: string[], settleMs?: number, scheme?: string } = {}): Promise<PageState> {
+async function gotoAndInstrument(cdp: Cdp, url: string, opts: { viewport?: { w: number, h: number }, scale?: number, timeoutMs?: number, cookies?: string[], settleMs?: number, scheme?: string, reducedMotion?: boolean } = {}): Promise<PageState> {
   let unsubscribe = () => {}
   const state: PageState = {
     consoleErrors: [],
@@ -356,12 +356,29 @@ async function gotoAndInstrument(cdp: Cdp, url: string, opts: { viewport?: { w: 
   }
 
   // Emulate light/dark so prefers-color-scheme pages can be QA'd in both
-  // schemes without flipping the host OS setting.
-  if (opts.scheme === 'light' || opts.scheme === 'dark') {
-    await cdp.send('Emulation.setEmulatedMedia', {
-      features: [{ name: 'prefers-color-scheme', value: opts.scheme }],
-    })
-  }
+  // schemes without flipping the host OS setting. `reducedMotion` rides the
+  // same call (a second `setEmulatedMedia` would replace this one's features
+  // rather than add to them) - it's set for `--full`/`--element` captures,
+  // which paint beyond the current viewport via `captureBeyondViewport`.
+  // That API paints pixels beyond the viewport WITHOUT moving `scrollY`, so
+  // a scroll-driven CSS reveal (`animation-timeline: view()`) never
+  // resolves past its initial (typically invisible) keyframe for anything
+  // that was never really scrolled past - a `--full` capture would silently
+  // screenshot every such section as blank. `prefers-reduced-motion: reduce`
+  // sidesteps that instead of fighting it with a scroll trick that would
+  // itself misplace `position: sticky`/`fixed` elements: this project's own
+  // marketing CSS already turns every scroll/entrance animation off and
+  // leaves elements at their plain (opaque) resting state under reduced
+  // motion (`@media (prefers-reduced-motion: reduce)`), which is exactly
+  // the already-shipped, already-tested fallback a real accessibility user
+  // gets - reusing it here means nothing new to prove correct.
+  const features: { name: string, value: string }[] = []
+  if (opts.scheme === 'light' || opts.scheme === 'dark')
+    features.push({ name: 'prefers-color-scheme', value: opts.scheme })
+  if (opts.reducedMotion)
+    features.push({ name: 'prefers-reduced-motion', value: 'reduce' })
+  if (features.length)
+    await cdp.send('Emulation.setEmulatedMedia', { features })
 
   unsubscribe = cdp.on((e) => {
     if (e.method === 'Runtime.consoleAPICalled') {
@@ -403,7 +420,27 @@ async function title(cdp: Cdp): Promise<string> {
   return r.result?.value ?? ''
 }
 
-async function captureScreenshot(cdp: Cdp, opts: { full?: boolean, element?: string } = {}): Promise<Buffer> {
+/**
+ * Scroll the real page to `y` and let two animation-frame round-trips settle
+ * before the caller reads pixels back - `behavior: 'instant'` forces the
+ * jump synchronously even when the page sets `scroll-behavior: smooth`,
+ * which would otherwise animate the scroll and leave a screenshot taken
+ * immediately after mid-flight.
+ */
+async function scrollTo(cdp: Cdp, y: number): Promise<void> {
+  const r = await cdp.send('Runtime.evaluate', {
+    expression: `(() => {
+      window.scrollTo({ top: ${y}, left: 0, behavior: 'instant' })
+      return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(window.scrollY))))
+    })()`,
+    returnByValue: true,
+    awaitPromise: true,
+  })
+  if (r.exceptionDetails)
+    throw new Error(r.exceptionDetails.exception?.description || r.exceptionDetails.text || 'scrollTo failed')
+}
+
+async function captureScreenshot(cdp: Cdp, opts: { full?: boolean, element?: string, scrollY?: number } = {}): Promise<Buffer> {
   let clip: any
   let captureBeyondViewport = false
 
@@ -422,6 +459,9 @@ async function captureScreenshot(cdp: Cdp, opts: { full?: boolean, element?: str
     const size = m.cssContentSize || m.contentSize
     clip = { x: 0, y: 0, width: Math.ceil(size.width), height: Math.ceil(size.height), scale: 1 }
     captureBeyondViewport = true
+  }
+  else if (opts.scrollY != null) {
+    await scrollTo(cdp, opts.scrollY)
   }
 
   const r = await cdp.send('Page.captureScreenshot', { format: 'png', ...(clip ? { clip, captureBeyondViewport } : {}) })
@@ -521,6 +561,22 @@ function parseViewport(value: string | undefined): { w: number, h: number } {
     throw new TypeError(`Invalid viewport "${value}". Expected WIDTHxHEIGHT, for example 1280x900.`)
 
   return { w, h }
+}
+
+/** `--scroll-y` on `screenshot`: an explicit document Y to jump to before
+ *  capturing just the viewport, for content a full-page capture cannot show
+ *  (sticky/fixed elements, scroll-linked animation) at a specific fold. */
+function parseScrollY(value: string | boolean | Array<string | boolean> | undefined): number | null {
+  if (value === undefined)
+    return null
+  if (typeof value !== 'string')
+    throw new TypeError('--scroll-y requires a value, for example --scroll-y 800.')
+
+  const y = Number(value)
+  if (!Number.isFinite(y) || y < 0)
+    throw new TypeError(`Invalid --scroll-y "${value}". Expected a non-negative number of pixels.`)
+
+  return y
 }
 
 type ScenarioAction = 'assert' | 'click' | 'evaluate' | 'fill' | 'focus' | 'press' | 'wait'
@@ -702,14 +758,28 @@ async function main() {
     console.log('Usage: bun browse.ts <navigate|screenshot|responsive|monitor|snapshot|scenario|crawl> <url> [flags]')
     console.log('  --cookie "name=value"   repeatable; pre-seeds cookies (e.g. coming-soon bypass)')
     console.log('  --settle 1500           ms to wait after load before acting (default 700; stretch for entrance animations)')
-    console.log('  --scheme dark           emulate prefers-color-scheme (light|dark) for QA of theme-aware pages')
+    console.log('  --scheme dark           emulate prefers-color-scheme (light|dark); defaults to light when omitted')
+    console.log('  --scroll-y 800          screenshot: jump to this document Y first, then capture just the viewport')
+    console.log('                          (--full renders beyond-viewport without ever scrolling, so it cannot show a')
+    console.log('                          position:sticky/fixed element overlapping content, or a scroll-linked')
+    console.log('                          animation mid-transition, at a specific fold - --scroll-y can)')
     process.exit(url ? 0 : 1)
   }
 
   let session = await launch()
   const cookies = flagList(flags.cookie)
   const settleMs = flags.settle ? Number(flags.settle) : undefined
-  const scheme = typeof flags.scheme === 'string' ? flags.scheme : undefined
+  // Defaults to 'light' rather than leaving prefers-color-scheme unset:
+  // headless Chromium's own default for that media feature isn't
+  // documented or guaranteed, and was observed reporting 'dark' matches
+  // with nothing here asking for it - every screenshot taken without
+  // --scheme would silently show this site's dark theme instead of its
+  // actual 'colored' (light) default. Forcing 'light' makes an unflagged
+  // capture deterministic and representative of what a visitor with no
+  // saved choice and no OS dark-mode preference actually sees.
+  if (flags.scheme !== undefined && flags.scheme !== 'light' && flags.scheme !== 'dark')
+    throw new TypeError(`Invalid --scheme "${String(flags.scheme)}". Expected "light" or "dark".`)
+  const scheme = typeof flags.scheme === 'string' ? flags.scheme : 'light'
   try {
     if (command === 'navigate' || command === 'go') {
       const cdp = await openPage(session.port)
@@ -733,12 +803,16 @@ async function main() {
       const cdp = await openPage(session.port)
       const viewport = parseViewport(typeof flags.viewport === 'string' ? flags.viewport : undefined)
       const scale = flags.scale ? Number(flags.scale) : 1
+      const scrollY = parseScrollY(flags['scroll-y'])
+      const modes = [flags.full && 'full', flags.element && 'element', scrollY != null && 'scroll-y'].filter(Boolean)
+      if (modes.length > 1)
+        throw new TypeError(`--full, --element, and --scroll-y are mutually exclusive; got ${modes.join(', ')}.`)
       const out = (flags.out as string) || `storage/framework/runtime/shots/${new URL(url).pathname.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'home'}.png`
       mkdirSync(out.split('/').slice(0, -1).join('/') || '.', { recursive: true })
-      const state = await gotoAndInstrument(cdp, url, { viewport, scale, cookies, settleMs, scheme })
-      const png = await captureScreenshot(cdp, { full: !!flags.full, element: flags.element as string | undefined })
+      const state = await gotoAndInstrument(cdp, url, { viewport, scale, cookies, settleMs, scheme, reducedMotion: !!flags.full || !!flags.element })
+      const png = await captureScreenshot(cdp, { full: !!flags.full, element: flags.element as string | undefined, scrollY: scrollY ?? undefined })
       await Bun.write(out, png)
-      console.log(JSON.stringify({ url, out, viewport: `${viewport.w}x${viewport.h}`, scale, full: !!flags.full, element: flags.element ?? null, bytes: png.length }, null, 2))
+      console.log(JSON.stringify({ url, out, viewport: `${viewport.w}x${viewport.h}`, scale, full: !!flags.full, element: flags.element ?? null, scrollY: scrollY ?? null, bytes: png.length }, null, 2))
       state.dispose()
       cdp.close()
     }
@@ -749,7 +823,7 @@ async function main() {
       const results: any[] = []
       for (const bp of BREAKPOINTS) {
         const cdp = await openPage(session.port)
-        const state = await gotoAndInstrument(cdp, url, { viewport: { w: bp.w, h: bp.h }, cookies, settleMs, scheme })
+        const state = await gotoAndInstrument(cdp, url, { viewport: { w: bp.w, h: bp.h }, cookies, settleMs, scheme, reducedMotion: true })
         const overflow = await cdp.send('Runtime.evaluate', {
           expression: 'document.body.scrollWidth > window.innerWidth ? document.body.scrollWidth - window.innerWidth : 0',
           returnByValue: true,
@@ -815,7 +889,7 @@ async function main() {
 
       const cdp = await openPage(session.port)
       const viewport = parseViewport(typeof flags.viewport === 'string' ? flags.viewport : undefined)
-      const state = await gotoAndInstrument(cdp, url, { viewport, cookies, settleMs, scheme })
+      const state = await gotoAndInstrument(cdp, url, { viewport, cookies, settleMs, scheme, reducedMotion: !!flags.full })
       const results: Record<string, unknown>[] = []
       await cdp.send('Page.bringToFront')
       await cdp.send('Runtime.evaluate', {

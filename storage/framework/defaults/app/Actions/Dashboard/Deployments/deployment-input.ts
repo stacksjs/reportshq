@@ -1,11 +1,11 @@
+import type { ReadableRecord } from '@stacksjs/orm'
 export interface DeploymentCommandInput {
   environment?: unknown
   domain?: unknown
 }
 
-export interface DeploymentRecordLike {
-  get: (key: string) => unknown
-}
+/** The shared shape, kept under this name for the helpers below. */
+export type DeploymentRecordLike = ReadableRecord
 
 export function booleanValue(value: unknown): boolean {
   return value === true || value === 1 || value === '1' || value === 'true' || value === 'on'

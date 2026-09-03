@@ -102,7 +102,7 @@ const MODEL_PATHS: Record<string, string[]> = {
   ShippingZone: ['app/Models/ShippingZone.ts', 'storage/framework/defaults/app/Models/commerce/ShippingZone.ts'],
   DeliveryRoute: ['app/Models/DeliveryRoute.ts', 'storage/framework/defaults/app/Models/commerce/DeliveryRoute.ts'],
   DigitalDelivery: ['app/Models/DigitalDelivery.ts', 'storage/framework/defaults/app/Models/commerce/DigitalDelivery.ts'],
-  Driver: ['app/Models/Driver.ts', 'storage/framework/defaults/app/Models/commerce/Driver.ts'],
+  Courier: ['app/Models/Courier.ts', 'storage/framework/defaults/app/Models/commerce/Courier.ts'],
   TaxRate: ['app/Models/TaxRate.ts', 'storage/framework/defaults/app/Models/commerce/TaxRate.ts'],
   WaitlistProduct: ['app/Models/WaitlistProduct.ts', 'storage/framework/defaults/app/Models/commerce/WaitlistProduct.ts'],
   WaitlistRestaurant: ['app/Models/WaitlistRestaurant.ts', 'storage/framework/defaults/app/Models/commerce/WaitlistRestaurant.ts'],
@@ -342,7 +342,7 @@ export function groupByDay(
     const d = new Date(raw)
     if (Number.isNaN(d.getTime())) continue
     const k = d.toISOString().slice(0, 10)
-    if (k in buckets) buckets[k]++
+    if (k in buckets) buckets[k] = (buckets[k] ?? 0) + 1
   }
   return Object.entries(buckets).map(([date, count]) => ({ date, count }))
 }
@@ -372,7 +372,7 @@ export function sumByDay(
     if (Number.isNaN(d.getTime())) continue
     const k = d.toISOString().slice(0, 10)
     if (!(k in buckets)) continue
-    buckets[k] += Number(safeGet(r, valueKey, 0)) || 0
+    buckets[k] = (buckets[k] ?? 0) + (Number(safeGet(r, valueKey, 0)) || 0)
   }
   return Object.entries(buckets).map(([date, total]) => ({ date, total }))
 }

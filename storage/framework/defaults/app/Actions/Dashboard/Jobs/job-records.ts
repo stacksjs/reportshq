@@ -1,9 +1,9 @@
+import type { ReadableRecord } from '@stacksjs/orm'
 export type JobRecordSource = 'job' | 'failed'
 export type DashboardJobStatus = 'queued' | 'processing' | 'failed'
 
-export interface ModelRecord {
-  get: (key: string) => unknown
-}
+/** The shared shape, kept under this name for the helpers below. */
+export type ModelRecord = ReadableRecord
 
 export interface NormalizedJob {
   id: string
