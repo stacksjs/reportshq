@@ -34,6 +34,13 @@ export default {
     description: 'The ReportsHQ chart elements: line, bar, donut, funnel, heatmap, table, big number and text.',
     keywords: ['reports', 'charts', 'custom-elements', 'web-components', 'stx', 'typescript'],
     include: ['**/*.stx'],
+    // The element names are public API. They are `stacks-line-chart` and
+    // friends in this app's views, in packages/stacks and in packages/laravel,
+    // and in every install of those out in the world. 0.74 derives the prefix
+    // from the package name, so renaming the package away from the scaffold
+    // would have quietly re-registered all nine as `elements-*` and left every
+    // chart blank. Pinned, so the name and the prefix can move independently.
+    prefix: 'stacks',
   },
 
   functions: {

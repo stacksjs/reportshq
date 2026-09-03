@@ -12,6 +12,10 @@
  * in a subdirectory, and `files` appends `.ts`. Only a recursive glob covers
  * the real layout.
  *
+ * `prefix` is undeclared for the same reason, and this app must set it: 0.74
+ * derives the element prefix from the package name, and these elements are
+ * published API.
+ *
  * Remove this once the framework declares the fields its own resolver reads.
  * Filed as stacksjs/stacks#2426.
  */
@@ -20,6 +24,8 @@ declare module '@stacksjs/types' {
   interface LibraryBuildOptions {
     include?: string[]
     exclude?: string[]
+    /** The custom-element prefix. Defaults to the unscoped package name. */
+    prefix?: string
   }
 }
 
