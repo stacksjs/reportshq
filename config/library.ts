@@ -8,38 +8,39 @@ import type { LibraryConfig } from '@stacksjs/types'
  * have any questions, feel free to reach out via Discord or GitHub Discussions.
  */
 export default {
-  name: 'hello-world',
-  owner: '@stacksjs', // you may or may not add the @ prefix here (it is added automatically)
-  repository: 'stacksjs/stacks',
+  name: 'reportshq',
+  owner: 'stacksjs',
+  repository: 'stacksjs/reportshq',
   license: 'MIT',
   author: 'Chris Breuer',
   contributors: ['Chris Breuer <chris@stacksjs.com>'],
   defaultLanguage: 'en',
   releaseable: true,
 
+  // The chart elements, bundled by `buddy build --web-components` into the
+  // file that build:charts copies to public/reportshq/charts.js and into both
+  // integration packages. Every .stx under resources/components is included,
+  // which is the default and the set that has always been bundled.
+  //
+  // `include` is set explicitly rather than left to default. The resolver's
+  // precedence is include > files > tags > default, and this app's config is
+  // merged over the framework's, whose own `tags` name a HelloWorld element
+  // that does not exist here. Omitting all three would inherit that tag and
+  // build a package matching no files, which 0.74 turned from a silent
+  // fallback into a hard error. Naming the glob keeps every .stx in the
+  // bundle, which is the set that has always shipped.
   webComponents: {
-    name: 'hello-world-elements',
-    description: 'Your framework agnostic web component library description.',
-    keywords: ['custom-elements', 'web-components', 'library', 'framework-agnostic', 'typescript', 'javascript'],
-    tags: [
-      {
-        name: ['HelloWorld', 'AppHelloWorld'],
-        description: 'The Hello World custom element, built via this framework.',
-        attributes: [
-          {
-            name: 'greeting',
-            description: 'The greeting.',
-          },
-        ],
-      },
-    ],
+    name: '@reportshq/elements',
+    description: 'The ReportsHQ chart elements: line, bar, donut, funnel, heatmap, table, big number and text.',
+    keywords: ['reports', 'charts', 'custom-elements', 'web-components', 'stx', 'typescript'],
+    include: ['**/*.stx'],
   },
 
   functions: {
-    name: 'hello-world-fx',
-    description: 'Your function library description.',
-    keywords: ['functions', 'composables', 'library', 'typescript', 'javascript'],
+    name: '@reportshq/functions',
+    description: 'Client helpers the chart elements use.',
+    keywords: ['reports', 'charts', 'functions', 'composables', 'typescript'],
     shouldGenerateSourcemap: false,
-    files: ['counter', 'dark'],
+    files: ['charts', 'counter', 'dark'],
   },
 } satisfies LibraryConfig

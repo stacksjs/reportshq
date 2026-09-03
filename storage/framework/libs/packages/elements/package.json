@@ -1,0 +1,65 @@
+{
+  "name": "@reportshq/elements",
+  "type": "module",
+  "version": "0.70.52",
+  "description": "The ReportsHQ chart elements: line, bar, donut, funnel, heatmap, table, big number and text.",
+  "author": "Chris Breuer",
+  "contributors": [
+    "Chris Breuer <chris@stacksjs.com>"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/stacksjs/reportshq/tree/main/storage/framework/libs/packages/elements#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stacksjs/reportshq.git",
+    "directory": "storage/framework/libs/packages/elements"
+  },
+  "bugs": {
+    "url": "https://github.com/stacksjs/reportshq/issues"
+  },
+  "keywords": [
+    "reports",
+    "charts",
+    "custom-elements",
+    "web-components",
+    "stx",
+    "typescript"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.js",
+      "import": "./dist/bundle.js",
+      "default": "./dist/bundle.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.js",
+      "import": "./dist/*.js",
+      "default": "./dist/*.js"
+    },
+    "./style.css": "./dist/bundle.css",
+    "./custom-elements.json": "./dist/custom-elements.json"
+  },
+  "module": "dist/bundle.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "README.md",
+    "dist"
+  ],
+  "stacks": {
+    "kind": "web-components",
+    "sources": [
+      "resources/components/Wordmark.stx",
+      "resources/components/charts/BarChart.stx",
+      "resources/components/charts/BigNumber.stx",
+      "resources/components/charts/DonutChart.stx",
+      "resources/components/charts/FunnelChart.stx",
+      "resources/components/charts/HeatmapChart.stx",
+      "resources/components/charts/LineChart.stx",
+      "resources/components/charts/TableChart.stx",
+      "resources/components/charts/TextBlock.stx"
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
