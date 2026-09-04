@@ -1,8 +1,8 @@
 # The Laravel package
 
 `reportshq/laravel` puts the reports inside your application. It reads the
-models you already have, queries them in place through Eloquent, and renders
-through the routes you already guard.
+models you already have, queries them in place on the connection your
+application already holds, and renders through the routes you already guard.
 
 Nothing leaves the application. There is no endpoint to send to, no connection
 to hand out, and the licence check is offline.
@@ -69,11 +69,17 @@ joined line items counts the order once per line, so:
 The refusal reaches the tile with the reason on it. A plausible wrong number is
 worse than an empty block, because nobody checks a number that looks right.
 
-## It reads the model, not the table
+## It reads what you declared, not the whole table
 
-Queries go through Eloquent, so a global scope still applies, a soft delete
-stays deleted, and a status means what your domain says it means. A raw query
-against the same table can quietly disagree with the product; this cannot.
+A block can only reach the measures and dimensions the description names, so a
+column nobody meant to expose is not one click away.
+
+Be aware of what this does *not* do. The compiler builds SQL and the runner
+executes it on the application's existing connection, not through Eloquent, so
+global scopes and soft deletes do **not** apply on their own. If rows are
+excluded by a scope in your application, declare the same condition as a filter
+on the model here, or the report will count them. A soft-deleted order is still
+a row.
 
 ## Timezone
 

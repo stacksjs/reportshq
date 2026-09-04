@@ -35,7 +35,7 @@ const sections = [
   },
   {
     "heading": "They obey the application's own rules",
-    "body": "A report reads the model, not the table. A soft delete stays deleted, a global scope still applies, and a status means what your domain says it means. A raw query against the same table would quietly disagree with the product, and nobody would notice until the numbers were quoted in a meeting."
+    "body": "A report reads the columns you described, at the grain you described, with the filters you declared. Nothing else is reachable. Ask it for something the description cannot answer correctly \u2014 a measure at a grain it does not have \u2014 and it refuses and says why, rather than returning a number that is quietly wrong."
   },
   {
     "heading": "Then you change them",

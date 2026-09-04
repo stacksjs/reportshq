@@ -26,8 +26,9 @@ application deploys, the reports deploy with it.
 
 ## Requirements
 
-PHP 8.2+, Laravel 11+, and whatever database you already use. The queries are
-built through Eloquent, so anything Laravel supports works, including SQLite.
+PHP 8.2+, Laravel 11+, and whatever database you already use. SQL is built for
+whatever driver your connection reports, so anything Laravel supports works,
+including SQLite.
 
 ## Without a licence key
 

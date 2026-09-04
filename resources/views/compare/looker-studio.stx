@@ -39,7 +39,7 @@ const sections = [
   },
   {
     "heading": "Reports as code",
-    "body": "A report here lives in your repository. It is reviewed in a pull request, deployed with the feature it describes, and it obeys the same scopes as the rest of the app. A dashboard built in a browser is a thing somebody made once and nobody can review."
+    "body": "A report here lives in your repository. What is queryable is declared in your repository, reviewed in a pull request and deployed with the feature it describes. A dashboard built in a browser is a thing somebody made once and nobody can review."
   },
   {
     "heading": "Where Looker Studio wins",

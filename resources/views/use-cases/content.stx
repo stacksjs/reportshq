@@ -34,8 +34,8 @@ const sections = [
     "body": "This reads your own database, so it knows what exists, who wrote it, and what state it is in. Page views come from a tracker on the page, and that is a genuinely different question. Most teams want both, and this is not trying to be the other one."
   },
   {
-    "heading": "Drafts, scheduling and soft deletes behave",
-    "body": "A draft is not counted as published because the model says it is a draft. Something soft deleted stays deleted. The report cannot disagree with the CMS, because it is reading the CMS."
+    "heading": "Drafts and scheduling behave",
+    "body": "A draft is not counted as published, because the filter that excludes it is part of the description rather than something each report remembers to add. Declare it once and every block that reads that model inherits it."
   },
   {
     "heading": "A dashboard for people who never sign in",

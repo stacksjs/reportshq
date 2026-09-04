@@ -35,7 +35,7 @@ const sections = [
   },
   {
     "heading": "Nothing leaves your servers",
-    "body": "Queries run in process, through the ORM the application already uses. There is no connection to hand out, no credential to rotate, and no endpoint to send anything to. The licence check is offline too."
+    "body": "Queries run in process, on the database connection the application already holds. There is no connection to hand out, no credential to rotate, and no endpoint to send anything to. The licence check is offline too."
   },
   {
     "heading": "Where it renders",

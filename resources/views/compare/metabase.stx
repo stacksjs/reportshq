@@ -35,7 +35,7 @@ const sections = [
   },
   {
     "heading": "Your database connection stays where it is",
-    "body": "Metabase needs credentials into production, which is a decision worth taking seriously and a thing to rotate, audit and firewall. This queries in process, through the ORM the application already uses, so there is no new connection, no new credential and no new host holding one."
+    "body": "Metabase needs credentials into production, which is a decision worth taking seriously and a thing to rotate, audit and firewall. This queries in process, on the database connection the application already holds, so there is no new connection, no new credential and no new host holding one."
   },
   {
     "heading": "Where Metabase wins",
@@ -43,7 +43,7 @@ const sections = [
   },
   {
     "heading": "Where this wins",
-    "body": "Reports that ship with the feature they describe. Anything where the numbers must obey the same rules as the application: a soft delete that a raw query would miss, a tenant scope, a status that means something specific in your domain. Reading a model rather than a table means a report cannot quietly disagree with the product."
+    "body": "Reports that ship with the feature they describe. The set of things a report can ask is an allowlist in your repository, so a column nobody meant to expose is not one click away, and a question the description cannot answer correctly is refused rather than answered approximately."
   },
   {
     "heading": "And for the people who are not staff",
@@ -87,12 +87,12 @@ const compare = [
   },
   {
     "about": "Business rules",
-    "ours": "Reads your models, so scopes and soft deletes still apply.",
-    "theirs": "Reads tables, so the rules live twice and can disagree."
+    "ours": "Reads the columns you declare, at the grain you declare.",
+    "theirs": "Reads whole tables, so any column is one click away."
   },
   {
     "about": "Sharing outside the team",
-    "ours": "A signed link from your own domain.",
+    "ours": "A private link from your own domain, revocable and expiring.",
     "theirs": "A public link from a service you also keep running."
   },
   {

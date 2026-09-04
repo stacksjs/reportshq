@@ -108,7 +108,7 @@ const steps = [
   },
   {
     title: 'Name the models you already have',
-    body: 'An order, a customer, a subscription. Say which fields are measures and which are dates, and the reports have real numbers in them immediately, obeying the same scopes and soft deletes the application does.',
+    body: 'An order, a customer, a subscription. Say which fields are measures and which are dates, and the reports have real numbers in them immediately, at the grain you described. A question the description cannot answer correctly is refused rather than guessed at.',
     icon: 'i-hugeicons-magic-wand-01',
   },
   {
