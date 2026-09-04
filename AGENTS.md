@@ -310,11 +310,7 @@ one.
   glob reaches, and `prefix` must be pinned because 0.74 derives the custom-element prefix from the
   package name - renaming would quietly re-register every chart as `elements-*` and leave them
   blank. Delete `app/library.d.ts` when the framework declares the fields.
-- **`deps:lockfile:check` is wired to a script that does not exist.** `package.json` declares
-  `"deps:lockfile:check": "bun .github/scripts/check-lockfile-version.ts"`, but `.github/scripts/`
-  is not in the tree, so the command exits with `Module not found`.
-  The Bun pin below is therefore unguarded. Write the script or drop the wiring; do not assume the
-  check is protecting you.
+
 - `config/mobile.ts` is deliberately absent. ReportsHQ ships no native application, and there is
   nothing to configure. The old blocker
   ([stacksjs/stacks#2322](https://github.com/stacksjs/stacks/issues/2322)) is closed:
