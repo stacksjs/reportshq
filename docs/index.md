@@ -19,10 +19,10 @@ hero:
 features:
   - title: One package
     details: composer require, a migration, and a config file naming your models. Nothing to deploy beside it and no tracking calls to write.
-  - title: Reports create themselves
-    details: Describe a model once and the reports it implies are created with real numbers already in them, covering everything already in your database.
-  - title: Every block explains itself
-    details: One sentence derived from the query the block actually runs, so two charts called Revenue are never confused.
+  - title: Describe once, query safely
+    details: Name your models, measures and dimensions in one config file. That description is an allowlist, so a block can only ever reach what you named.
+  - title: It refuses rather than guesses
+    details: Ask for a measure at a grain it does not have and the block says why, instead of returning a number that is quietly wrong.
   - title: Honest about its numbers
     details: No previous period is said rather than guessed at, bounded dimensions state what went into Other, and sampling keeps whole people.
   - title: Share without an account

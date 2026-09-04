@@ -69,13 +69,11 @@ const heroLine = {
 const heroRevenue = {
   series: [{ key: 'total', points: [], total: revenueTotal }],
   total: revenueTotal,
-  comparison: { change: 0.184 },
 }
 
 const heroOrders = {
   series: [{ key: 'total', points: [], total: 1284 }],
   total: 1284,
-  comparison: { change: 0.092 },
 }
 
 const heroPlans = {
@@ -94,9 +92,16 @@ php artisan migrate`
 const stacksSnippet = `// config/reportshq.php
 'models' => [
     'order' => [
-        'model' => App\\Models\\Order::class,
-        'measures' => ['revenue' => 'sum:total_amount'],
-        'time' => ['placed' => 'created_at'],
+        'class' => App\\Models\\Order::class,
+        'label' => 'Order',
+        'grain' => 'one row per order',
+        'dimensions' => [
+            'status' => ['label' => 'Status', 'type' => 'string'],
+            'placed' => ['label' => 'Placed', 'type' => 'date', 'column' => 'created_at'],
+        ],
+        'measures' => [
+            'revenue' => ['label' => 'Revenue', 'aggregate' => 'sum', 'column' => 'total_amount'],
+        ],
     ],
 ],`
 

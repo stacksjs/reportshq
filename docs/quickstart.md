@@ -23,24 +23,25 @@ Open `config/reportshq.php` and name something you already have.
 ```php
 'models' => [
     'order' => [
-        'model' => App\Models\Order::class,
-        'measures' => [
-            'revenue' => 'sum:total_amount',
-            'orders' => 'count',
-        ],
-        'time' => [
-            'placed' => 'created_at',
-        ],
+        'class' => App\Models\Order::class,
+        'label' => 'Order',
+        'grain' => 'one row per order',
         'dimensions' => [
-            'status' => 'status',
+            'status' => ['label' => 'Status', 'type' => 'string'],
+            'placed' => ['label' => 'Placed', 'type' => 'date', 'column' => 'created_at'],
+        ],
+        'measures' => [
+            'revenue' => ['label' => 'Revenue', 'aggregate' => 'sum', 'column' => 'total_amount'],
+            'orders' => ['label' => 'Orders', 'aggregate' => 'count'],
         ],
     ],
 ],
 ```
 
-That is the whole description. A measure says what to add up, a time key says
-which column a date range applies to, and a dimension says what you may group
-by.
+That is the whole description. A measure says what to add up and how, a
+dimension of type `date` is what a date range applies to, and every other
+dimension is something you may group by. `grain` is the sentence the compiler
+uses to refuse a question that would double-count.
 
 **Only what you name is reachable.** The compiler will not touch a column that
 is not in this file, which is why a password hash cannot end up as a dimension
@@ -48,20 +49,39 @@ by somebody typing its name into a URL.
 
 ## 3. Open the reports
 
+The routes are off until you say otherwise, because the package cannot know
+which of your users may see a total of everybody's orders. Turn them on:
+
+```bash
+REPORTSHQ_ROUTES=true
+```
+
 ```bash
 php artisan serve
 ```
 
-Visit `/reports`. The Commerce report is already there with real numbers in it,
-because everything it needed was in the description above, and your orders were
-already in the database. There is nothing to wait for and no data to accumulate:
-the first report covers everything you have ever sold.
+Visit `/reports`. It is empty -- nothing creates a report for you, and the page
+says as much. Make the first one:
 
-## 4. Build one of your own
+```php
+use ReportsHQ\Laravel\Reports\Builder;
+
+// The slug is derived from the name, and kept unique for you.
+$report = app(Builder::class)->create('Commerce');
+```
+
+Or post the same thing from the page itself, which is what the "New report"
+form does.
+
+## 4. Build it
 
 Visit `/reports/commerce/edit`. Drag a block from the palette onto the grid,
 pick a measure and a dimension, and it redraws as you change it. Drag a corner
 to resize, or nudge with the arrow keys.
+
+There is no data to accumulate and nothing to wait for: a block reads rows that
+are already in your database, so the first one you drop covers everything you
+have ever sold.
 
 Publish when it looks right. A draft stays yours until you do, so a teammate
 never opens a half arranged grid.

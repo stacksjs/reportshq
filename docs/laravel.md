@@ -24,21 +24,18 @@ revisions, shares and schedules. Your own tables are only ever read.
 // config/reportshq.php
 'models' => [
     'order' => [
-        'model' => App\Models\Order::class,
-        'measures' => [
-            'revenue' => 'sum:total_amount',
-            'orders' => 'count',
-            'average_order' => 'avg:total_amount',
-        ],
-        'time' => [
-            'placed' => 'created_at',
-            'shipped' => 'shipped_at',
-        ],
+        'class' => App\Models\Order::class,
+        'label' => 'Order',
+        'grain' => 'one row per order',
         'dimensions' => [
-            'status' => 'status',
+            'status' => ['label' => 'Status', 'type' => 'string'],
+            'placed' => ['label' => 'Placed', 'type' => 'date', 'column' => 'created_at'],
+            'shipped' => ['label' => 'Shipped', 'type' => 'date', 'column' => 'shipped_at'],
         ],
-        'relations' => [
-            'items' => 'orderItems',
+        'measures' => [
+            'revenue' => ['label' => 'Revenue', 'aggregate' => 'sum', 'column' => 'total_amount'],
+            'orders' => ['label' => 'Orders', 'aggregate' => 'count'],
+            'average_order' => ['label' => 'Average order', 'aggregate' => 'avg', 'column' => 'total_amount'],
         ],
     ],
 ],

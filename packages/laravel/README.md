@@ -64,7 +64,7 @@ Name the tables you are willing to report on:
 
 Nothing is reportable until it is listed. A report is a `SELECT` with a drag handle on it, so the package asks you to say what may be exposed rather than discovering that everything already is.
 
-`php artisan reportshq:discover` writes a draft of that block from your Eloquent models, leaving out anything that looks sensitive. Treat it as a starting point: it can see that a column is an integer, not that the integer is cents, nor which of two foreign keys is the customer.
+Write that block by hand. `ReportsHQ\Laravel\Semantic\Discovery::draft()` will sketch one from a list of model classes if you would rather start from something, but it is a library call rather than an artisan command, and it is only a starting point: it can see that a column is an integer, not that the integer is cents, nor which of two foreign keys is the customer.
 
 Then pick a surface. All three are off until asked for:
 
@@ -104,7 +104,7 @@ php artisan vendor:publish --tag=reportshq-config
 // config/reportshq.php
 return [
     'key' => env('REPORTSHQ_KEY', ''),
-    'endpoint' => env('REPORTSHQ_ENDPOINT', 'https://reportshq.org/ingest'),
+    'endpoint' => env('REPORTSHQ_ENDPOINT', ''),
     'domains' => ['commerce' => true, 'users' => true, 'cms' => true],
     'sample_rate' => 1.0,
     'queue' => env('REPORTSHQ_QUEUE'),

@@ -120,7 +120,7 @@ return [
      * is a SELECT with a drag handle on it, and an application should say what
      * it is willing to expose rather than discover it has exposed everything.
      *
-     * `php artisan reportshq:discover` writes a draft of this from your own
+     * `Semantic\Discovery::draft()` will sketch a draft of this from your own
      * Eloquent models, with every sensitive looking column already left out.
      * The draft is a starting point and not an answer: it can see that a column
      * is an integer and it cannot see that the integer is cents, or that one

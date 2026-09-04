@@ -35,7 +35,7 @@ const sections = [
   },
   {
     "heading": "Each block is a question",
-    "body": "Pick a measure, a dimension, a time grain and a comparison range. The choices come from the models you described, so the panel cannot offer a field the query would then refuse."
+    "body": "Pick a measure, a dimension and a time grain. The choices come from the models you described, so the panel cannot offer a field the query would then refuse."
   },
   {
     "heading": "A refusal beats a wrong number",
