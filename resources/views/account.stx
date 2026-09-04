@@ -3,20 +3,14 @@
 //
 // Deliberately small. It holds the things that are true about a person rather
 // than about a project: who they are, and how to stop being signed in. Team
-// membership belongs to a project and lives in project settings; billing
-// arrives with #17.
+// billing arrives with #17.
 import { db as __db } from '@stacksjs/database'
-import { projectsFor } from '../../app/Support/access'
 import { sessionCookieName, sessionFrom } from '../../app/Support/session'
 
 const session = await sessionFrom(cookies)
 const cookieName = sessionCookieName()
 const user = session.user
 const authPending = session.stale
-
-const projects = user ? await projectsFor(user) : []
-const owned = projects.filter(project => String(project.role ?? '') === 'owner').length
-const joined = projects.length - owned
 
 // When the account was opened. Shown because "member since" is the one fact a
 // person cannot look up anywhere else in the product.
@@ -74,10 +68,6 @@ const since = joinedLabel(row?.created_at)
             <span class="text-sm text-ink">{{ since }}</span>
           </div>
         @endif
-        <div class="flex gap-4 justify-between items-baseline px-5 py-4">
-          <span class="text-sm text-muted">Projects</span>
-          <span class="text-sm text-ink">{{ owned }} owned, {{ joined }} joined</span>
-        </div>
       </div>
 
       <div class="p-5 mt-6 rounded-xl border border-line">
