@@ -42,7 +42,15 @@ export default {
   // subtrees to keep, e.g. `['errors', 'emails']`. Applies to `buddy dev` and
   // `buddy serve` alike, and to whatever the route manifest enumerates into
   // the sitemap.
-  defaultViews: true,
+  // Was `true`, which mounts every default view. That put a demo storefront on
+  // reportshq.org: /cart answered 200 with "Your cart", /orders/1 with "Order
+  // confirmed", and /dashboard with a scaffold this app does not use -- none of
+  // them linked from anywhere, none in the sitemap, all indexable. errors and
+  // emails are the two subtrees this app actually wants: real error pages, and
+  // the mail previews. Everything else (auth, checkout, cms, dashboard, orders,
+  // password, and the top-level cart/index/login/register scaffolds) is served
+  // by this app's own resources/views or not wanted at all.
+  defaultViews: ['errors', 'emails'],
 
   app: {
     // --- Theme ---------------------------------------------------------------

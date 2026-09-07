@@ -172,7 +172,7 @@ const docLinks = [
   {
     title: 'Self-hosting',
     body: 'There is no other kind. What a licence covers, and what happens when you leave the key unset.',
-    href: '/docs/deploy',
+    href: '/docs/self-hosting',
   },
 ]
 </script>
