@@ -34,16 +34,16 @@ const sections = [
     "body": "CSV for anything that reads text, XLSX when somebody wants a workbook with the types already correct so the dates are dates. Both come from the same query the chart ran, so an exported number and a drawn number cannot disagree."
   },
   {
-    "heading": "Download links that expire",
-    "body": "A generated file is reachable through a signed link with a deadline on it, and the file is deleted when the link dies. Keeping somebody’s numbers on disk past the life of the only URL that reaches them is storage nobody asked for."
+    "heading": "Nothing is stored to expire",
+    "body": "An export is generated on the request and streamed straight out. The hosted product wrote a file, signed a URL and expired it after an hour, all because the file lived on a different machine from the reader. Here it does not: the numbers are one query away, so there is nothing on disk to clean up and no way to be handed a stale copy."
   },
   {
     "heading": "Scheduled delivery, in your timezone",
     "body": "The headline numbers by email, daily, weekly or monthly, at an hour you choose in your project’s own timezone. The hour stays the hour after the clocks change, because the schedule is evaluated in that timezone rather than by adding an offset to UTC and hoping."
   },
   {
-    "heading": "Recipients are checked",
-    "body": "A schedule can only send to addresses tied to the project. A reporting tool that will email anything anywhere on a timer is a data exfiltration feature with a friendly name."
+    "heading": "Delivery runs on your own queue",
+    "body": "Scheduled mail goes out through the mailer and queue the application already has, so it obeys whatever sending rules you already enforce. Note that the recipient list is a plain field and is not validated against anything — a reporting tool that emails on a timer deserves the same review you would give any other outbound mail."
   }
 ]
 </script>

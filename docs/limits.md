@@ -20,7 +20,6 @@ a good quarter.
 | Share links | Yes | Yes | Yes |
 | Scheduled email | | Yes | Yes |
 | XLSX export | | Yes | Yes |
-| Embeds, unbranded shares | | | Yes |
 | Priority support | | | Yes |
 
 `app/Billing/limits.ts` is the only place these numbers live. The pricing page

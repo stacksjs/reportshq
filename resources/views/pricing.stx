@@ -40,10 +40,8 @@ function count(value: number): string {
 /** The capability rows, in the order somebody evaluates them. */
 const CAPABILITY_ROWS = [
   { key: 'shares', label: 'Public share links' },
-  { key: 'embeds', label: 'Embed in your own pages' },
   { key: 'schedules', label: 'Scheduled email delivery' },
   { key: 'xlsx', label: 'XLSX export' },
-  { key: 'unbranded', label: 'Remove our footer from shares' },
 ] as const
 
 /**

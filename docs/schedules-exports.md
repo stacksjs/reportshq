@@ -24,14 +24,15 @@ number cannot disagree.
 
 XLSX is a paid-tier capability; CSV is on every plan. See [limits](/docs/limits).
 
-## Download links expire
+## Nothing is stored to expire
 
-A generated file is reachable through a signed link with a deadline on it, and
-the file is deleted when the link dies. Keeping somebody's numbers on disk past
-the life of the only URL that reaches them is storage nobody asked for.
+An export is generated on the request and streamed straight out. Nothing is
+written to disk and nothing is linked.
 
-The signature is verified in constant time, so a wrong token cannot be
-distinguished from a right one by how long the answer takes.
+The hosted product did store a file, sign a URL for it and expire it after an
+hour — all of which existed because the file lived on a different machine from
+the reader. Here it does not: the numbers are one query away, so generating on
+demand has nothing to clean up and cannot serve somebody a stale copy.
 
 ## Schedules
 
@@ -44,15 +45,22 @@ The schedule is evaluated in your project's timezone rather than by adding a
 fixed offset to UTC. That means 09:00 stays 09:00 after the clocks change,
 which is the whole reason to store a timezone rather than an offset.
 
-### Recipients are checked
+### Recipients are not validated — review them yourself
 
-A schedule can only send to addresses tied to the project. A reporting tool
-that will email anything to anywhere on a timer is a data exfiltration feature
-with a friendly name.
+Be explicit about this one. `recipients` is a free-text column;
+`Schedule::recipientList()` splits it on commas and `Delivery` hands the result
+straight to `Mail::to(...)->queue(...)`. Nothing checks that an address belongs
+to anyone in particular.
 
-### Runs are recorded
+A reporting tool that emails on a timer is worth the same review you would give
+any other outbound mail. Restrict who may create or edit a schedule, in your own
+application, since the package does not do it for you.
 
-Each run is recorded, including failures, so a report that stopped arriving is
-a question with an answer rather than a mystery.
+### What a run records
+
+`last_run_at` is stamped, and that is all — it is what decides whether a
+schedule is due, so it is written *before* the mail is queued. A send that
+fails afterwards still leaves the schedule looking like it ran. There is no
+failure log here: if you need one, watch your queue's failed jobs.
 
 Scheduled delivery is a paid-tier capability. See [limits](/docs/limits).

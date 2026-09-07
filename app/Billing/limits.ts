@@ -34,10 +34,6 @@ export type Capability =
   | 'xlsx'
   /** Share a report publicly. */
   | 'shares'
-  /** Embed a report in an iframe. */
-  | 'embeds'
-  /** Remove the "Made with ReportsHQ" footer from a share. */
-  | 'unbranded'
   /** Priority support, and a person rather than a queue. */
   | 'support'
 
@@ -111,7 +107,7 @@ export const PLANS: Record<Tier, Plan> = {
     applications: 10,
     reports: 0,
     seats: 25,
-    capabilities: ['shares', 'schedules', 'xlsx', 'embeds', 'unbranded', 'support'],
+    capabilities: ['shares', 'schedules', 'xlsx', 'support'],
   },
 }
 

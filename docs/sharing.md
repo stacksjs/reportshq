@@ -1,4 +1,4 @@
-# Sharing and embeds
+# Sharing
 
 A share link shows one published report and nothing around it: no navigation
 into the rest of your project, no sign-in wall, no account for the recipient to
@@ -10,8 +10,12 @@ to make a login for it.
 From a report, create a share. You get a URL of the form:
 
 ```
-https://reportshq.org/s/<token>
+https://your-app.example.com/reports/shared/<token>
 ```
+
+The link is served by your own application, on your own domain — the route is
+`/reports/shared/{token}`, mounted alongside the rest of the package. Nothing
+is hosted here.
 
 The token is the credential. Anyone holding it sees that one report, as
 published. They cannot reach anything else in the project, and the link grants
@@ -32,23 +36,6 @@ is simply out.
 Each view is recorded against the link, so you know whether the weekly report
 somebody asked for is actually being opened. It settles a lot of arguments
 about what is worth continuing to produce.
-
-## Embedding
-
-The same report can be embedded in a page of your own:
-
-```html
-<iframe
-  src="https://reportshq.org/embed/<token>"
-  width="100%"
-  height="480"
-  style="border: 0"
-  title="Revenue per day"
-></iframe>
-```
-
-A client portal or an internal wiki then carries the live chart rather than a
-screenshot somebody took in March.
 
 Embedding is available on the paid tiers, and the top tier removes our footer
 from shared and embedded reports so what you send a client looks like your work.

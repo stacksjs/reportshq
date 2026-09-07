@@ -39,7 +39,7 @@ features:
 | Install it into a Laravel application | [Laravel package](/laravel) |
 | Read the JSON the charts consume | [Query API](/api) |
 | Build a report of your own | [Report builder](/builder) |
-| Send a report to somebody outside | [Sharing and embeds](/sharing) |
+| Send a report to somebody outside | [Sharing](/sharing) |
 | Get the numbers as a file or an email | [Schedules and exports](/schedules-exports) |
 | Know what a licence covers | [Limits](/limits) |
 | Run it on your own machines | [Self-hosting](/self-hosting) |
