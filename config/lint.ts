@@ -24,7 +24,7 @@ const config: LintConfig = {
       'strict-lint': 0,
       'unmanaged-timer': 0,
 
-      // config/stx.ts sets none of strict/root/pagesDir. Pinning root+pagesDir
+      // config/ui.ts sets none of strict/root/pagesDir. Pinning root+pagesDir
       // changes how stx resolves topology, so it wants its own dev+build pass
       // rather than being swept in with a lint change.
       'stx-config-keys': 3,

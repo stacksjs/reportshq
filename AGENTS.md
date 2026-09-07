@@ -274,7 +274,7 @@ one.
   symptom look like a styling bug.
 - **Design tokens do not belong in Crosswind's `preflights`.** That key is never
   emitted on the stx serve path, and 0.74 dropped it from the scaffold config
-  entirely. They live in `public/tokens.css`, linked from `config/stx.ts`.
+  entirely. They live in `public/tokens.css`, linked from `config/ui.ts`.
 - **`buddy migrate:fresh` has burned this scaffold before**
   (stacksjs/stacks#2323, closed 2026-08-27; the command has since been reworked
   and now carries `--seed` and a guarded `--force`): it failed partway and left
