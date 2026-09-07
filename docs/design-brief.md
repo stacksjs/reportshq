@@ -68,7 +68,7 @@ distinguishable.
 
 ## Architecture
 
-Tokens live in `public/tokens.css`, linked once from `config/ui.ts`. They are
+Tokens live in `public/tokens.css`, linked once from `config/stx.ts`. They are
 **not** in the Crosswind `preflights` key, which reads like the obvious home for
 them and is never emitted on the stx serve path.
 
@@ -78,7 +78,7 @@ var(--…)"`. Because the properties swap under `[data-theme]` and
 `prefers-color-scheme`, dark mode needs no `dark:` variant on individual classes.
 
 Theme is set once, at the root, by the pre-paint boot script stx emits from
-`config/ui.ts` `app.colorMode`. Do not add a second theme guard; two of them
+`config/stx.ts` `app.colorMode`. Do not add a second theme guard; two of them
 fight, and light loses on refresh.
 
 ## Rules this system carries

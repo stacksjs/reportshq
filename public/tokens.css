@@ -1,6 +1,6 @@
 /* ReportsHQ design tokens - the single source for every surface.
  *
- * Linked once from config/ui.ts `app.head.link`, so every page gets it without
+ * Linked once from config/stx.ts `app.head.link`, so every page gets it without
  * repeating it. It is deliberately NOT in config/crosswind.ts `preflights`,
  * which is where the styling guide says tokens belong: on the stx serve path
  * `preflights` is spread into the generator config and then never emitted, so a
