@@ -48,7 +48,7 @@ const notice = new License(process.env.REPORTSHQ_LICENSE).notice()
 <template>
   @include('AuthGuard')
 
-  <div class="min-h-[100dvh] bg-canvas text-ink">
+  <div class="min-h-[100dvh] text-ink bg-canvas">
     {{-- What the guard reads. The server is the only side that can see the
          HttpOnly session cookie, so it is the side that decides. Rendering the
          numbers and hiding them client-side would still serve them to curl. --}}
@@ -64,14 +64,14 @@ const notice = new License(process.env.REPORTSHQ_LICENSE).notice()
     <link rel="stylesheet" href="/reportshq/charts.css">
     <script type="module" src="/reportshq/charts.js"></script>
 
-    <main class="px-6 py-10 mx-auto max-w-6xl">
+    <main class="mx-auto px-6 py-10 max-w-6xl">
       @if (missing)
-        <h1 class="text-3xl font-semibold tracking-tight">No such report</h1>
+        <h1 class="font-semibold text-3xl tracking-tight">No such report</h1>
         <p class="mt-2 text-muted">There is no report called "{{ requested }}".</p>
         <p class="mt-6"><a href="/reports" class="text-accent">Back to reports</a></p>
       @else
         <header>
-          <h1 class="text-3xl font-semibold tracking-tight">{{ report.name }}</h1>
+          <h1 class="font-semibold text-3xl tracking-tight">{{ report.name }}</h1>
           @if (report.description)
             <p class="mt-2 text-muted">{{ report.description }}</p>
           @endif
@@ -89,8 +89,8 @@ const notice = new License(process.env.REPORTSHQ_LICENSE).notice()
               @if (tile.error)
                 {{-- The refusal goes on the tile's face. A blank cell reads as
                      a quiet week to whoever opens the page. --}}
-                <p class="text-sm font-medium text-ink">{{ tile.title }}</p>
-                <p class="mt-1 text-sm text-muted">{{ tile.error }}</p>
+                <p class="font-medium text-ink text-sm">{{ tile.title }}</p>
+                <p class="mt-1 text-muted text-sm">{{ tile.error }}</p>
               @else
                 {!! tile.html !!}
               @endif
@@ -100,7 +100,7 @@ const notice = new License(process.env.REPORTSHQ_LICENSE).notice()
       @endif
 
       @if (notice)
-        <p class="pt-4 mt-12 text-xs border-t border-line text-subtle">{{ notice }}</p>
+        <p class="mt-12 pt-4 text-subtle text-xs border-line border-t">{{ notice }}</p>
       @endif
     </main>
   </div>

@@ -14,7 +14,7 @@
      partials: stx drops props passed component to component in this version, so
      shared chrome built as a component would silently render empty. --}}
 <nav aria-label="Breadcrumb" class="px-6 pt-8 mx-auto {{ breadcrumbWidth }}">
-  <ol class="flex flex-wrap gap-2 items-center text-sm list-none text-subtle">
+  <ol class="flex flex-wrap gap-2 items-center list-none text-sm text-subtle">
     @foreach (breadcrumbs as crumb)
       @if (!loop.first)
         {{-- Decorative, so it is hidden from a screen reader, which gets the

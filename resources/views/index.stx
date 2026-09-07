@@ -178,7 +178,7 @@ const docLinks = [
 </script>
 
 <template>
-  <div class="min-h-[100dvh] bg-canvas text-ink">
+  <div class="min-h-[100dvh] text-ink bg-canvas">
     {{-- The chart components, compiled from the same stx sources the package
          ships, so the marketing charts and a customer's charts cannot diverge.
          In the body because stx generates the head itself; a module script runs
@@ -208,24 +208,24 @@ const docLinks = [
       {{-- Hero. Split rather than centred: the claim and the proof belong side
            by side, and a centred headline over a gradient is the shape every
            other analytics landing page already has. --}}
-      <section class="px-6 pt-16 pb-12 mx-auto max-w-6xl md:pt-24">
+      <section class="mx-auto pb-12 pt-16 px-6 md:pt-24 max-w-6xl">
         <div class="grid gap-12 items-center lg:grid-cols-[minmax(0,42%)_minmax(0,58%)]">
           <div>
-            <h1 class="text-4xl font-semibold leading-none tracking-tighter md:text-6xl">
+            <h1 class="font-semibold leading-none text-4xl tracking-tighter md:text-6xl">
               Reports that build themselves
             </h1>
 
-            <p class="mt-6 max-w-[46ch] text-base leading-relaxed text-muted">
+            <p class="mt-6 max-w-[46ch] leading-relaxed text-base text-muted">
               Name the models you already have. The Commerce, Users and Content reports
               appear with real numbers in them, covering everything in your database rather
               than starting at zero today.
             </p>
 
             <div class="flex flex-wrap gap-3 items-center mt-8">
-              <a href="/register" class="px-5 py-2.5 text-sm font-medium no-underline rounded-lg bg-accent text-accent-ink">
+              <a href="/register" class="px-5 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
                 Start free
               </a>
-              <a href="/pricing" class="px-5 py-2.5 text-sm no-underline rounded-lg border border-line text-ink hover:border-accent">
+              <a href="/pricing" class="px-5 py-2.5 no-underline text-ink text-sm border border-line rounded-lg hover:border-accent">
                 See pricing
               </a>
             </div>
@@ -237,25 +237,25 @@ const docLinks = [
 
           {{-- The product, rendered. These are the components the app uses, so
                this cannot drift from what a customer gets. --}}
-          <div class="p-5 rounded-2xl border shadow-sm border-line bg-panel">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div class="p-4 rounded-xl border border-line bg-canvas">
+          <div class="p-5 bg-panel border border-line rounded-2xl shadow-sm">
+            <div class="grid gap-4 grid-cols-1 sm:grid-cols-2">
+              <div class="p-4 bg-canvas border border-line rounded-xl">
                 <stacks-big-number result="{{ JSON.stringify(heroRevenue) }}" title="Revenue" unit="currency"></stacks-big-number>
               </div>
-              <div class="p-4 rounded-xl border border-line bg-canvas">
+              <div class="p-4 bg-canvas border border-line rounded-xl">
                 <stacks-big-number result="{{ JSON.stringify(heroOrders) }}" title="Orders"></stacks-big-number>
               </div>
             </div>
 
-            <div class="p-4 mt-4 rounded-xl border border-line bg-canvas">
+            <div class="mt-4 p-4 bg-canvas border border-line rounded-xl">
               <stacks-line-chart result="{{ JSON.stringify(heroLine) }}" title="Revenue per day" variant="area"></stacks-line-chart>
             </div>
 
-            <div class="p-4 mt-4 rounded-xl border border-line bg-canvas">
+            <div class="mt-4 p-4 bg-canvas border border-line rounded-xl">
               <stacks-donut-chart result="{{ JSON.stringify(heroPlans) }}" title="Orders by plan"></stacks-donut-chart>
             </div>
 
-            <p class="mt-3 text-xs text-subtle">
+            <p class="mt-3 text-subtle text-xs">
               A sample report, drawn by the same components the product uses. The numbers are made
               up; the charts are not.
             </p>
@@ -265,15 +265,15 @@ const docLinks = [
 
       {{-- The narrative, as three steps rather than three equal boxes of
            adjectives. --}}
-      <section class="px-6 py-20 mx-auto max-w-6xl">
-        <h2 class="text-3xl font-semibold tracking-tight">Three steps, and you write none of the reporting</h2>
+      <section class="mx-auto px-6 py-20 max-w-6xl">
+        <h2 class="font-semibold text-3xl tracking-tight">Three steps, and you write none of the reporting</h2>
 
-        <div class="grid gap-8 mt-12 lg:grid-cols-3">
+        <div class="grid gap-8 lg:grid-cols-3 mt-12">
           @foreach (steps as step)
             <div>
               <i class="w-6 h-6 {{ step.icon }} text-accent"></i>
-              <h3 class="mt-4 text-base font-medium text-ink">{{ step.title }}</h3>
-              <p class="mt-2 max-w-[42ch] text-sm leading-relaxed text-muted">{{ step.body }}</p>
+              <h3 class="mt-4 font-medium text-base text-ink">{{ step.title }}</h3>
+              <p class="mt-2 max-w-[42ch] leading-relaxed text-muted text-sm">{{ step.body }}</p>
             </div>
           @endforeach
         </div>
@@ -282,27 +282,27 @@ const docLinks = [
              to `min-width: auto`, so a long unwrapped line inside the `<pre>`
              widens the track rather than scrolling within it, and the whole page
              picks up a horizontal scrollbar on a phone. --}}
-        <div class="grid gap-4 mt-12 lg:grid-cols-2">
+        <div class="grid gap-4 lg:grid-cols-2 mt-12">
           <div class="min-w-0">
-            <h3 class="mb-2 text-sm font-medium text-ink">From a Stacks app</h3>
-            <pre class="overflow-x-auto p-4 font-mono text-xs leading-relaxed rounded-xl border border-line bg-panel text-ink">{{ stacksSnippet }}</pre>
+            <h3 class="mb-2 font-medium text-ink text-sm">From a Stacks app</h3>
+            <pre class="overflow-x-auto p-4 font-mono leading-relaxed text-ink text-xs bg-panel border border-line rounded-xl">{{ stacksSnippet }}</pre>
           </div>
           <div class="min-w-0">
-            <h3 class="mb-2 text-sm font-medium text-ink">Or from anything that speaks HTTP</h3>
-            <pre class="overflow-x-auto p-4 font-mono text-xs leading-relaxed rounded-xl border border-line bg-panel text-ink">{{ curlSnippet }}</pre>
+            <h3 class="mb-2 font-medium text-ink text-sm">Or from anything that speaks HTTP</h3>
+            <pre class="overflow-x-auto p-4 font-mono leading-relaxed text-ink text-xs bg-panel border border-line rounded-xl">{{ curlSnippet }}</pre>
           </div>
         </div>
       </section>
 
-      <section class="px-6 py-20 mx-auto max-w-6xl border-t border-line">
-        <h2 class="text-3xl font-semibold tracking-tight">What you get</h2>
+      <section class="mx-auto px-6 py-20 max-w-6xl border-line border-t">
+        <h2 class="font-semibold text-3xl tracking-tight">What you get</h2>
 
-        <div class="grid gap-6 mt-12 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 mt-12">
           @foreach (features as feature)
-            <div class="p-6 rounded-xl border border-line bg-panel">
+            <div class="p-6 bg-panel border border-line rounded-xl">
               <i class="w-5 h-5 {{ feature.icon }} text-accent"></i>
-              <h3 class="mt-4 text-base font-medium text-ink">{{ feature.title }}</h3>
-              <p class="mt-2 text-sm leading-relaxed text-muted">{{ feature.body }}</p>
+              <h3 class="mt-4 font-medium text-base text-ink">{{ feature.title }}</h3>
+              <p class="mt-2 leading-relaxed text-muted text-sm">{{ feature.body }}</p>
             </div>
           @endforeach
         </div>
@@ -311,36 +311,36 @@ const docLinks = [
       {{-- Docs teaser. Three real entry points rather than one "Read the docs"
            button, because the question somebody has at this point is specific
            and a landing page that knows which three it is saves them a search. --}}
-      <section class="px-6 pb-20 mx-auto max-w-6xl border-t border-line">
-        <div class="flex flex-wrap gap-4 justify-between items-end pt-20">
+      <section class="mx-auto pb-20 px-6 max-w-6xl border-line border-t">
+        <div class="flex flex-wrap gap-4 items-end justify-between pt-20">
           <div>
-            <h2 class="text-3xl font-semibold tracking-tight">Written down, not implied</h2>
-            <p class="mt-3 max-w-[52ch] text-sm leading-relaxed text-muted">
+            <h2 class="font-semibold text-3xl tracking-tight">Written down, not implied</h2>
+            <p class="mt-3 max-w-[52ch] leading-relaxed text-muted text-sm">
               How a model is described, what the compiler will and will not answer, and why it
               refuses rather than guessing. Every bound the query API enforces is stated.
             </p>
           </div>
-          <a href="/docs" class="text-sm no-underline text-accent hover:underline">All documentation</a>
+          <a href="/docs" class="no-underline text-accent text-sm hover:underline">All documentation</a>
         </div>
 
-        <div class="grid gap-4 mt-10 lg:grid-cols-3">
+        <div class="grid gap-4 lg:grid-cols-3 mt-10">
           @foreach (docLinks as doc)
-            <a href="{{ doc.href }}" class="block p-5 no-underline rounded-xl border border-line bg-panel hover:border-accent">
-              <h3 class="text-sm font-medium text-ink">{{ doc.title }}</h3>
-              <p class="mt-2 text-sm leading-relaxed text-muted">{{ doc.body }}</p>
+            <a href="{{ doc.href }}" class="block p-5 no-underline bg-panel border border-line rounded-xl hover:border-accent">
+              <h3 class="font-medium text-ink text-sm">{{ doc.title }}</h3>
+              <p class="mt-2 leading-relaxed text-muted text-sm">{{ doc.body }}</p>
             </a>
           @endforeach
         </div>
       </section>
 
-      <section class="px-6 pb-24 mx-auto max-w-6xl">
-        <div class="p-10 rounded-2xl border border-line bg-panel">
-          <h2 class="text-2xl font-semibold tracking-tight">Describe one model and see</h2>
-          <p class="mt-3 max-w-[56ch] text-sm leading-relaxed text-muted">
+      <section class="mx-auto pb-24 px-6 max-w-6xl">
+        <div class="p-10 bg-panel border border-line rounded-2xl">
+          <h2 class="font-semibold text-2xl tracking-tight">Describe one model and see</h2>
+          <p class="mt-3 max-w-[56ch] leading-relaxed text-muted text-sm">
             Install the package, name a model you already have, and drop a block on the grid. It
             reads rows that are already in your database, so the first chart covers all of them.
           </p>
-          <a href="/register" class="inline-block px-5 py-2.5 mt-6 text-sm font-medium no-underline rounded-lg bg-accent text-accent-ink">
+          <a href="/register" class="inline-block mt-6 px-5 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
             Create an account
           </a>
         </div>

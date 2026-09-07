@@ -22,7 +22,7 @@ const notice = new License(process.env.REPORTSHQ_LICENSE).notice()
 <template>
   @include('AuthGuard')
 
-  <div class="min-h-[100dvh] bg-canvas text-ink">
+  <div class="min-h-[100dvh] text-ink bg-canvas">
     {{-- What the guard reads. The server is the only side that can see the
          HttpOnly session cookie, so it is the side that decides. Rendering the
          numbers and hiding them client-side would still serve them to curl. --}}
@@ -35,22 +35,22 @@ const notice = new License(process.env.REPORTSHQ_LICENSE).notice()
 
     @include('AppNav')
 
-    <main class="px-6 py-10 mx-auto max-w-4xl">
-      <h1 class="text-3xl font-semibold tracking-tight">Reports</h1>
+    <main class="mx-auto px-6 py-10 max-w-4xl">
+      <h1 class="font-semibold text-3xl tracking-tight">Reports</h1>
       <p class="mt-2 text-muted">Everything this application reports on, from its own tables.</p>
 
       @if (reports.length)
         <ul class="grid gap-3 mt-8 list-none">
           @foreach (reports as report)
-            <li class="rounded-xl border border-line bg-panel">
-              <a href="/reports/{{ report.slug }}" class="flex gap-4 justify-between items-baseline p-5 no-underline">
+            <li class="bg-panel border border-line rounded-xl">
+              <a href="/reports/{{ report.slug }}" class="flex gap-4 items-baseline justify-between p-5 no-underline">
                 <span>
                   <span class="block font-medium text-ink">{{ report.name }}</span>
                   @if (report.description)
-                    <span class="block mt-1 text-sm text-muted">{{ report.description }}</span>
+                    <span class="block mt-1 text-muted text-sm">{{ report.description }}</span>
                   @endif
                 </span>
-                <span class="text-xs uppercase tracking-wide text-subtle">{{ report.status }}</span>
+                <span class="text-subtle text-xs tracking-wide uppercase">{{ report.status }}</span>
               </a>
             </li>
           @endforeach
@@ -60,7 +60,7 @@ const notice = new License(process.env.REPORTSHQ_LICENSE).notice()
       @endif
 
       @if (notice)
-        <p class="pt-4 mt-12 text-xs border-t border-line text-subtle">{{ notice }}</p>
+        <p class="mt-12 pt-4 text-subtle text-xs border-line border-t">{{ notice }}</p>
       @endif
     </main>
   </div>

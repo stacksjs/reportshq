@@ -49,14 +49,14 @@ const empty = result.total === 0 && !result.comparison
 <template>
   <div class="flex flex-col justify-center h-full">
     @if (title)
-      <p class="text-sm text-muted">{{ title }}</p>
+      <p class="text-muted text-sm">{{ title }}</p>
     @endif
 
     {{-- Smaller on a phone. A headline number is the one piece of text that
          must never be clipped, and at 30px a formatted currency total is wider
          than a narrow block on a 375px screen. Shrinking beats truncating,
          because half a number is worse than no number. --}}
-    <p class="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl num text-ink">{{ value }}</p>
+    <p class="mt-1 font-semibold text-2xl text-ink tracking-tight sm:text-3xl num">{{ value }}</p>
 
     @if (change !== null)
       <p class="flex gap-1.5 items-center mt-2 text-sm {{ tone }}">

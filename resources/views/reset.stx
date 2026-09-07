@@ -19,7 +19,7 @@ const usable = token !== '' && email !== ''
 </script>
 
 <template>
-  <div class="min-h-[100dvh] bg-canvas text-ink">
+  <div class="min-h-[100dvh] text-ink bg-canvas">
     {{-- Already signed in: bounce before anything paints, the same way the
          guard does in the other direction. --}}
 
@@ -27,17 +27,17 @@ const usable = token !== '' && email !== ''
     <script>document.documentElement.setAttribute('data-session-cookie', {{ cookieName }})</script>
 
     <main class="grid place-items-center px-6 py-16 min-h-[100dvh]">
-      <div class="w-full max-w-sm">
+      <div class="max-w-sm w-full">
         <a href="/" class="flex gap-2 items-center mb-8 no-underline">
-          <i class="w-5 h-5 i-hugeicons-chart-histogram text-accent"></i>
-          <span class="font-semibold tracking-tight text-ink">ReportsHQ</span>
+          <i class="h-5 w-5 text-accent i-hugeicons-chart-histogram"></i>
+          <span class="font-semibold text-ink tracking-tight">ReportsHQ</span>
         </a>
 
-        <h1 class="text-2xl font-semibold tracking-tight">Choose a new password</h1>
+        <h1 class="font-semibold text-2xl tracking-tight">Choose a new password</h1>
         @if (usable)
-          <p class="mt-1 mb-6 text-sm text-muted">For {{ email }}. Signing in elsewhere ends when you save this.</p>
+          <p class="mb-6 mt-1 text-muted text-sm">For {{ email }}. Signing in elsewhere ends when you save this.</p>
         @else
-          <p class="mt-1 mb-6 text-sm text-warn">This link is missing part of itself. Ask for a new one.</p>
+          <p class="mb-6 mt-1 text-sm text-warn">This link is missing part of itself. Ask for a new one.</p>
         @endif
 
         {{-- A real form, so a password manager recognises it and the enter key
@@ -48,29 +48,29 @@ const usable = token !== '' && email !== ''
           <input id="email" type="hidden" value="{{ email }}" />
 
           <label class="block">
-            <span class="block mb-1 text-sm text-muted">New password</span>
+            <span class="block mb-1 text-muted text-sm">New password</span>
             <input
               id="password"
               name="password"
               type="password"
               autocomplete="new-password"
               required
-              class="px-3 py-2 w-full text-sm rounded-lg border border-line bg-panel text-ink"
+              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg"
             />
           </label>
 
-          <p class="-mt-2 text-xs text-subtle">At least 10 characters. Length beats punctuation.</p>
+          <p class="-mt-2 text-subtle text-xs">At least 10 characters. Length beats punctuation.</p>
 
           <p id="error" class="text-sm text-warn" hidden></p>
 
           <button
             id="submit"
             type="submit"
-            class="px-4 py-2.5 text-sm font-medium rounded-lg bg-accent text-accent-ink disabled:opacity-60"
+            class="px-4 py-2.5 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
           >Save it</button>
         </form>
 
-        <p class="mt-6 text-sm text-muted">
+        <p class="mt-6 text-muted text-sm">
           <a href="/forgot" class="text-accent">Ask for a new link</a>
         </p>
       </div>

@@ -76,16 +76,16 @@ const emptyMessage = 'No data in this range'
 </script>
 
 <template>
-    <figure class="flex flex-col h-full m-0">
+    <figure class="flex flex-col m-0 h-full">
     @if (title)
-      <figcaption class="mb-3 text-sm font-medium text-ink">{{ title }}</figcaption>
+      <figcaption class="mb-3 font-medium text-ink text-sm">{{ title }}</figcaption>
     @endif
 
     @if (empty)
-      <div class="flex flex-1 flex-col gap-1 justify-center items-center py-8 text-center">
-        <i class="w-5 h-5 text-subtle i-hugeicons-chart-line-data-01"></i>
-        <p class="text-sm text-muted">{{ emptyMessage }}</p>
-        <p class="text-xs text-subtle">Events that arrive later will appear here.</p>
+      <div class="flex flex-1 flex-col gap-1 items-center justify-center py-8 text-center">
+        <i class="h-5 w-5 text-subtle i-hugeicons-chart-line-data-01"></i>
+        <p class="text-muted text-sm">{{ emptyMessage }}</p>
+        <p class="text-subtle text-xs">Events that arrive later will appear here.</p>
       </div>
     @else
       <div class="flex-1 min-h-0">
@@ -93,22 +93,22 @@ const emptyMessage = 'No data in this range'
       <table class="w-full text-sm border-collapse">
         <thead>
           <tr class="text-left border-b border-line">
-            <th class="py-2 pr-3 text-xs font-medium text-subtle">{{ label }}</th>
-            <th class="py-2 px-3 text-xs font-medium text-right text-subtle">Value</th>
-            <th class="py-2 pl-3 text-xs font-medium text-right text-subtle">Share</th>
+            <th class="pr-3 py-2 font-medium text-subtle text-xs">{{ label }}</th>
+            <th class="px-3 py-2 font-medium text-right text-subtle text-xs">Value</th>
+            <th class="pl-3 py-2 font-medium text-right text-subtle text-xs">Share</th>
           </tr>
         </thead>
         <tbody>
           @foreach (rows as row)
             <tr class="border-b border-line last:border-0">
-              <td class="py-2 pr-3">
+              <td class="pr-3 py-2">
                 <span class="flex gap-2 items-center text-ink">
-                  <span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background: {{ row.color }}"></span>
+                  <span class="shrink-0 h-2.5 w-2.5 rounded-sm" style="background: {{ row.color }}"></span>
                   {{ row.key }}
                 </span>
               </td>
-              <td class="py-2 px-3 text-right num text-ink">{{ row.value }}</td>
-              <td class="py-2 pl-3 text-right num text-muted">{{ row.share }}</td>
+              <td class="px-3 py-2 text-ink text-right num">{{ row.value }}</td>
+              <td class="pl-3 py-2 text-muted text-right num">{{ row.share }}</td>
             </tr>
           @endforeach
         </tbody>
@@ -121,13 +121,13 @@ const emptyMessage = 'No data in this range'
              colour alone, and one adjacent pair in this palette sits in the
              band where a legend is the condition of the palette being usable.
              Text wears text tokens; the swatch carries the identity. --}}
-        <ul class="flex flex-wrap gap-x-4 gap-y-1 items-center pt-3 mt-3 list-none border-t border-line">
+        <ul class="flex flex-wrap gap-x-4 gap-y-1 items-center mt-3 pt-3 list-none border-line border-t">
           @foreach (legend as entry)
-            <li class="flex gap-2 items-center text-xs text-muted">
-              <span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background: {{ entry.color }}"></span>
+            <li class="flex gap-2 items-center text-muted text-xs">
+              <span class="shrink-0 h-2.5 w-2.5 rounded-sm" style="background: {{ entry.color }}"></span>
               <span>{{ entry.key }}</span>
               @if (entry.value)
-                <span class="num text-subtle">{{ entry.value }}</span>
+                <span class="text-subtle num">{{ entry.value }}</span>
               @endif
             </li>
           @endforeach

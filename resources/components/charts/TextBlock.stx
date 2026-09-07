@@ -29,8 +29,8 @@ const { body, title } = defineProps<TextBlockProps>()
 <template>
   <div class="flex flex-col justify-center h-full">
     @if (title)
-      <p class="mb-1 text-sm font-medium text-ink">{{ title }}</p>
+      <p class="mb-1 font-medium text-ink text-sm">{{ title }}</p>
     @endif
-    <p class="max-w-[65ch] text-sm text-muted leading-relaxed">{{ body }}</p>
+    <p class="max-w-[65ch] leading-relaxed text-muted text-sm">{{ body }}</p>
   </div>
 </template>

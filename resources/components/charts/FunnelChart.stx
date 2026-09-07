@@ -74,34 +74,34 @@ const legend: Array<{ key: string, color: string, value?: string }> = []
 </script>
 
 <template>
-    <figure class="flex flex-col h-full m-0">
+    <figure class="flex flex-col m-0 h-full">
     @if (title)
-      <figcaption class="mb-3 text-sm font-medium text-ink">{{ title }}</figcaption>
+      <figcaption class="mb-3 font-medium text-ink text-sm">{{ title }}</figcaption>
     @endif
 
     @if (empty)
-      <div class="flex flex-1 flex-col gap-1 justify-center items-center py-8 text-center">
-        <i class="w-5 h-5 text-subtle i-hugeicons-chart-line-data-01"></i>
-        <p class="text-sm text-muted">{{ emptyMessage }}</p>
-        <p class="text-xs text-subtle">Events that arrive later will appear here.</p>
+      <div class="flex flex-1 flex-col gap-1 items-center justify-center py-8 text-center">
+        <i class="h-5 w-5 text-subtle i-hugeicons-chart-line-data-01"></i>
+        <p class="text-muted text-sm">{{ emptyMessage }}</p>
+        <p class="text-subtle text-xs">Events that arrive later will appear here.</p>
       </div>
     @else
       <div class="flex-1 min-h-0">
     <ol class="flex flex-col gap-3 justify-center py-1 h-full list-none">
       @foreach (steps as step)
         <li>
-          <div class="flex gap-3 justify-between items-baseline mb-1">
-            <span class="text-sm text-ink">{{ step.name }}</span>
+          <div class="flex gap-3 items-baseline justify-between mb-1">
+            <span class="text-ink text-sm">{{ step.name }}</span>
             <span class="flex gap-3 items-baseline text-xs">
-              <span class="num text-ink">{{ step.count }}</span>
-              <span class="num text-subtle">{{ step.ofFirst }}</span>
+              <span class="text-ink num">{{ step.count }}</span>
+              <span class="text-subtle num">{{ step.ofFirst }}</span>
             </span>
           </div>
-          <div class="overflow-hidden h-2.5 rounded-full bg-canvas">
+          <div class="overflow-hidden h-2.5 bg-canvas rounded-full">
             <div class="h-full rounded-full" style="width: {{ step.width }}%; background: {{ step.color }}"></div>
           </div>
           @if (step.dropped)
-            <p class="mt-1 text-xs text-subtle">
+            <p class="mt-1 text-subtle text-xs">
               <span class="num">{{ step.ofPrevious }}</span> of the previous step,
               <span class="num">{{ step.dropped }}</span> dropped
             </p>
@@ -116,13 +116,13 @@ const legend: Array<{ key: string, color: string, value?: string }> = []
              colour alone, and one adjacent pair in this palette sits in the
              band where a legend is the condition of the palette being usable.
              Text wears text tokens; the swatch carries the identity. --}}
-        <ul class="flex flex-wrap gap-x-4 gap-y-1 items-center pt-3 mt-3 list-none border-t border-line">
+        <ul class="flex flex-wrap gap-x-4 gap-y-1 items-center mt-3 pt-3 list-none border-line border-t">
           @foreach (legend as entry)
-            <li class="flex gap-2 items-center text-xs text-muted">
-              <span class="w-2.5 h-2.5 rounded-sm shrink-0" style="background: {{ entry.color }}"></span>
+            <li class="flex gap-2 items-center text-muted text-xs">
+              <span class="shrink-0 h-2.5 w-2.5 rounded-sm" style="background: {{ entry.color }}"></span>
               <span>{{ entry.key }}</span>
               @if (entry.value)
-                <span class="num text-subtle">{{ entry.value }}</span>
+                <span class="text-subtle num">{{ entry.value }}</span>
               @endif
             </li>
           @endforeach

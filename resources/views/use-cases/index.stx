@@ -30,22 +30,22 @@ const breadcrumbs = [
 </script>
 
 <template>
-  <div class="min-h-[100dvh] bg-canvas text-ink">
+  <div class="min-h-[100dvh] text-ink bg-canvas">
     @include('SiteNav')
     @include('Breadcrumbs')
 
-    <main class="px-6 py-12 mx-auto max-w-6xl">
+    <main class="mx-auto px-6 py-12 max-w-6xl">
       <div class="max-w-[52ch]">
-        <h1 class="text-4xl font-semibold tracking-tighter md:text-5xl">{{ hub.heading }}</h1>
-        <p class="mt-4 text-base leading-relaxed text-muted">{{ hub.description }}</p>
+        <h1 class="font-semibold text-4xl tracking-tighter md:text-5xl">{{ hub.heading }}</h1>
+        <p class="mt-4 leading-relaxed text-base text-muted">{{ hub.description }}</p>
       </div>
 
-      <div class="grid gap-5 mt-12 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 mt-12">
         @foreach (pages as page)
-          <a href="{{ page.href }}" class="flex flex-col p-6 no-underline rounded-xl border border-line bg-panel hover:border-accent">
+          <a href="{{ page.href }}" class="flex flex-col p-6 no-underline bg-panel border border-line rounded-xl hover:border-accent">
             <i class="w-5 h-5 {{ page.icon }} text-accent"></i>
-            <h2 class="mt-4 text-base font-medium text-ink">{{ page.title }}</h2>
-            <p class="mt-2 text-sm leading-relaxed text-muted">{{ page.description }}</p>
+            <h2 class="mt-4 font-medium text-base text-ink">{{ page.title }}</h2>
+            <p class="mt-2 leading-relaxed text-muted text-sm">{{ page.description }}</p>
           </a>
         @endforeach
       </div>

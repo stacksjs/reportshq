@@ -12,7 +12,7 @@ const signedIn = session.user !== null
 </script>
 
 <template>
-  <div class="min-h-[100dvh] bg-canvas text-ink">
+  <div class="min-h-[100dvh] text-ink bg-canvas">
     {{-- Already signed in: bounce before anything paints, the same way the
          guard does in the other direction. --}}
     @if (signedIn)
@@ -22,28 +22,28 @@ const signedIn = session.user !== null
     <script>document.documentElement.setAttribute('data-session-cookie', {{ cookieName }})</script>
 
     <main class="grid place-items-center px-6 py-16 min-h-[100dvh]">
-      <div class="w-full max-w-sm">
+      <div class="max-w-sm w-full">
         <a href="/" class="flex gap-2 items-center mb-8 no-underline">
-          <i class="w-5 h-5 i-hugeicons-chart-histogram text-accent"></i>
-          <span class="font-semibold tracking-tight text-ink">ReportsHQ</span>
+          <i class="h-5 w-5 text-accent i-hugeicons-chart-histogram"></i>
+          <span class="font-semibold text-ink tracking-tight">ReportsHQ</span>
         </a>
 
-        <h1 class="text-2xl font-semibold tracking-tight">Reset your password</h1>
-        <p class="mt-1 mb-6 text-sm text-muted">We will email you a link. It works once and expires in an hour.</p>
+        <h1 class="font-semibold text-2xl tracking-tight">Reset your password</h1>
+        <p class="mb-6 mt-1 text-muted text-sm">We will email you a link. It works once and expires in an hour.</p>
 
         {{-- A real form, so a password manager recognises it and the enter key
              submits. The script intercepts it; without the script it still
              posts somewhere sensible rather than nowhere. --}}
         <form id="signin" method="post" action="/api/auth/forgot" class="grid gap-4">
           <label class="block">
-            <span class="block mb-1 text-sm text-muted">Email</span>
+            <span class="block mb-1 text-muted text-sm">Email</span>
             <input
               id="email"
               name="email"
               type="email"
               autocomplete="username"
               required
-              class="px-3 py-2 w-full text-sm rounded-lg border border-line bg-panel text-ink"
+              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg"
             />
           </label>
 
@@ -52,13 +52,13 @@ const signedIn = session.user !== null
           <button
             id="submit"
             type="submit"
-            class="px-4 py-2.5 text-sm font-medium rounded-lg bg-accent text-accent-ink disabled:opacity-60"
+            class="px-4 py-2.5 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
           >Send the link</button>
         </form>
 
-        <p id="done" class="p-3 mt-4 text-sm rounded-lg border border-line text-muted" hidden></p>
+        <p id="done" class="mt-4 p-3 text-muted text-sm border border-line rounded-lg" hidden></p>
 
-        <p class="mt-6 text-sm text-muted">
+        <p class="mt-6 text-muted text-sm">
           Remembered it?
           <a href="/login" class="text-accent">Sign in</a>
         </p>

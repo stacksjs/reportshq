@@ -12,22 +12,22 @@
      included into the page's scope, so this reads that binding directly:
      passing it as a prop would arrive empty, since stx drops props between
      components in this version. --}}
-<div class="overflow-x-auto mt-12 -mx-6 px-6">
-  <table class="w-full min-w-[36rem] border-collapse text-left">
+<div class="overflow-x-auto -mx-6 mt-12 px-6">
+  <table class="min-w-[36rem] w-full text-left border-collapse">
     <caption class="sr-only">How ReportsHQ and {{ compareWith }} differ, feature by feature</caption>
     <thead>
       <tr class="border-b border-line">
-        <th scope="col" class="py-3 pr-4 text-xs font-medium uppercase tracking-wide text-subtle">What you are comparing</th>
-        <th scope="col" class="py-3 px-4 text-xs font-medium uppercase tracking-wide text-subtle">ReportsHQ</th>
-        <th scope="col" class="py-3 pl-4 text-xs font-medium uppercase tracking-wide text-subtle">{{ compareWith }}</th>
+        <th scope="col" class="pr-4 py-3 font-medium text-subtle text-xs tracking-wide uppercase">What you are comparing</th>
+        <th scope="col" class="px-4 py-3 font-medium text-subtle text-xs tracking-wide uppercase">ReportsHQ</th>
+        <th scope="col" class="pl-4 py-3 font-medium text-subtle text-xs tracking-wide uppercase">{{ compareWith }}</th>
       </tr>
     </thead>
     <tbody>
       @foreach (compare as row)
         <tr class="border-b border-line/60 align-top">
-          <th scope="row" class="py-4 pr-4 text-sm font-medium text-ink">{{ row.about }}</th>
-          <td class="py-4 px-4 text-sm leading-relaxed text-muted">{{ row.ours }}</td>
-          <td class="py-4 pl-4 text-sm leading-relaxed text-muted">{{ row.theirs }}</td>
+          <th scope="row" class="pr-4 py-4 font-medium text-ink text-sm">{{ row.about }}</th>
+          <td class="px-4 py-4 leading-relaxed text-muted text-sm">{{ row.ours }}</td>
+          <td class="pl-4 py-4 leading-relaxed text-muted text-sm">{{ row.theirs }}</td>
         </tr>
       @endforeach
     </tbody>

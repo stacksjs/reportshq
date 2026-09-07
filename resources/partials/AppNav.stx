@@ -4,23 +4,23 @@
      component to another (stacksjs/stx#1937), and this needs the page's own
      data. A partial is included into the page's scope, so it reads the page's
      bindings directly and cannot lose them. --}}
-<header class="border-b border-line bg-panel">
-  <div class="flex gap-4 justify-between items-center px-6 py-3 mx-auto max-w-7xl">
+<header class="bg-panel border-b border-line">
+  <div class="flex gap-4 items-center justify-between mx-auto px-6 py-3 max-w-7xl">
     <a href="/reports" class="flex gap-6 items-center no-underline">
       <Wordmark />
     </a>
 
     <nav class="flex gap-1 items-center">
-      <a href="/reports" class="px-3 py-1.5 text-sm rounded-lg text-muted hover:text-ink">Reports</a>
-      <a href="/account" class="px-3 py-1.5 text-sm rounded-lg text-muted hover:text-ink">Account</a>
+      <a href="/reports" class="px-3 py-1.5 text-muted text-sm hover:text-ink rounded-lg">Reports</a>
+      <a href="/account" class="px-3 py-1.5 text-muted text-sm hover:text-ink rounded-lg">Account</a>
       <button
         type="button"
-        class="inline-flex justify-center items-center ml-1 w-8 h-8 rounded-lg border theme-btn border-line text-muted"
+        class="inline-flex items-center justify-center ml-1 h-8 w-8 text-muted border border-line rounded-lg theme-btn"
         aria-label="Switch theme"
         onclick="(function(r){var d=r.getAttribute('data-theme')==='dark';r.setAttribute('data-theme',d?'light':'dark');r.classList.toggle('dark',!d);try{localStorage.setItem('reportshq_theme',d?'light':'dark')}catch(e){}})(document.documentElement)"
       >
-        <i class="w-4 h-4 ic-sun i-hugeicons-sun-03"></i>
-        <i class="w-4 h-4 ic-moon i-hugeicons-moon-02"></i>
+        <i class="h-4 w-4 i-hugeicons-sun-03 ic-sun"></i>
+        <i class="h-4 w-4 i-hugeicons-moon-02 ic-moon"></i>
       </button>
     </nav>
   </div>

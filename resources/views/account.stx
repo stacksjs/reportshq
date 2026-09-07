@@ -37,7 +37,7 @@ const since = joinedLabel(row?.created_at)
   <script>document.documentElement.setAttribute('data-session-cookie', {{ cookieName }})</script>
   @include('AuthGuard')
 
-  <div class="min-h-[100dvh] bg-canvas text-ink">
+  <div class="min-h-[100dvh] text-ink bg-canvas">
     {{-- What the guard reads. The server is the only side that can see the
          HttpOnly session cookie, so it is the side that decides. --}}
     @if (!user)
@@ -49,37 +49,37 @@ const since = joinedLabel(row?.created_at)
 
     @include('AppNav')
 
-    <main class="px-6 py-10 mx-auto max-w-2xl">
-      <h1 class="text-2xl font-semibold tracking-tight">Account</h1>
-      <p class="mt-1 mb-8 text-sm text-muted">Who you are here, and how to sign out.</p>
+    <main class="mx-auto px-6 py-10 max-w-2xl">
+      <h1 class="font-semibold text-2xl tracking-tight">Account</h1>
+      <p class="mb-8 mt-1 text-muted text-sm">Who you are here, and how to sign out.</p>
 
-      <div class="rounded-xl border divide-y border-line divide-line bg-panel">
-        <div class="flex gap-4 justify-between items-baseline px-5 py-4">
-          <span class="text-sm text-muted">Name</span>
-          <span class="text-sm text-ink">{{ user.name }}</span>
+      <div class="bg-panel border border-line divide-line divide-y rounded-xl">
+        <div class="flex gap-4 items-baseline justify-between px-5 py-4">
+          <span class="text-muted text-sm">Name</span>
+          <span class="text-ink text-sm">{{ user.name }}</span>
         </div>
-        <div class="flex gap-4 justify-between items-baseline px-5 py-4">
-          <span class="text-sm text-muted">Email</span>
-          <span class="text-sm text-ink">{{ user.email }}</span>
+        <div class="flex gap-4 items-baseline justify-between px-5 py-4">
+          <span class="text-muted text-sm">Email</span>
+          <span class="text-ink text-sm">{{ user.email }}</span>
         </div>
         @if (since)
-          <div class="flex gap-4 justify-between items-baseline px-5 py-4">
-            <span class="text-sm text-muted">Member since</span>
-            <span class="text-sm text-ink">{{ since }}</span>
+          <div class="flex gap-4 items-baseline justify-between px-5 py-4">
+            <span class="text-muted text-sm">Member since</span>
+            <span class="text-ink text-sm">{{ since }}</span>
           </div>
         @endif
       </div>
 
-      <div class="p-5 mt-6 rounded-xl border border-line">
-        <h2 class="text-sm font-medium">Sign out</h2>
-        <p class="mt-1 mb-4 max-w-[60ch] text-sm text-muted">
+      <div class="mt-6 p-5 border border-line rounded-xl">
+        <h2 class="font-medium text-sm">Sign out</h2>
+        <p class="mb-4 mt-1 max-w-[60ch] text-muted text-sm">
           This ends the session everywhere it was being used, not just in this tab. The token is
           revoked rather than forgotten, so a copy of it stops working too.
         </p>
         <button
           id="signout"
           type="button"
-          class="px-4 py-2 text-sm font-medium rounded-lg border border-line text-ink hover:border-accent"
+          class="px-4 py-2 font-medium text-ink text-sm border border-line rounded-lg hover:border-accent"
         >Sign out</button>
       </div>
     </main>
