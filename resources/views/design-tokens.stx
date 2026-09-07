@@ -153,7 +153,7 @@ const series = [1, 2, 3, 4, 5]
           <p class="text-3xl font-semibold tracking-tight">Geist, 600, tracking tight</p>
           <p class="mt-2 text-base text-muted">Geist, 400, for body copy at a comfortable measure.</p>
           <p class="mt-4 font-mono text-sm">
-            <span class="num">1,284,905</span> events &middot; <span class="num">99.2%</span> ingested
+            <span class="num">1,284,905</span> rows &middot; <span class="num">99.2%</span> in budget
           </p>
           <p class="mt-2 text-xs text-subtle">
             Figures are set in Geist Mono with tabular numerals, so a column of numbers aligns on the

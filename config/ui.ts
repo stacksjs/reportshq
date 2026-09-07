@@ -69,7 +69,7 @@ export default {
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'Send events, get reports that build themselves.' },
+        { name: 'description', content: 'Reports that run inside your own Laravel application, against your own database. Install a package, point it at the models you already have, and the numbers never leave your servers.' },
         // Both themes are declared so the browser paints its own chrome (form
         // controls, scrollbars) correctly before tokens.css arrives.
         { name: 'color-scheme', content: 'light dark' },

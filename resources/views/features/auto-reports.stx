@@ -30,8 +30,8 @@ const sections = [
     "body": "Name the model, say which fields are measures and which are dates, and that is the description. An Order with a total and a placed-at is enough for revenue over time, orders per day, and average order value, none of which you asked for individually."
   },
   {
-    "heading": "The reports build themselves from that",
-    "body": "A described model implies its own reports. Commerce, Customers and Users appear with real numbers already in them, because everything they need was in the description. There is no template gallery to browse and nothing to pick before you see anything."
+    "heading": "The blocks come from that description",
+    "body": "Everything a block can ask for is already decided by the description, so the builder's panel offers your measures and dimensions and nothing else. There is no template gallery to browse and no blank query language to learn \u2014 the first block you drop draws from rows already in your database, with no data to accumulate first."
   },
   {
     "heading": "They obey the application's own rules",
@@ -39,7 +39,7 @@ const sections = [
   },
   {
     "heading": "Then you change them",
-    "body": "An auto-created report is an ordinary report. Drag its blocks, change a measure, add one it did not think of. Nothing is regenerated behind you and nothing is locked because it started life automatically."
+    "body": "Drag the blocks, change a measure, add one you did not think of at first. A report is a draft until you publish it, so nothing a teammate opens is half-arranged, and nothing is regenerated behind you."
   }
 ]
 const shot = '/img/feature-auto-reports.png'

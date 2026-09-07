@@ -140,7 +140,7 @@ export const PAGES: MarketingPage[] = [
     slug: 'looker-studio',
     group: 'compare',
     title: 'ReportsHQ compared with Looker Studio',
-    description: 'Looker Studio draws dashboards over connectors you configure. This owns the collection as well as the drawing, which is fewer moving parts and less reach.',
+    description: 'Looker Studio draws dashboards over connectors you configure. This runs inside the application instead, so there is no connector, no copy of the data and no second place for it to live.',
     icon: 'i-hugeicons-grid',
   },
   {

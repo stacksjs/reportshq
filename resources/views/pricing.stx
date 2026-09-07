@@ -229,8 +229,8 @@ const faqs = [
       <section class="p-8 mt-16 rounded-2xl border border-line bg-panel">
         <h2 class="text-xl font-semibold tracking-tight">Start on Free</h2>
         <p class="mt-2 max-w-[60ch] text-sm leading-relaxed text-muted">
-          {{ freeApplications }} application, unlimited reports, no card, and the same builder everyone else gets. Install
-          one event and the first report builds itself.
+          {{ freeApplications }} application, unlimited reports, no card, and the same builder everyone else gets.
+          Describe one model and the first block draws from rows you already have.
         </p>
         <a href="/register" class="inline-block px-4 py-2.5 mt-5 text-sm font-medium no-underline rounded-lg bg-accent text-accent-ink">
           Create an account

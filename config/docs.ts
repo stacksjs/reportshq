@@ -27,7 +27,7 @@ const config: BunPressOptions = {
   markdown: {
     title: 'ReportsHQ Documentation',
     meta: {
-      description: 'Send the events your application already emits and the reports build themselves.',
+      description: 'Reports that run inside your own Laravel application, against your own database. Installing the package, describing your models, the query API and the report builder.',
       author: 'ReportsHQ',
     },
     syntaxHighlightTheme: 'github-dark',

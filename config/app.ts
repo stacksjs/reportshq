@@ -10,7 +10,7 @@ import { env } from '@stacksjs/env'
  */
 export default {
   name: env.APP_NAME ?? 'ReportsHQ',
-  description: 'Reports for people who ship. Send events, get reports that build themselves.',
+  description: 'Reports that run inside your own Laravel application, against your own database. Install a package, point it at the models you already have, and the numbers never leave your servers.',
   env: env.APP_ENV ?? 'local',
   url: env.APP_URL ?? 'reportshq.localhost',
   redirectUrls: ['www.reportshq.org'],

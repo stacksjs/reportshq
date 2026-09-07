@@ -8,8 +8,8 @@
 // variant renders as a night camp under the same sun. The email form posts
 // to the same rate-limited endpoint the framework form used
 // (/api/email/subscribe).
-const appName = 'Stacks'
-const siteDescription = 'Stacks is a full-stack TypeScript framework for web apps, CMS content, docs, APIs, queues, mail, tests, and cloud deployment. The public launch is almost here.'
+const appName = 'ReportsHQ'
+const siteDescription = 'Reports that run inside your own Laravel application, against your own database. Back shortly.'
 </script>
 
 <!DOCTYPE html>
@@ -17,7 +17,7 @@ const siteDescription = 'Stacks is a full-stack TypeScript framework for web app
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Stacks - Opening soon</title>
+    <title>ReportsHQ - Back shortly</title>
     <meta name="description" content="{{ siteDescription }}">
     <meta name="robots" content="noindex">
     <meta name="color-scheme" content="light dark">
