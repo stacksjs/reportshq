@@ -16,7 +16,11 @@ const authPending = session.stale
 
 // Nothing is read for a visitor the server could not identify.
 const reports = user ? (await reportHandlers.index()).reports : []
-const notice = new License(process.env.REPORTSHQ_LICENSE).notice()
+// Only for someone who could act on it. The notice names an environment
+// variable to set, which is an instruction to whoever runs this deployment --
+// showing it to a signed-out visitor on reportshq.org tells them nothing they
+// can use and reads as the product failing its own licence check.
+const notice = user ? new License(process.env.REPORTSHQ_LICENSE).notice() : null
 </script>
 
 <template>
@@ -56,7 +60,15 @@ const notice = new License(process.env.REPORTSHQ_LICENSE).notice()
           @endforeach
         </ul>
       @else
-        <p class="mt-8 text-muted">Nothing described yet. Add a model to config/reportshq.ts.</p>
+        {{-- Two different empty states. `reports` is [] for a signed-out visitor
+             as well as for an empty registry, and telling someone who simply is
+             not signed in to go and edit a config file is advice they cannot
+             take. --}}
+        @if (user)
+          <p class="mt-8 text-muted">Nothing described yet. Add a model to config/reportshq.ts.</p>
+        @else
+          <p class="mt-8 text-muted">Sign in to see the reports this application runs on its own tables.</p>
+        @endif
       @endif
 
       @if (notice)
