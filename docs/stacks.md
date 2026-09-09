@@ -18,6 +18,10 @@ bun add @reportshq/stacks
 buddy migrate
 ```
 
+Take `0.2.0` or later. `0.1.0` carries the same name but is a different
+library: it was an event-forwarding SDK from before this package became the
+reporting engine, and none of the API below exists in it.
+
 The migration creates the tables the reports live in: reports, blocks,
 revisions, shares and schedules. Your own tables are only ever read.
 
