@@ -10,9 +10,9 @@ Two ecosystems, one engine. Pick yours; everything after this step is the same
 report either way.
 
 ```bash
-# Stacks
+# Stacks. No migration: the package ships no tables and asks your
+# application where reports are kept. See /docs/stacks.
 bun add @reportshq/stacks
-buddy migrate
 ```
 
 ```bash
@@ -22,9 +22,11 @@ php artisan vendor:publish --tag=reportshq-config
 php artisan migrate
 ```
 
-The migration creates the tables the reports themselves live in: the report, its
-blocks, its revisions, its share links and its schedules. Your own tables are
-never touched, read-only or otherwise altered.
+In Laravel the migration creates the tables the reports themselves live in: the
+report, its blocks, its revisions, its share links and its schedules. In Stacks
+there is no migration, because the package keeps no tables of its own and asks
+the application where reports live instead. Either way your own tables are never
+touched, read-only or otherwise altered.
 
 ## 2. Describe a model
 

@@ -15,15 +15,24 @@ differs is only how you describe a model and where you mount it.
 
 ```bash
 bun add @reportshq/stacks
-buddy migrate
 ```
 
 Take `0.2.0` or later. `0.1.0` carries the same name but is a different
 library: it was an event-forwarding SDK from before this package became the
 reporting engine, and none of the API below exists in it.
 
-The migration creates the tables the reports live in: reports, blocks,
-revisions, shares and schedules. Your own tables are only ever read.
+**There is no migration, and that is deliberate.** This package ships no tables
+of its own and never writes to yours: it reads the models you describe below,
+and it asks the application where reports themselves are kept through a
+`ReportStore` you supply. Config, your own tables, a CMS, anything that can
+answer four methods. See "Where reports live" for both shapes.
+
+That is the one real difference from [the Laravel package](/docs/laravel), which
+does ship migrations and an Eloquent-backed store. In Laravel the framework
+convention is that a package brings its own tables; in Stacks migrations are
+derived from the models an application declares, and there is no mechanism for a
+package to contribute them. Rather than pretend otherwise, this package hands
+the decision to you.
 
 ## Describing a model
 
@@ -107,11 +116,30 @@ const store: ReportStore = {
 export const reportHandlers = createHandlers(store, runner, registry)
 ```
 
-The store is an interface rather than a set of tables, so an application can
-decide where reports live. Backing it with your own config instead of the
-migration is a supported choice: reports defined in code are reviewed in a pull
-request and deployed with everything else, and `saveLayout` can simply throw.
-This application does exactly that, in `config/reportshq.ts`.
+### Where reports live
+
+The store is an interface, not a set of tables, so the application decides.
+There are two shapes and both are first class.
+
+**Reports in code.** Back the store with your own config and let `saveLayout`
+throw. A report is then reviewed in a pull request and deployed with everything
+else, there is no editing surface to secure, and there is nothing to migrate.
+reportshq.org itself runs this way, in `config/reportshq.ts`. The builder is
+simply not mounted.
+
+**Reports in tables.** Give the store real reads and writes and implement the
+optional half of the interface as well, and the builder becomes usable: people
+compose reports in the browser and you keep them wherever you like. You own that
+schema, because you own the migration - the interface only says what the package
+will ask for, not how you store it.
+
+```ts
+// The optional half. Absent means read-only, which is a valid answer.
+addBlock?:    (reportId, kind)            => Promise<StoredBlock>
+saveBlock?:   (reportId, blockId, patch)  => Promise<void>
+removeBlock?: (reportId, blockId)         => Promise<void>
+publish?:     (reportId)                  => Promise<void>
+```
 
 ## Measures the compiler will refuse
 
