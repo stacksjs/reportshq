@@ -27,7 +27,7 @@ const breadcrumbs = [
 const sections = [
   {
     "heading": "One package, inside the application",
-    "body": "composer require, a migration, and a config file naming your models. There is nothing to deploy beside it and no second service to keep upgrading in step with the app it reports on."
+    "body": "One package, a migration, and a config file naming your models: `bun add @reportshq/stacks` in a Stacks app, `composer require reportshq/laravel` in a Laravel one. There is nothing to deploy beside it and no second service to keep upgrading in step with the app it reports on."
   },
   {
     "heading": "It reads what you already have",
@@ -70,7 +70,7 @@ const shotCaption = 'The whole installation, and the config the compiler reads. 
       <div class="mt-16 p-8 bg-panel border border-line rounded-2xl">
         <h2 class="font-semibold text-xl tracking-tight">Start with one endpoint</h2>
         <p class="mt-2 leading-relaxed text-muted text-sm">
-          One composer require and a config block naming a model. Nothing to sign up to first, and nothing to deploy beside the application it reports on.
+          One install and a config block naming a model. Nothing to sign up to first, and nothing to deploy beside the application it reports on.
         </p>
         <a href="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
           Start free

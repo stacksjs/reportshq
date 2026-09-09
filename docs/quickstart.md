@@ -6,7 +6,17 @@ against your own database.
 
 ## 1. Install the package
 
+Two ecosystems, one engine. Pick yours; everything after this step is the same
+report either way.
+
 ```bash
+# Stacks
+bun add @reportshq/stacks
+buddy migrate
+```
+
+```bash
+# Laravel
 composer require reportshq/laravel
 php artisan vendor:publish --tag=reportshq-config
 php artisan migrate
@@ -18,9 +28,31 @@ never touched, read-only or otherwise altered.
 
 ## 2. Describe a model
 
-Open `config/reportshq.php` and name something you already have.
+Name something you already have.
+
+```ts
+// Stacks: config/reportshq.ts
+import type { ModelDescription } from '@reportshq/stacks'
+
+export const models: Record<string, ModelDescription> = {
+  order: {
+    table: 'orders',
+    measures: {
+      revenue: { aggregate: 'sum', column: 'total_amount', unit: 'currency' },
+      orders: { aggregate: 'count' },
+    },
+    time: {
+      placed: 'created_at',
+    },
+    dimensions: {
+      status: 'status',
+    },
+  },
+}
+```
 
 ```php
+// Laravel: config/reportshq.php
 'models' => [
     'order' => [
         'class' => App\Models\Order::class,
@@ -39,9 +71,10 @@ Open `config/reportshq.php` and name something you already have.
 ```
 
 That is the whole description. A measure says what to add up and how, a
-dimension of type `date` is what a date range applies to, and every other
-dimension is something you may group by. `grain` is the sentence the compiler
-uses to refuse a question that would double-count.
+`time` column is what a date range applies to, and every dimension is something
+you may group by. Where a relation would multiply rows, saying so is what lets
+the compiler refuse a question that would double-count rather than answer it
+approximately.
 
 **Only what you name is reachable.** The compiler will not touch a column that
 is not in this file, which is why a password hash cannot end up as a dimension
@@ -126,6 +159,7 @@ adds itself to your scheduler is a package that sends email nobody asked for.
 
 ## What next
 
-- [The Laravel package](/docs/laravel) for the full description format.
+- [The Stacks package](/docs/stacks) or [the Laravel package](/docs/laravel)
+  for the full description format in your own language.
 - [The query API](/docs/api) for the JSON the charts read.
 - [What a licence covers](/docs/limits), and why none of it gates a report.

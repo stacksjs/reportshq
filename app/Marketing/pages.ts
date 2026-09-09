@@ -73,7 +73,7 @@ export const PAGES: MarketingPage[] = [
     slug: 'integrations',
     group: 'features',
     title: 'Installing it into your stack',
-    description: 'One composer package, a migration, and a config file naming your models. Nothing to deploy beside it, and no tracking calls to write.',
+    description: 'One package, a migration, and a config file naming your models. Nothing to deploy beside it, and no tracking calls to write.',
     icon: 'i-hugeicons-cloud-upload',
   },
   {

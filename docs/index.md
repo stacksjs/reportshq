@@ -36,6 +36,7 @@ features:
 | You want to | Read |
 |---|---|
 | Get from nothing to a report | [Quickstart](/quickstart) |
+| Install it into a Stacks application | [Stacks package](/stacks) |
 | Install it into a Laravel application | [Laravel package](/laravel) |
 | Read the JSON the charts consume | [Query API](/api) |
 | Build a report of your own | [Report builder](/builder) |

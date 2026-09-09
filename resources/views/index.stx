@@ -13,7 +13,7 @@ import { useSeoMeta } from 'stx'
 import { PLANS } from '../../app/Billing/limits'
 
 const siteUrl = 'https://reportshq.org'
-const siteDescription = 'Reports that run inside your own Laravel application, against your own database. Install a package, point it at the models you already have, and the numbers never leave your servers.'
+const siteDescription = 'Reports that run inside your own Stacks or Laravel application, against your own database. Install a package, point it at the models you already have, and the numbers never leave your servers.'
 
 useSeoMeta({
   title: 'ReportsHQ: reports that build themselves',
@@ -85,30 +85,58 @@ const heroPlans = {
   total: 1284,
 }
 
-const curlSnippet = `composer require reportshq/laravel
-php artisan vendor:publish --tag=reportshq-config
-php artisan migrate`
+/**
+ * The install, in both ecosystems it actually ships for.
+ *
+ * There are two packages in this repository - `packages/stacks` and
+ * `packages/laravel` - and for a long time this section showed neither
+ * honestly: the snippet headed "From a Stacks app" was PHP, and the one headed
+ * "anything that speaks HTTP" was `composer require`. Both are spelled out
+ * now, side by side, because a reader arriving from either language should see
+ * their own install rather than a translation exercise.
+ *
+ * Each snippet is the real thing. The Stacks one is what `config/reportshq.ts`
+ * in this very application looks like, trimmed to one model.
+ */
+const stacksSnippet = `bun add @reportshq/stacks
 
-const stacksSnippet = `// config/reportshq.php
+// config/reportshq.ts
+import type { ModelDescription } from '@reportshq/stacks'
+
+export const models: Record<string, ModelDescription> = {
+  order: {
+    table: 'orders',
+    measures: {
+      revenue: { aggregate: 'sum', column: 'total_amount', unit: 'currency' },
+    },
+    time: {
+      placed: 'created_at',
+    },
+    dimensions: {
+      status: 'status',
+    },
+  },
+}`
+
+const laravelSnippet = `composer require reportshq/laravel
+php artisan vendor:publish --tag=reportshq-config
+
+// config/reportshq.php
 'models' => [
     'order' => [
         'class' => App\\Models\\Order::class,
-        'label' => 'Order',
-        'grain' => 'one row per order',
-        'dimensions' => [
-            'status' => ['label' => 'Status', 'type' => 'string'],
-            'placed' => ['label' => 'Placed', 'type' => 'date', 'column' => 'created_at'],
-        ],
         'measures' => [
-            'revenue' => ['label' => 'Revenue', 'aggregate' => 'sum', 'column' => 'total_amount'],
+            'revenue' => ['aggregate' => 'sum', 'column' => 'total_amount'],
         ],
+        'time' => ['placed' => 'created_at'],
+        'dimensions' => ['status' => 'status'],
     ],
 ],`
 
 const steps = [
   {
     title: 'Install it into the application',
-    body: 'One composer package and a migration. No service to deploy beside it, no connection into production to hand out, and nothing to keep upgrading separately from the app it reports on.',
+    body: 'One package and a migration, in Stacks or in Laravel. No service to deploy beside it, no connection into production to hand out, and nothing to keep upgrading separately from the app it reports on.',
     icon: 'i-hugeicons-package',
   },
   {
@@ -160,8 +188,13 @@ const freeApplications = PLANS.free.applications
 
 const docLinks = [
   {
-    title: 'The Laravel package',
+    title: 'The Stacks package',
     body: 'Installing it, describing your models, and what the builder can compose once they are described.',
+    href: '/docs/stacks',
+  },
+  {
+    title: 'The Laravel package',
+    body: 'The same engine and the same charts, described in PHP and mounted through your own routes.',
     href: '/docs/laravel',
   },
   {
@@ -284,12 +317,12 @@ const docLinks = [
              picks up a horizontal scrollbar on a phone. --}}
         <div class="grid gap-4 lg:grid-cols-2 mt-12">
           <div class="min-w-0">
-            <h3 class="mb-2 font-medium text-ink text-sm">From a Stacks app</h3>
+            <h3 class="mb-2 font-medium text-ink text-sm">In a Stacks app</h3>
             <pre class="overflow-x-auto p-4 font-mono leading-relaxed text-ink text-xs bg-panel border border-line rounded-xl">{{ stacksSnippet }}</pre>
           </div>
           <div class="min-w-0">
-            <h3 class="mb-2 font-medium text-ink text-sm">Or from anything that speaks HTTP</h3>
-            <pre class="overflow-x-auto p-4 font-mono leading-relaxed text-ink text-xs bg-panel border border-line rounded-xl">{{ curlSnippet }}</pre>
+            <h3 class="mb-2 font-medium text-ink text-sm">In a Laravel app</h3>
+            <pre class="overflow-x-auto p-4 font-mono leading-relaxed text-ink text-xs bg-panel border border-line rounded-xl">{{ laravelSnippet }}</pre>
           </div>
         </div>
       </section>

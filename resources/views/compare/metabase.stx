@@ -31,7 +31,7 @@ const sections = [
   },
   {
     "heading": "This is a package inside the application",
-    "body": "It installs with composer, reads the models you already have, and renders through the routes you already guard. There is nothing else to deploy, nothing else to upgrade, and no second copy of who is allowed to see what. A report is code in your repository, reviewed in a pull request and deployed with everything else."
+    "body": "It installs as a package in the application, reads the models you already have, and renders through the routes you already guard. There is nothing else to deploy, nothing else to upgrade, and no second copy of who is allowed to see what. A report is code in your repository, reviewed in a pull request and deployed with everything else."
   },
   {
     "heading": "Your database connection stays where it is",

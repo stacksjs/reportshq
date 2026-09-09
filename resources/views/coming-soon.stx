@@ -9,7 +9,7 @@
 // to the same rate-limited endpoint the framework form used
 // (/api/email/subscribe).
 const appName = 'ReportsHQ'
-const siteDescription = 'Reports that run inside your own Laravel application, against your own database. Back shortly.'
+const siteDescription = 'Reports that run inside your own Stacks or Laravel application, against your own database. Back shortly.'
 </script>
 
 <!DOCTYPE html>
