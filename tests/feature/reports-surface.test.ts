@@ -84,7 +84,7 @@ describe('the reports surface', () => {
     for (const page of ['resources/views/reports/index.stx', 'resources/views/reports/[slug].stx']) {
       const source = readFileSync(join(root, page), 'utf8')
 
-      expect(source).toContain('sessionFrom(cookies)')
+      expect(source).toContain("sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)")
       expect(source).toContain(`@include('AuthGuard')`)
       expect(source).toContain('auth-required')
       // And the data is fetched only for an identified visitor.
