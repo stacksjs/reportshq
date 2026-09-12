@@ -11,14 +11,14 @@ hero:
       text: Quickstart
       link: /quickstart
     - theme: alt
-      text: Ingestion API
-      link: /quickstart
+      text: Stacks package
+      link: /stacks
     - theme: alt
       text: View on GitHub
       link: https://github.com/stacksjs/reportshq
 features:
-  - title: One package
-    details: composer require, a migration, and a config file naming your models. Nothing to deploy beside it and no tracking calls to write.
+  - title: One engine
+    details: Install it in Stacks or Laravel, name the models it may read, and keep every query on the application's existing database connection.
   - title: Describe once, query safely
     details: Name your models, measures and dimensions in one config file. That description is an allowlist, so a block can only ever reach what you named.
   - title: It refuses rather than guesses
@@ -36,11 +36,14 @@ features:
 | You want to | Read |
 |---|---|
 | Get from nothing to a report | [Quickstart](/quickstart) |
+| Understand measures, dimensions and refusals | [Reporting concepts](/concepts) |
 | Install it into a Stacks application | [Stacks package](/stacks) |
 | Install it into a Laravel application | [Laravel package](/laravel) |
+| Review every integration setting | [Configuration](/configuration) |
 | Read the JSON the charts consume | [Query API](/api) |
 | Build a report of your own | [Report builder](/builder) |
 | Send a report to somebody outside | [Sharing](/sharing) |
 | Get the numbers as a file or an email | [Schedules and exports](/schedules-exports) |
 | Know what a licence covers | [Limits](/limits) |
 | Run it on your own machines | [Self-hosting](/self-hosting) |
+| Diagnose a report or deployment | [Troubleshooting](/troubleshooting) |

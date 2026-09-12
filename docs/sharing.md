@@ -13,7 +13,7 @@ From a report, create a share. You get a URL of the form:
 https://your-app.example.com/reports/shared/<token>
 ```
 
-The link is served by your own application, on your own domain — the route is
+The link is served by your own application, on your own domain - the route is
 `/reports/shared/{token}`, mounted alongside the rest of the package. Nothing
 is hosted here.
 
