@@ -10,7 +10,7 @@ import { sessionFrom } from '../../../app/Support/session'
 import { reportHandlers } from '../../../app/Support/reports'
 import { License } from '@reportshq/stacks'
 
-const session = await sessionFrom(cookies)
+const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
 const user = session.user
 const authPending = session.stale
 

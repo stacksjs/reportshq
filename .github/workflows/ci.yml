@@ -175,6 +175,53 @@ jobs:
       - name: Design tokens
         run: bun scripts/verify-tokens.ts
 
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Pantry
+        uses: pantry-pm/pantry/packages/action@c1417d98f5613290bc3b1f96d35086b834684659 # v0.10.47 + the socket-hang-up retry fix
+        with:
+          install: 'false'
+
+      - name: Use cached node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            node-modules-
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Build artifacts
+        run: bun run build:artifacts
+
+      - name: Build application
+        run: bun run build
+
+      - name: Build documentation
+        run: bun buddy build docs
+
+      - name: Validate documentation
+        run: bun run docs:validate
+
+      - name: Validate UI accessibility
+        run: bun run ui:validate
+
+      - name: Validate responsive visual contracts
+        run: bun run visual:validate
+
+      - name: Validate production release artifact
+        run: bun run release:validate
+
+      - name: Verify generated files are current
+        run: git diff --exit-code
+
   # Push to deploy.
   #
   # This job lives in CI rather than in a workflow of its own so the gates are
@@ -185,7 +232,7 @@ jobs:
   #
   # A red build therefore means NO deploy, silently and by construction.
   deploy:
-    needs: [lint, typecheck, test, test-postgres]
+    needs: [lint, typecheck, test, test-postgres, build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
@@ -220,6 +267,12 @@ jobs:
       # throws takes the whole registry with it.
       - name: Build artifacts
         run: bun run build:artifacts
+
+      - name: Build application
+        run: bun run build
+
+      - name: Validate production artifact
+        run: bun run release:validate
 
       # ts-cloud reads the PUBLIC key off disk to register it, so it is derived
       # from the private one rather than stored as a second secret. Two secrets
@@ -297,6 +350,9 @@ jobs:
           # database; there is no write surface left to probe.
 
           exit $fail
+
+      - name: Verify public metadata
+        run: bun run deployment:smoke
 
   # The same suite against Postgres, and a hard gate on the deploy.
   #

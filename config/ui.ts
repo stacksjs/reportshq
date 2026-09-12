@@ -31,7 +31,7 @@ export default {
   // resolves through this. See the plugin file for the lookup order.
   plugins: ['./storage/framework/defaults/stx-components-plugin.ts'],
 
-  layoutsDir: 'layouts',
+  layoutsDir: 'views/layouts',
 
   partialsDir: 'partials',
 

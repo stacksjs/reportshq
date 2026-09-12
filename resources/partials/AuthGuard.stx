@@ -17,6 +17,7 @@
      authenticate. The first says where to go; the second says to bin the stale
      cookie on the way, which is what stops an expired token from bouncing
      somebody back and forth forever. --}}
+<span hidden aria-hidden="true">
 <script>
 (function () {
   if (!document.getElementById('auth-required')) return
@@ -32,3 +33,4 @@
   window.location.replace('/login')
 }())
 </script>
+</span>
