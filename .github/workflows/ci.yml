@@ -175,6 +175,45 @@ jobs:
       - name: Design tokens
         run: bun scripts/verify-tokens.ts
 
+  build:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Pantry
+        uses: pantry-pm/pantry/packages/action@c1417d98f5613290bc3b1f96d35086b834684659 # v0.10.47 + the socket-hang-up retry fix
+        with:
+          install: 'false'
+
+      - name: Use cached node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            node-modules-
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Build artifacts
+        run: bun run build:artifacts
+
+      - name: Build application
+        run: bun run build
+
+      - name: Build documentation
+        run: bun buddy build docs
+
+      - name: Validate documentation
+        run: bun run docs:validate
+
+      - name: Verify generated files are current
+        run: git diff --exit-code
+
   # Push to deploy.
   #
   # This job lives in CI rather than in a workflow of its own so the gates are
