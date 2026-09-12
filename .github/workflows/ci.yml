@@ -176,7 +176,6 @@ jobs:
         run: bun scripts/verify-tokens.ts
 
   build:
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
     steps:
@@ -217,6 +216,9 @@ jobs:
       - name: Validate responsive visual contracts
         run: bun run visual:validate
 
+      - name: Validate production release artifact
+        run: bun run release:validate
+
       - name: Verify generated files are current
         run: git diff --exit-code
 
@@ -230,7 +232,7 @@ jobs:
   #
   # A red build therefore means NO deploy, silently and by construction.
   deploy:
-    needs: [lint, typecheck, test, test-postgres]
+    needs: [lint, typecheck, test, test-postgres, build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
@@ -265,6 +267,12 @@ jobs:
       # throws takes the whole registry with it.
       - name: Build artifacts
         run: bun run build:artifacts
+
+      - name: Build application
+        run: bun run build
+
+      - name: Validate production artifact
+        run: bun run release:validate
 
       # ts-cloud reads the PUBLIC key off disk to register it, so it is derived
       # from the private one rather than stored as a second secret. Two secrets
@@ -342,6 +350,9 @@ jobs:
           # database; there is no write surface left to probe.
 
           exit $fail
+
+      - name: Verify public metadata
+        run: bun run deployment:smoke
 
   # The same suite against Postgres, and a hard gate on the deploy.
   #
