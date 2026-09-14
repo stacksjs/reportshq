@@ -67,7 +67,7 @@ export function createHandlers(
     return report
   }
 
-  const writable = Boolean(store.addBlock && store.saveBlock && store.removeBlock)
+  const writable = Boolean(store.addBlock && store.saveBlock && store.removeBlock && store.publish)
 
   /** The block, if it belongs to this report. Both ids arrive from a browser. */
   const ownedBlock = async (slug: string, blockId: number) => {
