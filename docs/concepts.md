@@ -19,7 +19,7 @@ measures: {
 
 ## Dimension
 
-A dimension groups a measure, such as status, country or plan. Dimensions are bounded where necessary so a chart cannot accidentally request millions of categories. Values outside the displayed set are reported honestly as `Other` when the block supports it.
+A dimension groups a measure, such as status, country or plan. The current TypeScript compiler can limit a dimensioned result to at most 500 rows. It does not synthesize an `Other` bucket for omitted values, so a limited chart is not a complete total.
 
 ## Time grain
 
@@ -37,7 +37,7 @@ A block is one report tile. Its kind controls presentation, while its query sele
 
 ## Draft and published report
 
-The builder edits the draft. Publishing creates the version shown by ordinary report views and share links. A half-finished layout therefore cannot leak through a public share merely because an editor moved a tile.
+In the current Laravel source, the builder edits a draft and publishing creates the revision shown by ordinary views and share links. In a Stacks host, draft storage and publishing depend on its `ReportStore`; this site's code-defined report has no browser editor or share link.
 
 ## Refusal
 

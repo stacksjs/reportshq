@@ -36,11 +36,11 @@ Confirm the request is reaching the current application release and that the sha
 
 ## A scheduled report did not arrive
 
-Check that the scheduler and queue worker are running, the report has an eligible next-run time, mail is configured, recipients are valid and the export format is permitted by the installation's license. Inspect failed jobs before retrying.
+For the current Laravel source, check that the host scheduler and queue worker are running, the report has an eligible next-run time, mail is configured and recipients are valid. The offline licence does not gate export formats. Inspect failed jobs before retrying. The Stacks package has no schedule runner.
 
 ## XLSX or scheduled delivery is unavailable
 
-CSV is available on every plan. XLSX and scheduled email are licensed capabilities. See [limits](/docs/limits). License checks are offline and do not disable ordinary report rendering.
+The current Stacks package exports CSV only and has no scheduled delivery. The current Laravel source implements CSV, XLSX and scheduled email, but the published v0.1.0 artifact predates the reporting rewrite. The offline licence does not gate these methods. See [limits](/docs/limits) and [release status](/docs/quickstart).
 
 ## The docs build succeeds locally but fails during deploy
 

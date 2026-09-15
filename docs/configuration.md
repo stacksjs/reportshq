@@ -33,22 +33,22 @@ The Stacks package does not ship database tables. Provide a `ReportStore` backed
 return [
     'models' => [/* declared model descriptions */],
     'license' => env('REPORTSHQ_LICENSE'),
-    'timezone' => env('REPORTSHQ_TIMEZONE', 'UTC'),
+    'connection' => env('REPORTSHQ_CONNECTION'),
     'routes' => [
-        'enabled' => env('REPORTSHQ_ROUTES', true),
-        'prefix' => env('REPORTSHQ_PREFIX', 'reports'),
+        'enabled' => env('REPORTSHQ_ROUTES', false),
+        'prefix' => env('REPORTSHQ_ROUTE_PREFIX', 'reports'),
         'middleware' => ['web', 'auth'],
         'share_middleware' => ['web'],
     ],
     'api' => [
         'enabled' => env('REPORTSHQ_API', false),
         'prefix' => env('REPORTSHQ_API_PREFIX', 'api/reportshq'),
-        'middleware' => ['api', 'auth:sanctum'],
+        'middleware' => ['api'],
     ],
 ];
 ```
 
-Publish the package configuration and migrations using the commands documented in [the Laravel guide](/docs/laravel). Review generated routes before enabling the JSON API.
+These are values in the current repository source, not the published v0.1.0 package. Once a reporting release exists, publish its configuration with the command in [the Laravel guide](/docs/laravel). The package loads its own migrations. Set page and API middleware for your host before enabling either surface; the source defaults shown here do not add an auth guard.
 
 ## Model descriptions
 
@@ -62,9 +62,9 @@ Keep the registry narrow:
 
 ## Middleware
 
-Page, API and share routes have separate middleware because they serve different callers. Page routes commonly use sessions, API routes use tokens, and a share link may be intentionally public to anyone holding its revocable token.
+The current Laravel source has separate page, API and share middleware. The page and API defaults are `web` and `api`, respectively, without an application-specific auth guard. Add your own auth policy before enabling them. Its share link may be intentionally public to anyone holding a revocable token. The Stacks package describes no share route today.
 
-An empty share middleware list does not make every report public. Only an active share token exposes its published report. Add rate limiting, trusted proxy and application-specific policy middleware when required.
+An empty share middleware list does not make every report public. Only an active share token exposes its published report in Laravel. Add rate limiting, trusted proxy and application-specific policy middleware when required.
 
 ## Environment values
 
@@ -73,9 +73,9 @@ Common Laravel environment settings include:
 | Variable | Purpose |
 | --- | --- |
 | `REPORTSHQ_LICENSE` | Optional offline license key |
-| `REPORTSHQ_TIMEZONE` | Default report timezone |
+| `REPORTSHQ_CONNECTION` | Reporting database connection |
 | `REPORTSHQ_ROUTES` | Enable packaged page routes |
-| `REPORTSHQ_PREFIX` | Page route prefix |
+| `REPORTSHQ_ROUTE_PREFIX` | Page route prefix |
 | `REPORTSHQ_API` | Enable the JSON API |
 | `REPORTSHQ_API_PREFIX` | JSON API route prefix |
 

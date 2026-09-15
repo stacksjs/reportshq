@@ -1,36 +1,28 @@
 # Quickstart
 
-Empty application to first report, in about five minutes. Nothing here talks to
-a service, because there is not one: everything below runs on your machine
-against your own database.
+ReportsHQ runs reporting queries inside the application that owns the data. The current reporting implementations live in this repository under `packages/stacks/` and `packages/laravel/`. Neither needs a hosted collector for reports.
 
-## 1. Install the package
+## Check the release before installing
 
-Two ecosystems, one engine. Pick yours; everything after this step is the same
-report either way.
+As of September 2026, npm serves `@reportshq/stacks` 0.1.0 and Packagist serves `reportshq/laravel` v0.1.0. Those published artifacts predate the reporting rewrite. Installing either version does **not** give you the reporting API described below. The TypeScript reporting source is versioned 0.2.0 in this checkout, but it has not been published. The Laravel reporting source also differs from its published artifact.
+
+Do not use `bun add @reportshq/stacks` or `composer require reportshq/laravel` as a reporting setup step until releases containing the current source are available. You can inspect and test the current implementations in a working checkout of this repository:
 
 ```bash
-# Stacks. No migration: the package ships no tables and asks your
-# application where reports are kept. See /docs/stacks.
-bun add @reportshq/stacks
+cd packages/stacks
+bun test ./tests
 ```
 
 ```bash
-# Laravel
-composer require reportshq/laravel
-php artisan vendor:publish --tag=reportshq-config
-php artisan migrate
+cd ../..
+php packages/laravel/tests/run.php
 ```
 
-In Laravel the migration creates the tables the reports themselves live in: the
-report, its blocks, its revisions, its share links and its schedules. In Stacks
-there is no migration, because the package keeps no tables of its own and asks
-the application where reports live instead. Either way your own tables are never
-touched, read-only or otherwise altered.
+The following steps describe the current source and what a host application must supply when the reporting packages are released. They are not a claim that a fresh customer install works today.
 
-## 2. Describe a model
+## 1. Describe queryable models
 
-Name something you already have.
+Name only the tables and columns a report may read. This is the security boundary for query identifiers.
 
 ```ts
 // Stacks: config/reportshq.ts
@@ -43,18 +35,14 @@ export const models: Record<string, ModelDescription> = {
       revenue: { aggregate: 'sum', column: 'total_amount', unit: 'currency' },
       orders: { aggregate: 'count' },
     },
-    time: {
-      placed: 'created_at',
-    },
-    dimensions: {
-      status: 'status',
-    },
+    time: { placed: 'created_at' },
+    dimensions: { status: 'status' },
   },
 }
 ```
 
 ```php
-// Laravel: config/reportshq.php
+// Laravel: config/reportshq.php, inside the returned array
 'models' => [
     'order' => [
         'class' => App\Models\Order::class,
@@ -72,96 +60,32 @@ export const models: Record<string, ModelDescription> = {
 ],
 ```
 
-That is the whole description. A measure says what to add up and how, a
-`time` column is what a date range applies to, and every dimension is something
-you may group by. Where a relation would multiply rows, saying so is what lets
-the compiler refuse a question that would double-count rather than answer it
-approximately.
+Compiled SQL does not apply ORM scopes or soft deletes automatically. Declare the same row restrictions in the reporting model description when those rows must be excluded.
 
-**Only what you name is reachable.** The compiler will not touch a column that
-is not in this file, which is why a password hash cannot end up as a dimension
-by somebody typing its name into a URL.
+## 2. Decide where reports are stored
 
-## 3. Open the reports
+The Stacks package brings no report tables. Supply a `ReportStore` with `list`, `find`, `blocks`, and `saveLayout`, backed by code or your own persistence. Write methods are optional. This site defines its one Accounts report in `config/reportshq.ts` and keeps the viewer read-only. See [the Stacks integration](/docs/stacks) for the store and route descriptions.
 
-The routes are off until you say otherwise, because the package cannot know
-which of your users may see a total of everybody's orders. Turn them on:
+The Laravel package source ships migrations for reports, blocks, revisions, shares, and schedules. Its `Builder` creates and publishes reports. The standalone pages are off by default; enable them only after choosing middleware that protects the data they expose. See [the Laravel integration](/docs/laravel).
 
-```bash
-REPORTSHQ_ROUTES=true
+## 3. Build a first report
+
+A block names a model and one of that model's described measures. A time key or dimension is optional:
+
+```ts
+{ model: 'order', measure: 'revenue', time: { key: 'placed' }, grain: 'day' }
 ```
 
-```bash
-php artisan serve
-```
+In a Stacks host, put this query in a stored block and mount the package's route descriptions behind your application's auth policy. In a Laravel host using the current source, `Builder::create('Commerce')` creates a draft; `Builder::addBlock()` adds a block; `Builder::publish()` records the published revision. The Laravel browser editor exists only when the standalone routes are enabled. This site's viewer does not mount an editor.
 
-Visit `/reports`. It is empty -- nothing creates a report for you, and the page
-says as much. Make the first one:
+The compiler returns an explicit refusal on a block when a query names an undeclared field or would multiply a measure across a fan-out relation. It does not send a query to ReportsHQ servers.
 
-```php
-use ReportsHQ\Laravel\Reports\Builder;
+## 4. Export or distribute
 
-// The slug is derived from the name, and kept unique for you.
-$report = app(Builder::class)->create('Commerce');
-```
-
-Or post the same thing from the page itself, which is what the "New report"
-form does.
-
-## 4. Build it
-
-Visit `/reports/commerce/edit`. Drag a block from the palette onto the grid,
-pick a measure and a dimension, and it redraws as you change it. Drag a corner
-to resize, or nudge with the arrow keys.
-
-There is no data to accumulate and nothing to wait for: a block reads rows that
-are already in your database, so the first one you drop covers everything you
-have ever sold.
-
-Publish when it looks right. A draft stays yours until you do, so a teammate
-never opens a half arranged grid.
-
-## 5. Share it, or send it
-
-A published report can be given a link that works for somebody with no account:
-
-```php
-use ReportsHQ\Laravel\Reports\Share;
-
-$share = Share::create([
-    'report_id' => $report->id,
-    'token' => Share::newToken(),
-    'label' => 'For the board',
-    'expires_at' => now()->addDays(30),
-]);
-```
-
-Or emailed on a cadence, from your own queue, in the report's own timezone:
-
-```php
-use ReportsHQ\Laravel\Reports\Schedule;
-
-Schedule::create([
-    'report_id' => $report->id,
-    'cadence' => 'weekly',
-    'hour' => 8,
-    'recipients' => 'ops@example.com',
-    'format' => 'xlsx',
-]);
-```
-
-Add the runner to `routes/console.php` and the application does the rest:
-
-```php
-Schedule::command('reportshq:send')->hourly();
-```
-
-It is registered by the package but scheduled by you, on purpose. A package that
-adds itself to your scheduler is a package that sends email nobody asked for.
+The Stacks package currently downloads CSV only. The Laravel source supports CSV and XLSX, plus local sharing and scheduled delivery. Those Laravel features require the host's route, middleware, queue, and mail decisions. See [exports and schedules](/docs/schedules-exports) and [sharing](/docs/sharing) for the package-specific behavior.
 
 ## What next
 
-- [The Stacks package](/docs/stacks) or [the Laravel package](/docs/laravel)
-  for the full description format in your own language.
-- [The query API](/docs/api) for the JSON the charts read.
-- [What a licence covers](/docs/limits), and why none of it gates a report.
+- [Reporting concepts](/docs/concepts) explains measures, dimensions, time grains, and fan-out.
+- [The builder](/docs/builder) gives the current block and query vocabulary.
+- [Configuration](/docs/configuration) shows the separate route and API switches.

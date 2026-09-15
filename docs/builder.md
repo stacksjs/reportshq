@@ -1,144 +1,50 @@
 # Report builder
 
-A report is a grid of blocks. Each block runs one query and draws one thing.
+A report is a grid of blocks. The current source has two storage models: `@reportshq/stacks` asks the host for a `ReportStore`, while `reportshq/laravel` ships Eloquent report tables and a browser editor. The editor in this site's old hosted app was removed. Its read-only Accounts report is defined in `config/reportshq.ts`.
 
-The terms here are the terms the interface uses, because both come from the
-same validation schema in `app/Reports/schema.ts`. A test asserts this page
-lists exactly the values that schema accepts, so a new measure cannot appear in
-the product without appearing here.
+## Block kinds
 
-## Blocks
+Both current packages accept the same nine kind names in `packages/stacks/src/http/handlers.ts` and `packages/laravel/src/Reports/Block.php`:
 
-| Kind | Draws |
-|---|---|
-| `line` | A measure over time |
-| `area` | The same, filled, for one dominant series |
-| `bar` | A measure across a dimension, or over coarse time |
-| `donut` | Composition of a total across a dimension |
-| `big_number` | One number, and whether it moved |
-| `table` | The underlying rows, when the shape is not a chart |
-| `funnel` | Conversion across ordered steps |
-| `heatmap` | A measure across two dimensions |
-| `text` | Prose. The only kind that runs no query |
+| Kind | Use |
+| --- | --- |
+| `big_number` | A headline value |
+| `line` | A time series |
+| `area` | A filled time series |
+| `bar` | Values over time or categories |
+| `donut` | Category composition |
+| `table` | Values in rows |
+| `funnel` | A funnel chart frame |
+| `heatmap` | A heatmap chart frame |
+| `note` | Text without a query |
 
-## The query
+The current query engines do not have a separate ordered-step funnel calculation or two-dimensional heatmap aggregation. Do not infer those analytical semantics from the renderer kind alone.
 
-Every block except `text` carries a query with these parts.
+## Query vocabulary
 
-### events
+Each query-bearing block starts with `model` and `measure`, both looked up in the semantic registry. Measures are described with `count`, `sum`, `avg`, `min`, or `max`. Only `count` needs no column. The TypeScript block shape is `BlockQuery` in `packages/stacks/src/types.ts`:
 
-The event names the block reads. Empty means every event in the project. Names
-come from the models you described in `config/reportshq.php`.
-
-### measure
-
-What to compute:
-
-| Measure | Means |
-|---|---|
-| `count` | Rows. The default, and what a count of events means |
-| `count_unique` | Distinct `user_key`. Unique visitors, active users, buyers |
-| `sum` | Sum of the named field. Revenue, duration, quantity |
-| `avg` | Mean of the named field. Order value, session length |
-| `min` | Smallest value of the named field |
-| `max` | Largest value of the named field |
-
-`sum`, `avg`, `min` and `max` require a **field**. `count` and `count_unique`
-ignore one.
-
-### field
-
-Which value the measure reads. One of `name`, `user_key`, `session_key`,
-`value`, `currency`, `occurred_at`, or `properties.<key>` for anything in your
-own property bag.
-
-This is an allowlist rather than a pattern. These names reach a query builder,
-and "anything that looks like an identifier" is how a column name becomes an
-injection point the day somebody builds the query with a template string.
-
-### dimension
-
-Group the result into series by a field, using the same set as above. Bounded
-by **limit** with an explicit other bucket: when two hundred tags become the top
-ten, the report says how many went into Other rather than letting a reader
-assume the tail does not exist.
-
-### filters
-
-Narrow what the block counts. Each filter is a field, an operator and usually a
-value:
-
-| Operator | Means |
-|---|---|
-| `is` | Equal to |
-| `is_not` | Not equal to |
-| `contains` | Substring |
-| `starts_with` | Prefix |
-| `gt` | Greater than |
-| `lt` | Less than |
-| `exists` | The field is present |
-| `not_exists` | The field is absent |
-
-`exists` and `not_exists` carry no value, because the test is presence.
-
-### grain
-
-How time is bucketed: `hour`, `day`, `week` or `month`.
-
-### compare
-
-Compare against the previous period of equal length. When there was no previous
-period, the block says so rather than inventing a percentage. This is how
-dashboards end up claiming a four thousand percent rise, and it is always
-because the previous period was zero.
-
-### limit
-
-Top N series when a dimension is set. The rest become Other, and the count is
-stated.
-
-### steps
-
-Ordered event names, for `funnel` blocks only. A funnel measures people, not
-events, so when data is sampled the sampling keeps whole subjects: somebody is
-either wholly in the sample or wholly out. Sampling events independently makes
-every conversion rate noise, because the steps stop belonging to the same
-people.
-
-## The grid
-
-Twelve columns. Drag a block to move it, its corner to resize, and everything
-has a keyboard path. Blocks push each other out of the way while you hold one,
-and the server settles the layout before saving, so two blocks can never share
-a cell. That last part is on the server deliberately: a layout agreed by one
-browser is a layout that disagrees with itself when two people edit at once.
-
-## Draft and published
-
-Edits go to a draft. The published version is what a teammate opens and what a
-[share link](/docs/sharing) serves, and it does not change until you publish. A
-half finished experiment is never what somebody else walks into.
-
-## Every block explains itself
-
-Each block carries one sentence derived from the query it actually runs, not
-from a label somebody typed. Two charts both called Revenue can count different
-things, and a reader deserves to know which one is in front of them before they
-quote a number in a meeting.
-
-## Report filters
-
-A whole report can be narrowed from its URL:
-
-```
-/reports/my-report?f=properties.plan:is:pro
+```ts
+{
+  model: 'order',
+  measure: 'revenue',
+  time: { key: 'placed' },
+  grain: 'day',
+  from: '2026-08-01',
+  to: '2026-09-01',
+}
 ```
 
-The form is `f=field:operator:value`, repeated, up to five. It lives in the
-query string and nowhere else, so a narrowed view is linkable: paste the URL
-into a conversation and the reader sees what you saw.
+`dimension` groups by an allowlisted column. `time` selects an allowlisted date column on the measured model; `grain` can be `hour`, `day`, `week`, or `month`. `from` is inclusive and `to` is exclusive. A date range without `time` uses the model's first described time column. `limit` bounds a dimensioned result to at most 500 rows in the TypeScript compiler. The current TypeScript compiler accepts `=`, `!=`, `>`, `>=`, `<`, `<=`, and `like` for filters. Laravel's `Filter` uses the named operators `is`, `is_not`, `contains`, `starts_with`, `gt`, `lt`, `exists`, and `not_exists`. Do not copy a filter payload between the two runtimes without translating the operator vocabulary.
 
-Operators here are limited to `is`, `is_not` and `contains`. A malformed filter
-is dropped rather than erroring, so a link with one bad filter still shows the
-report. Funnels are left alone, because quietly narrowing their steps would
-change what the conversion rate measures without saying so.
+`compare` is present in the TypeScript type, but the current TypeScript compiler returns `comparison: null`. It does not yet compute a prior-period change. The retired event fields `events`, `user_key`, `session_key`, `properties.<key>`, and `steps` are not this reporting query schema.
+
+The registry supplies every SQL identifier and the caller supplies only keys and parameterized values. A column not described in the registry is unreachable by a block request.
+
+## Editing and publishing
+
+A Stacks host can keep reports in code and make the viewer read-only. The browser builder is writable only when the store implements `addBlock`, `saveBlock`, `removeBlock`, and `publish`; a partially implemented editor is not advertised as writable. The host mounts the package's route descriptions and chooses auth and persistence. This site intentionally does not mount the builder.
+
+In Laravel, `Builder` adds blocks, validates their kind, packs a 12-column layout on the server, and publishes a revision. The package's standalone editor is under `/reports/{slug}/edit` only after `routes.enabled` is set and the host chooses suitable middleware. The Filament plugin is another optional surface.
+
+One impossible block returns its reason in `error` while the report can still render other blocks. A fan-out relation that would multiply a sum is refused instead of shown as a plausible wrong number. See [the query API](/docs/api) for the result shape.

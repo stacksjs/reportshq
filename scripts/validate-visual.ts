@@ -16,6 +16,7 @@ interface PageAudit {
   overflow: number
   unresolved: boolean
   unnamedControls: string[]
+  visibleTextLength: number
 }
 
 interface Pending {
@@ -32,17 +33,20 @@ const OUTPUT = resolve('storage/logs/visual-contract')
 const VIEWPORTS: Viewport[] = [
   { name: 'desktop', width: 1440, height: 1000, mobile: false },
   { name: 'tablet', width: 768, height: 1024, mobile: false },
+  { name: 'small-mobile', width: 320, height: 780, mobile: true },
   { name: 'mobile', width: 390, height: 844, mobile: true },
+  { name: 'large-mobile', width: 430, height: 932, mobile: true },
 ]
 const THEMES = ['light', 'dark'] as const
 const ROUTE_CANDIDATES = [
   '/',
+  '/pricing',
+  '/features',
+  '/use-cases',
   '/login',
   '/register',
-  '/dashboard',
-  '/dashboard/commshq',
   '/reports',
-  '/projects',
+  '/account',
 ]
 
 function chromePath(): string {
@@ -212,6 +216,7 @@ const auditExpression = `(() => {
     overflow: Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),
     unresolved: document.body.innerText.includes('{{') || document.body.innerText.includes('@if'),
     unnamedControls,
+    visibleTextLength: document.body.innerText.trim().length,
   }
 })()`
 
@@ -281,6 +286,14 @@ async function main(): Promise<void> {
         await cdp.send('Page.navigate', { url: `http://127.0.0.1:${server.port}${route}` })
         await waitFor(() => cdp.evaluate("document.readyState === 'complete'"))
         await Bun.sleep(100)
+        // Protected stx static builds wrap the server-rendered guest branch in a
+        // top-level template. Scripts are disabled in this contract, so expose
+        // that branch for layout inspection instead of capturing a blank page.
+        await cdp.evaluate(`(() => {
+          if (document.body.innerText.trim()) return
+          const shell = document.querySelector('body > template')
+          if (shell) document.body.append(shell.content.cloneNode(true))
+        })()`)
         for (const theme of THEMES) {
           await cdp.evaluate(`(() => {
             const theme = ${JSON.stringify(theme)}
@@ -293,6 +306,7 @@ async function main(): Promise<void> {
           const audit = await cdp.evaluate<PageAudit>(auditExpression)
           const key = `${route} at ${viewport.name}/${theme}`
           if (audit.overflow > 1) failures.push(`${key}: ${audit.overflow}px horizontal overflow`)
+          if (audit.visibleTextLength < 20) failures.push(`${key}: no meaningful visible page content`)
           if (audit.unresolved) failures.push(`${key}: unresolved template expression is visible`)
           if (audit.imagesWithoutAlt) failures.push(`${key}: ${audit.imagesWithoutAlt} image(s) have no alt attribute`)
           if (audit.unnamedControls.length) failures.push(`${key}: unnamed controls ${audit.unnamedControls.join(', ')}`)
