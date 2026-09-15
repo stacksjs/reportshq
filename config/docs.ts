@@ -42,14 +42,16 @@ const config: BunPressOptions = {
           text: 'Getting started',
           items: [
             { text: 'Quickstart', link: '/quickstart' },
+            { text: 'Reporting concepts', link: '/concepts' },
             { text: 'Limits', link: '/limits' },
           ],
         },
         {
           text: 'Installing it',
           items: [
+            { text: 'Stacks package', link: '/stacks' },
             { text: 'Laravel package', link: '/laravel' },
-            { text: 'Query API', link: '/api' },
+            { text: 'Configuration', link: '/configuration' },
           ],
         },
         {
@@ -66,12 +68,13 @@ const config: BunPressOptions = {
             { text: 'Self-hosting', link: '/self-hosting' },
             { text: 'Deploying', link: '/deploy' },
             { text: 'Launch checklist', link: '/launch-checklist' },
-            { text: 'API', link: '/api' },
+            { text: 'Troubleshooting', link: '/troubleshooting' },
           ],
         },
         {
           text: 'Reference',
           items: [
+            { text: 'Query API', link: '/api' },
             { text: 'Design brief', link: '/design-brief' },
           ],
         },

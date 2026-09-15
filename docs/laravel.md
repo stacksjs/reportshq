@@ -4,19 +4,27 @@
 models you already have, queries them in place on the connection your
 application already holds, and renders through the routes you already guard.
 
-Nothing leaves the application. There is no endpoint to send to, no connection
-to hand out, and the licence check is offline.
+The report engine does not send rows to a vendor endpoint and the licence check
+is offline. A separate optional event forwarder can send taxonomy events to a
+collector explicitly configured by the host; it is not required for reports.
 
 ## Install
+
+Do not run that install sequence yet for the reporting product. Packagist
+currently serves v0.1.0, whose published metadata describes the earlier event
+forwarder. This repository's current source adds in-process reporting, but that
+source has not been released on Packagist. Verify a release containing it before
+following the install sequence. The current source loads migrations for
+reports, blocks, revisions, shares and schedules. Your own tables are only ever
+read by the report engine.
+
+After a reporting release exists, the host installation sequence is:
 
 ```bash
 composer require reportshq/laravel
 php artisan vendor:publish --tag=reportshq-config
 php artisan migrate
 ```
-
-The migration creates the tables the reports live in: reports, blocks,
-revisions, shares and schedules. Your own tables are only ever read.
 
 ## Describing a model
 
@@ -103,9 +111,9 @@ same compiled components in all three, so they cannot drift.
 
 ## Exports, sharing, schedules
 
-CSV and XLSX are generated on demand rather than stored and linked. The numbers
-are one query away, so there is nothing to clean up and no way to serve a stale
-copy.
+The current Laravel source generates CSV and XLSX on demand. Its CSV is one
+long table with block, point, series and value columns. Its XLSX uses one sheet
+per query-bearing block. The current Stacks package generates CSV only.
 
 Sharing and scheduling are documented in [sharing](/docs/sharing) and
 [schedules and exports](/docs/schedules-exports).

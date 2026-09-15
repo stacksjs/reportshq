@@ -5,17 +5,17 @@
      data. A partial is included into the page's scope, so it reads the page's
      bindings directly and cannot lose them. --}}
 <header class="bg-panel border-b border-line">
-  <div class="flex gap-4 items-center justify-between mx-auto px-6 py-3 max-w-7xl">
-    <a href="/reports" class="flex gap-6 items-center no-underline">
+  <div class="flex flex-col gap-2 sm:flex-row sm:gap-4 sm:items-center sm:justify-between mx-auto px-4 sm:px-6 py-3 max-w-7xl">
+    <a href="/reports" class="flex gap-6 items-center self-start no-underline">
       <Wordmark />
     </a>
 
-    <nav class="flex gap-1 items-center">
-      <a href="/reports" class="px-3 py-1.5 text-muted text-sm hover:text-ink rounded-lg">Reports</a>
-      <a href="/account" class="px-3 py-1.5 text-muted text-sm hover:text-ink rounded-lg">Account</a>
+    <nav class="flex gap-1 items-center justify-between sm:justify-start w-full sm:w-auto">
+      <a href="/reports" class="inline-flex items-center px-3 min-h-11 text-muted text-sm hover:text-ink rounded-lg">Reports</a>
+      <a href="/account" class="inline-flex items-center px-3 min-h-11 text-muted text-sm hover:text-ink rounded-lg">Account</a>
       <button
         type="button"
-        class="inline-flex items-center justify-center ml-1 h-8 w-8 text-muted border border-line rounded-lg theme-btn"
+        class="inline-flex items-center justify-center ml-1 h-11 w-11 text-muted border border-line rounded-lg theme-btn"
         aria-label="Switch theme"
         onclick="(function(r){var d=r.getAttribute('data-theme')==='dark';r.setAttribute('data-theme',d?'light':'dark');r.classList.toggle('dark',!d);try{localStorage.setItem('reportshq_theme',d?'light':'dark')}catch(e){}})(document.documentElement)"
       >

@@ -81,7 +81,9 @@ Layout is packed on the server as well as in the browser, and the response
 carries the canonical positions back. What is stored and what you saw cannot
 disagree.
 
-## Sharing
+## Laravel sharing
+
+The current Laravel source exposes the following share endpoints when its API is enabled and guarded. The Stacks `reportRoutes` list does not contain share routes, and this site's code-defined viewer does not mount them.
 
 ```bash
 curl -X POST .../api/reportshq/reports/commerce-overview/shares -d '{"label":"Board"}'

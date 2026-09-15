@@ -9,7 +9,7 @@
 //
 // If a limit changes, this page changes with it. Nothing here is typed twice.
 import { useSeoMeta } from 'stx'
-import { PLANS, TIERS } from '../../app/Billing/limits'
+import { PLANS, TIERS } from '../../../app/Billing/limits'
 
 const siteUrl = 'https://reportshq.org'
 const pricingDescription = 'Three plans, priced per installed application. Free covers one application with unlimited reports and no card. Your data never leaves your servers, and nothing here can stop a report rendering.'

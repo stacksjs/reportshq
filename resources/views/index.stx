@@ -10,7 +10,7 @@
 // The sample is stated as a sample. Numbers on a marketing page that imply a
 // real customer's business are a lie with a chart on it.
 import { useSeoMeta } from 'stx'
-import { PLANS } from '../../app/Billing/limits'
+import { PLANS } from '../../../app/Billing/limits'
 
 const siteUrl = 'https://reportshq.org'
 const siteDescription = 'Reports that run inside your own Stacks or Laravel application, against your own database. Install a package, point it at the models you already have, and the numbers never leave your servers.'

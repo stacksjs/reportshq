@@ -22,9 +22,12 @@ a good quarter.
 | XLSX export | | Yes | Yes |
 | Priority support | | | Yes |
 
-`app/Billing/limits.ts` is the only place these numbers live. The pricing page
-renders from it rather than restating it, because a marketing table maintained
-separately is a promise somebody eventually breaks by editing one of them.
+`app/Billing/limits.ts` supplies pricing copy. It is not a runtime feature gate
+or a proof that every listed capability exists. The current Stacks package has
+CSV but not XLSX, sharing or scheduled delivery. The Laravel source implements
+CSV, XLSX, sharing and schedules, but its reporting rewrite has not yet been
+published on Packagist. Check [release status](/docs/quickstart) before treating
+this table as an installation plan.
 
 ## Reports are unlimited on every tier
 

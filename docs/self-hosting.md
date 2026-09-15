@@ -2,10 +2,13 @@
 
 There is no other kind, and that is the whole point.
 
-The package runs inside your application, on your servers, against your
-database. Nothing is hosted on our side, nothing is sent anywhere, and the
-licence is checked offline. What follows is therefore not a special deployment
-mode: it is a description of what you already have once you install it.
+The reporting engines run inside your application, on your servers, against
+your database. Reporting sends no rows to ReportsHQ and the licence is checked
+offline. The Laravel package also contains a separate, optional event
+forwarder. That half sends events to an explicitly configured collector only
+when its endpoint, key and sample rate enable it. The collector's future is an
+unmade product decision, so do not assume it is either a required part of
+reporting or permanently retired.
 
 If you are looking for how to deploy `reportshq.org`, the marketing site and
 account pages, that is [deploying](/docs/deploy) and it has nothing to do with
@@ -13,27 +16,31 @@ running reports.
 
 ## What you are actually running
 
-Your application. That is it.
+Your application. The currently published package versions do not yet include
+the reporting source described here. Check [release status](/docs/quickstart)
+before installation.
 
 ```bash
 composer require reportshq/laravel
 php artisan migrate
 ```
 
-The package adds routes, views, a console command and five tables. It does not
-add a service, a daemon, a queue worker of its own, or a port to open. If your
-application deploys, the reports deploy with it.
+After a reporting release exists, the Laravel package can load routes, views,
+a console command and five tables. Routes and the JSON API remain off until
+the host enables them. It does not add a service, daemon, queue worker of its
+own, or port to open. Scheduled email uses the host's worker and scheduler.
 
 ## Requirements
 
-PHP 8.2+, Laravel 11+, and whatever database you already use. SQL is built for
-whatever driver your connection reports, so anything Laravel supports works,
-including SQLite.
+PHP 8.2+, Laravel 11+, and a supported SQLite, MySQL or Postgres connection.
+The current source has a query dialect for each of those three; do not assume
+every database driver Laravel supports has one.
 
 ## Without a licence key
 
-Leave `REPORTSHQ_LICENSE` unset and every limit falls away. Unlimited
-applications, unlimited reports, everything the Pro tier lists.
+Leave `REPORTSHQ_LICENSE` unset and the current reporting engine still runs.
+The plans in pricing copy do not gate functionality or guarantee that every
+listed feature is implemented in both packages.
 
 Nothing about the software changes. The pages say the installation is
 unlicensed and that is the entire difference. This is deliberate: an offline
@@ -49,10 +56,10 @@ paying for, not because something will stop.
 Worth stating explicitly, because it is the property most self-hosting is
 chasing.
 
-Queries run in process, through your own ORM, against your own connection. There
-is no ingest endpoint, no export to a third party, and no telemetry. The licence
-class opens no sockets, and a test asserts that by reading its source for
-anything that could.
+Queries run in process on your own connection, not through ORM scopes. The
+report engine has no ingest endpoint or vendor telemetry. The separate Laravel
+event forwarder can POST taxonomy events to an endpoint the host explicitly
+configures. The licence class opens no sockets.
 
 For anyone under a data processing agreement, this is usually the shortest
 section of a security review you will ever write.
@@ -82,7 +89,8 @@ data was restored with them.
 
 ## Upgrades
 
-`composer update reportshq/laravel`, then `php artisan migrate`. Read the
+After a reporting release exists, `composer update reportshq/laravel`, then
+`php artisan migrate`. Read the
 changelog for anything with a `!` in the commit subject, which is how a breaking
 change is marked.
 

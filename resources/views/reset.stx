@@ -4,18 +4,19 @@
 // The token and address come from the query string, which is where the email
 // put them. They are read here only to hand back to the API: the page never
 // decides whether a token is valid, because a page cannot be trusted to.
-import { param, sessionCookieName, sessionFrom } from '../../app/Support/session'
+import { param, sessionCookieName, sessionFrom } from '../../../app/Support/session'
 
-const session = await sessionFrom(cookies)
+const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
 const cookieName = sessionCookieName()
 // Deliberately not bounced when signed in. Somebody resetting a password may
 // well have a stale session open in another tab, and that is the case they are
 // most likely trying to fix.
 const signedIn = false
 
-const token = param(query, 'token') ?? ''
-const email = param(query, 'email') ?? ''
-const usable = token !== '' && email !== ''
+const pageQuery = typeof query !== 'undefined' ? query : undefined
+const __resetToken = param(pageQuery, 'token') ?? ''
+const email = param(pageQuery, 'email') ?? ''
+const usable = __resetToken !== '' && email !== ''
 </script>
 
 <template>
@@ -44,7 +45,7 @@ const usable = token !== '' && email !== ''
              submits. The script intercepts it; without the script it still
              posts somewhere sensible rather than nowhere. --}}
         <form id="signin" method="post" action="/api/auth/reset" class="grid gap-4" @if (!usable) hidden @endif>
-          <input id="token" type="hidden" value="{{ token }}" />
+          <input id="token" type="hidden" value="{{ __resetToken }}" />
           <input id="email" type="hidden" value="{{ email }}" />
 
           <label class="block">

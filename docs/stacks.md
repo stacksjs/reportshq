@@ -7,19 +7,24 @@ application already holds, and renders through the routes you already guard.
 Nothing leaves the application. There is no endpoint to send to, no connection
 to hand out, and the licence check is offline.
 
-This is the same engine as [the Laravel package](/docs/laravel) and the same
-compiled chart components, so the two cannot drift on what a number means. What
-differs is only how you describe a model and where you mount it.
+The Stacks and [Laravel source](/docs/laravel) share a result contract and
+compiled chart components. Their query implementations are separate and their
+filter operator vocabularies currently differ. Verify semantics in each
+runtime instead of assuming they cannot drift.
 
 ## Install
+
+Do not run that install command yet for the reporting product. npm currently
+serves `0.1.0`, the earlier event-forwarding SDK. The reporting source in this
+checkout is versioned `0.2.0` but has not been published. Verify that npm serves
+a release containing the reporting source before installing it. See the
+[quickstart release status](/docs/quickstart) for the current boundary.
+
+After a reporting release exists, install it with:
 
 ```bash
 bun add @reportshq/stacks
 ```
-
-Take `0.2.0` or later. `0.1.0` carries the same name but is a different
-library: it was an event-forwarding SDK from before this package became the
-reporting engine, and none of the API below exists in it.
 
 **There is no migration, and that is deliberate.** This package ships no tables
 of its own and never writes to yours: it reads the models you describe below,
@@ -86,9 +91,9 @@ rest of `ReportsHQConfig` is optional:
 }
 ```
 
-`shareMiddleware` is empty on purpose. A share link is read by somebody with no
-account, so it does not inherit `routes.middleware`; adding a guard there means
-the link stops working for the people it was sent to.
+The config type includes `shareMiddleware`, but the current Stacks
+`reportRoutes` list has no share route. This setting does not publish a link by
+itself. The Laravel source has the share route and its own middleware decision.
 
 ## Wiring it up
 
@@ -217,12 +222,12 @@ Or [the JSON API](/docs/api), for a front end of your own.
 
 ## Exports, sharing, schedules
 
-CSV and XLSX are generated on demand rather than stored and linked. The numbers
-are one query away, so there is nothing to clean up and no way to serve a stale
-copy.
+The current Stacks package generates CSV on demand. Its download handler
+rejects XLSX. The Laravel source implements both formats. Neither format is
+stored as a report file by the Stacks handler.
 
-Sharing and scheduling are documented in [sharing](/docs/sharing) and
-[schedules and exports](/docs/schedules-exports).
+Sharing and scheduling in the current source are Laravel features, documented
+in [sharing](/docs/sharing) and [schedules and exports](/docs/schedules-exports).
 
 ## Requirements
 

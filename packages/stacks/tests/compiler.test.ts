@@ -125,6 +125,17 @@ describe('the compiler', () => {
     expect(auckland.total).toBe(17_500)
   })
 
+  it('falls back to UTC when a stored timezone is no longer valid', async () => {
+    const { compiler } = fixture()
+    const query = { model: 'order', measure: 'revenue', time: { key: 'placed' }, grain: 'day' } as const
+
+    const utc = await compiler.run(query, 'UTC')
+    const unknown = await compiler.run(query, 'Not/A_Timezone')
+
+    expect(unknown.series).toEqual(utc.series)
+    expect(unknown.total).toBe(utc.total)
+  })
+
   it('groups by a dimension on the same model', async () => {
     const { compiler } = fixture()
     const result = await compiler.run({

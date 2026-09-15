@@ -4,9 +4,9 @@
 // Renders for a stranger, like /login. The response never says whether the
 // address has an account, so this page cannot be used to find out who is a
 // customer; the confirmation below is deliberately the same either way.
-import { sessionCookieName, sessionFrom } from '../../app/Support/session'
+import { sessionCookieName, sessionFrom } from '../../../app/Support/session'
 
-const session = await sessionFrom(cookies)
+const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
 const cookieName = sessionCookieName()
 const signedIn = session.user !== null
 </script>
