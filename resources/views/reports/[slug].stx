@@ -17,7 +17,6 @@ import { reportHandlers } from '../../../app/Support/reports'
 
 const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
 const user = session.user
-const authPending = session.stale
 
 const requested = String(typeof slug !== 'undefined' && slug ? slug : '')
 
@@ -46,19 +45,11 @@ const notice = new License(process.env.REPORTSHQ_LICENSE).notice()
 </script>
 
 <template>
-  @include('AuthGuard')
-
   <div class="min-h-[100dvh] text-ink bg-canvas">
-    {{-- What the guard reads. The server is the only side that can see the
-         HttpOnly session cookie, so it is the side that decides. Rendering the
-         numbers and hiding them client-side would still serve them to curl. --}}
-    @if (!user)
-      <div id="auth-required" hidden></div>
-    @endif
-    @if (authPending)
-      <div id="auth-pending" hidden></div>
-    @endif
-
+    {{-- The server is the only side that can see the HttpOnly session cookie, so
+         it is the side that gates: a visitor it could not identify throws into
+         the missing state above and gets no numbers. Rendering them and hiding
+         them client-side would still serve them to curl. --}}
     @include('AppNav')
 
     <link rel="stylesheet" href="/reportshq/charts.css">

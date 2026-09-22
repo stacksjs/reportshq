@@ -4,14 +4,14 @@
 // The token and address come from the query string, which is where the email
 // put them. They are read here only to hand back to the API: the page never
 // decides whether a token is valid, because a page cannot be trusted to.
-import { param, sessionCookieName, sessionFrom } from '../../../app/Support/session'
+import { param, sessionFrom } from '../../../app/Support/session'
 
-const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
-const cookieName = sessionCookieName()
+// Resolved for parity with the other auth views; this page does not bounce a
+// signed-in visitor (see below), so nothing is read off it.
+await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
 // Deliberately not bounced when signed in. Somebody resetting a password may
 // well have a stale session open in another tab, and that is the case they are
 // most likely trying to fix.
-const signedIn = false
 
 const pageQuery = typeof query !== 'undefined' ? query : undefined
 const __resetToken = param(pageQuery, 'token') ?? ''
@@ -21,12 +21,6 @@ const usable = __resetToken !== '' && email !== ''
 
 <template>
   <div class="min-h-[100dvh] text-ink bg-canvas">
-    {{-- Already signed in: bounce before anything paints, the same way the
-         guard does in the other direction. --}}
-
-
-    <script>document.documentElement.setAttribute('data-session-cookie', {{ cookieName }})</script>
-
     <main class="grid place-items-center px-6 py-16 min-h-[100dvh]">
       <div class="max-w-sm w-full">
         <a href="/" class="flex gap-2 items-center mb-8 no-underline">

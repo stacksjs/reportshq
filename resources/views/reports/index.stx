@@ -12,7 +12,6 @@ import { License } from '@reportshq/stacks'
 
 const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
 const user = session.user
-const authPending = session.stale
 
 // Nothing is read for a visitor the server could not identify.
 const reports = user ? (await reportHandlers.index()).reports : []
@@ -24,19 +23,12 @@ const notice = user ? new License(process.env.REPORTSHQ_LICENSE).notice() : null
 </script>
 
 <template>
-  @include('AuthGuard')
-
   <div class="min-h-[100dvh] text-ink bg-canvas">
-    {{-- What the guard reads. The server is the only side that can see the
-         HttpOnly session cookie, so it is the side that decides. Rendering the
-         numbers and hiding them client-side would still serve them to curl. --}}
-    @if (!user)
-      <div id="auth-required" hidden></div>
-    @endif
-    @if (authPending)
-      <div id="auth-pending" hidden></div>
-    @endif
-
+    {{-- The server is the only side that can see the HttpOnly session cookie, so
+         it is the side that gates. A visitor it could not identify gets no
+         reports (see the withholding above) and the signed-out empty state
+         below — rendering the numbers and hiding them client-side would still
+         serve them to curl. --}}
     @include('AppNav')
 
     <main class="mx-auto px-6 py-10 max-w-4xl">

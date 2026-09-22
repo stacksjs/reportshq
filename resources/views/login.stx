@@ -5,10 +5,9 @@
 // AuthGuard and no app chrome. It does the opposite check instead: somebody who
 // already has a session is sent to their reports rather than shown a form
 // asking them to do something they have already done.
-import { sessionCookieName, sessionFrom } from '../../../app/Support/session'
+import { sessionFrom } from '../../../app/Support/session'
 
 const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
-const cookieName = sessionCookieName()
 const signedIn = session.user !== null
 </script>
 
@@ -19,8 +18,6 @@ const signedIn = session.user !== null
     @if (signedIn)
       <script>window.location.replace('/reports')</script>
     @endif
-
-    <script>document.documentElement.setAttribute('data-session-cookie', {{ cookieName }})</script>
 
     <main class="grid place-items-center px-6 py-16 min-h-[100dvh]">
       <div class="max-w-sm w-full">
@@ -60,6 +57,14 @@ const signedIn = session.user !== null
             />
           </label>
 
+          {{-- Off by default: a shared machine should not opt into a month-long
+               session by accident. Checked lengthens the session to 30 days;
+               unchecked is the one-week baseline. --}}
+          <label class="flex gap-2 items-center text-muted text-sm cursor-pointer select-none">
+            <input id="remember" name="remember" type="checkbox" class="h-4 w-4 accent-accent" />
+            <span>Keep me signed in for 30 days</span>
+          </label>
+
           <p id="error" class="text-sm text-warn" hidden></p>
 
           <button
@@ -67,6 +72,34 @@ const signedIn = session.user !== null
             type="submit"
             class="px-4 py-2.5 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
           >Sign in</button>
+        </form>
+
+        {{-- Second step, revealed only when the account has 2FA enabled. Dormant
+             until an enrollment surface ships, but present so a 2FA account can
+             never sign in halfway and stall. --}}
+        <form id="twofa" method="post" action="/api/auth/verify-two-factor-login" class="grid gap-4" hidden>
+          <h2 class="font-semibold text-lg tracking-tight">Two-factor code</h2>
+          <p class="-mt-2 text-muted text-sm">Enter the 6-digit code from your authenticator app.</p>
+          <label class="block">
+            <span class="block mb-1 text-muted text-sm">Authentication code</span>
+            <input
+              id="code"
+              name="code"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg"
+            />
+          </label>
+
+          <p id="twofa-error" class="text-sm text-warn" hidden></p>
+
+          <button
+            id="twofa-submit"
+            type="submit"
+            class="px-4 py-2.5 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
+          >Verify and sign in</button>
         </form>
 
         <p class="mt-6 text-muted text-sm">
@@ -95,6 +128,15 @@ const signedIn = session.user !== null
 
   var error = document.getElementById('error')
   var submit = document.getElementById('submit')
+  var twofa = document.getElementById('twofa')
+  var twofaError = document.getElementById('twofa-error')
+  var twofaSubmit = document.getElementById('twofa-submit')
+
+  // The 2FA step is a separate request, so the "remember me" choice made at
+  // step one is captured here and re-sent with the code — otherwise a 2FA
+  // account would be silently downgraded to the baseline week.
+  var rememberChoice = false
+  var challengeToken = null
 
   function fail(message) {
     error.textContent = message
@@ -103,11 +145,21 @@ const signedIn = session.user !== null
     submit.textContent = 'Sign in'
   }
 
+  function twofaFail(message) {
+    twofaError.textContent = message
+    twofaError.hidden = !message
+    twofaSubmit.disabled = false
+    twofaSubmit.textContent = 'Verify and sign in'
+  }
+
   form.addEventListener('submit', function (event) {
     event.preventDefault()
     fail('')
     submit.disabled = true
     submit.textContent = 'Signing in'
+
+    var remember = document.getElementById('remember')
+    rememberChoice = !!(remember && remember.checked)
 
     fetch('/api/auth/login', {
       method: 'POST',
@@ -116,6 +168,7 @@ const signedIn = session.user !== null
       body: JSON.stringify({
         email: document.getElementById('email').value,
         password: document.getElementById('password').value,
+        remember: rememberChoice,
       }),
     }).then(function (res) {
       if (res.ok) {
@@ -126,10 +179,55 @@ const signedIn = session.user !== null
       }
 
       return res.json().then(function (data) {
+        // 2FA-enabled account: reveal the code step and carry the challenge.
+        if (data && data.requires_two_factor && data.challenge_token) {
+          challengeToken = data.challenge_token
+          form.hidden = true
+          twofa.hidden = false
+          document.getElementById('code').focus()
+          return
+        }
         fail((data && data.message) || 'Could not sign you in.')
       }).catch(function () { fail('Could not sign you in.') })
     }).catch(function () {
       fail('Could not reach the server.')
+    })
+  })
+
+  twofa.addEventListener('submit', function (event) {
+    event.preventDefault()
+    twofaFail('')
+    twofaSubmit.disabled = true
+    twofaSubmit.textContent = 'Verifying'
+
+    fetch('/api/auth/verify-two-factor-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({
+        challenge_token: challengeToken,
+        code: document.getElementById('code').value,
+        remember: rememberChoice,
+      }),
+    }).then(function (res) {
+      if (res.ok) {
+        window.location.replace('/reports')
+        return
+      }
+
+      return res.json().then(function (data) {
+        // Challenge tokens are single-use; a failure sends the person back to
+        // the start rather than letting them retry a spent challenge.
+        twofa.hidden = true
+        form.hidden = false
+        fail((data && data.message) || 'Could not sign you in.')
+      }).catch(function () {
+        twofa.hidden = true
+        form.hidden = false
+        fail('Could not sign you in.')
+      })
+    }).catch(function () {
+      twofaFail('Could not reach the server.')
     })
   })
 }())

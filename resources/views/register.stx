@@ -5,10 +5,9 @@
 // session. The only account this creates is the person's own; teammates arrive
 // through project invites instead, which is why there is no organisation step
 // here.
-import { sessionCookieName, sessionFrom } from '../../../app/Support/session'
+import { sessionFrom } from '../../../app/Support/session'
 
 const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
-const cookieName = sessionCookieName()
 const signedIn = session.user !== null
 </script>
 
@@ -19,8 +18,6 @@ const signedIn = session.user !== null
     @if (signedIn)
       <script>window.location.replace('/reports')</script>
     @endif
-
-    <script>document.documentElement.setAttribute('data-session-cookie', {{ cookieName }})</script>
 
     <main class="grid place-items-center px-6 py-16 min-h-[100dvh]">
       <div class="max-w-sm w-full">

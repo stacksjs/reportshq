@@ -47,18 +47,37 @@ export default {
   password: env.AUTH_PASSWORD_FIELD || 'password',
 
   /**
-   * Access-token expiry in milliseconds (default: 1 hour).
+   * Access-token expiry in milliseconds (default: 7 days).
    *
-   * Access tokens are deliberately short-lived: a leaked bearer (logs,
-   * proxy, browser storage) is then usable for an hour, not a month. The
-   * paired refresh token (`refreshTokenExpiry`) carries the long-lived
-   * session and is rotated on use, so UX is unaffected.
+   * This value IS the browser session length, not just an API-bearer TTL.
+   * The auth actions mirror the issued access token into the HttpOnly
+   * `auth-token` cookie (see app/Actions/Auth/authCookie.ts) because the
+   * app is server-rendered stx with no client hydration and has no other
+   * way to know who is asking. Both the cookie's Max-Age and the
+   * `oauth_access_tokens.expires_at` row are stamped from the same number,
+   * and nothing extends either one — `getUserFromToken` leaves `expires_at`
+   * alone, then deletes the row once it passes. So a signed-in operator is
+   * logged out exactly this long after login regardless of activity.
+   *
+   * This is the BASELINE only. LoginAction and VerifyTwoFactorLoginAction
+   * pass a per-login `expiresInMinutes` from the sign-in form's "remember
+   * me" checkbox (see sessionExpiryMinutes in app/Actions/Auth/authCookie.ts):
+   * a week unchecked, 30 days checked. This default covers the entry points
+   * that have no such checkbox — register above all — so they land on the
+   * baseline week. It was 1h before (a sane API-bearer TTL but a hostile
+   * session that forced a re-login mid-task every hour).
    */
-  tokenExpiry: env.AUTH_TOKEN_EXPIRY || 60 * 60 * 1000,
+  tokenExpiry: env.AUTH_TOKEN_EXPIRY || 7 * 24 * 60 * 60 * 1000,
 
   /**
-   * Refresh-token expiry in milliseconds (default: 30 days). This is the
-   * long-lived credential exchanged for fresh access tokens.
+   * Refresh-token expiry in milliseconds (default: 30 days).
+   *
+   * NOT WIRED UP. There is no refresh route, no RefreshTokenAction and no
+   * cookie that stores a refresh token, so nothing ever reads this value —
+   * it only bounds a row that never gets exchanged. Session length is
+   * `tokenExpiry` above, alone. Building a refresh exchange is awkward here
+   * anyway: an stx server block cannot set response headers, so a
+   * server-rendered page has nowhere to rotate the cookie.
    */
   refreshTokenExpiry: env.AUTH_REFRESH_TOKEN_EXPIRY || 30 * 24 * 60 * 60 * 1000,
 
