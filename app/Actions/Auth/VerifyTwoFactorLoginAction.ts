@@ -35,18 +35,18 @@ export default new Action({
     // wrong) must start over from LoginAction, not retry.
     const userId = await consumeTwoFactorChallenge(challengeToken)
     if (!userId)
-      return response.json({ message: 'This sign-in has expired — please sign in again.' }, 401)
+      return response.json({ message: 'This sign-in has expired - please sign in again.' }, 401)
 
     const valid = await verifyTwoFactorLoginCode(userId, code)
     if (!valid)
-      return response.json({ message: 'That code did not match — please sign in again.' }, 401)
+      return response.json({ message: 'That code did not match - please sign in again.' }, 401)
 
     // Carry the "remember me" tier chosen at step one through to the session
     // issued here. The login page re-sends the checkbox with the code.
     const expiresInMinutes = sessionExpiryMinutes(request.get('remember'))
     const result = await Auth.loginUsingId(userId, { expiresInMinutes })
     if (!result?.token)
-      return response.json({ message: 'Could not complete sign-in — please sign in again.' }, 401)
+      return response.json({ message: 'Could not complete sign-in - please sign in again.' }, 401)
 
     return response.json(
       { signedIn: true },

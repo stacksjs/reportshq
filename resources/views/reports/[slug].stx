@@ -90,7 +90,11 @@ const notice = new License(process.env.REPORTSHQ_LICENSE).notice()
         </div>
       @endif
 
-      @if (notice)
+      {{-- Operator-facing licence notice: only for a signed-in operator, matching
+           reports/index.stx. Now that the client AuthGuard bounce is gone, a
+           signed-out visitor stays on the SSR missing state, so gate on `user`
+           or the notice would leak to them when the licence is misconfigured. --}}
+      @if (user && notice)
         <p class="mt-12 pt-4 text-subtle text-xs border-line border-t">{{ notice }}</p>
       @endif
     </main>
