@@ -3,7 +3,7 @@ import { Action } from '@stacksjs/actions'
 import { register } from '@stacksjs/auth'
 import { db } from '@stacksjs/database'
 import { response } from '@stacksjs/router'
-import { buildAuthCookie } from './authCookie'
+import { buildAuthCookie } from '../../Support/authCookie'
 
 /**
  * Creating an account.

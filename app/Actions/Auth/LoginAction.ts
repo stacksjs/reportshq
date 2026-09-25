@@ -3,7 +3,7 @@ import { Action } from '@stacksjs/actions'
 import { Auth, createTwoFactorChallenge, getTwoFactorState } from '@stacksjs/auth'
 import { User } from '@stacksjs/orm'
 import { response } from '@stacksjs/router'
-import { buildAuthCookie, sessionExpiryMinutes } from './authCookie'
+import { buildAuthCookie, sessionExpiryMinutes } from '../../Support/authCookie'
 import { checkSigninLimits, clientAddress } from '../../Support/signin-limits'
 
 /**

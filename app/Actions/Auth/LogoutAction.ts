@@ -2,7 +2,7 @@ import type { RequestInstance } from '@stacksjs/types'
 import { Action } from '@stacksjs/actions'
 import { Auth, authCookieName } from '@stacksjs/auth'
 import { response } from '@stacksjs/router'
-import { clearAuthCookie } from './authCookie'
+import { clearAuthCookie } from '../../Support/authCookie'
 
 /**
  * Signing out.

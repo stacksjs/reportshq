@@ -2,7 +2,7 @@ import type { RequestInstance } from '@stacksjs/types'
 import { Action } from '@stacksjs/actions'
 import { Auth, consumeTwoFactorChallenge, verifyTwoFactorLoginCode } from '@stacksjs/auth'
 import { response } from '@stacksjs/router'
-import { buildAuthCookie, sessionExpiryMinutes } from './authCookie'
+import { buildAuthCookie, sessionExpiryMinutes } from '../../Support/authCookie'
 
 /**
  * Second step of a sign-in for an account with TOTP 2FA enabled.
