@@ -15,7 +15,7 @@ import { checkSigninLimits, clientAddress } from '../../Support/signin-limits'
  * me" checkbox: `Auth.loginUsingId(id, { expiresInMinutes })` sets both the
  * `oauth_access_tokens.expires_at` row and, via the returned `expiresIn`, the
  * cookie's Max-Age from the same number, so page and API cannot disagree about
- * when the session ends. See app/Actions/Auth/authCookie.ts.
+ * when the session ends. See app/Support/authCookie.ts.
  *
  * The app's own rules are kept, not the framework default's: credentials are
  * charged against the sign-in rate limiter before they are checked, and every

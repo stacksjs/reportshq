@@ -51,7 +51,7 @@ export default {
    *
    * This value IS the browser session length, not just an API-bearer TTL.
    * The auth actions mirror the issued access token into the HttpOnly
-   * `auth-token` cookie (see app/Actions/Auth/authCookie.ts) because the
+   * `auth-token` cookie (see app/Support/authCookie.ts) because the
    * app is server-rendered stx with no client hydration and has no other
    * way to know who is asking. Both the cookie's Max-Age and the
    * `oauth_access_tokens.expires_at` row are stamped from the same number,
@@ -61,7 +61,7 @@ export default {
    *
    * This is the BASELINE only. LoginAction and VerifyTwoFactorLoginAction
    * pass a per-login `expiresInMinutes` from the sign-in form's "remember
-   * me" checkbox (see sessionExpiryMinutes in app/Actions/Auth/authCookie.ts):
+   * me" checkbox (see sessionExpiryMinutes in app/Support/authCookie.ts):
    * a week unchecked, 30 days checked. This default covers the entry points
    * that have no such checkbox — register above all — so they land on the
    * baseline week. It was 1h before (a sane API-bearer TTL but a hostile
