@@ -85,10 +85,21 @@ describe('the reports surface', () => {
       const source = readFileSync(join(root, page), 'utf8')
 
       expect(source).toContain("sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)")
-      expect(source).toContain(`@include('AuthGuard')`)
-      expect(source).toContain('auth-required')
       // And the data is fetched only for an identified visitor.
       expect(source).toMatch(/if \(!user\)|user \?/)
+
+      // The other half of the claim, and the half that used to be asserted by
+      // requiring @include('AuthGuard') and an #auth-required element. Both were
+      // deleted in 437970e when the pre-paint guard was replaced by the server
+      // session, so asserting them asserted the browser guard was still there.
+      // What matters now is the opposite: that nothing gates in the browser,
+      // because a client-side bounce leaves the markup already rendered.
+      // Matched as the directive and the element, not as the word: both pages
+      // name AuthGuard in a comment explaining that the bounce is gone, and a
+      // bare substring check fails on the prose that documents the fix.
+      expect(source).not.toContain(`@include('AuthGuard')`)
+      expect(source).not.toMatch(/id=["']auth-(?:required|pending)["']/)
+      expect(source).not.toMatch(/<script client[\s\S]*?location\.(?:replace|href)/)
     }
   })
 

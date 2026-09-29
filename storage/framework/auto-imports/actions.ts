@@ -5,6 +5,10 @@
 // resolves. Values are paths rather than import thunks on purpose: thunks
 // would make every compilation that touches a name resolve every module.
 export const actions = {
+  'Actions/Auth/LoginAction': '../../../app/Actions/Auth/LoginAction.ts',
+  'Actions/Auth/LogoutAction': '../../../app/Actions/Auth/LogoutAction.ts',
+  'Actions/Auth/RegisterAction': '../../../app/Actions/Auth/RegisterAction.ts',
+  'Actions/Auth/VerifyTwoFactorLoginAction': '../../../app/Actions/Auth/VerifyTwoFactorLoginAction.ts',
   'Actions/NotifyUser': '../../../app/Actions/NotifyUser.ts',
   'Actions/SendWelcomeEmail': '../../../app/Actions/SendWelcomeEmail.ts',
   'Actions/AI/AskAction': '../defaults/app/Actions/AI/AskAction.ts',
@@ -17,13 +21,10 @@ export const actions = {
   'Actions/Auth/GenerateRegistrationAction': '../defaults/app/Actions/Auth/GenerateRegistrationAction.ts',
   'Actions/Auth/GenerateTwoFactorSecretAction': '../defaults/app/Actions/Auth/GenerateTwoFactorSecretAction.ts',
   'Actions/Auth/ListTokensAction': '../defaults/app/Actions/Auth/ListTokensAction.ts',
-  'Actions/Auth/LoginAction': '../defaults/app/Actions/Auth/LoginAction.ts',
-  'Actions/Auth/LogoutAction': '../defaults/app/Actions/Auth/LogoutAction.ts',
   'Actions/Auth/LogoutAllAction': '../defaults/app/Actions/Auth/LogoutAllAction.ts',
   'Actions/Auth/MagicLinkConsumeAction': '../defaults/app/Actions/Auth/MagicLinkConsumeAction.ts',
   'Actions/Auth/MagicLinkSendAction': '../defaults/app/Actions/Auth/MagicLinkSendAction.ts',
   'Actions/Auth/RefreshTokenAction': '../defaults/app/Actions/Auth/RefreshTokenAction.ts',
-  'Actions/Auth/RegisterAction': '../defaults/app/Actions/Auth/RegisterAction.ts',
   'Actions/Auth/ResendVerificationAction': '../defaults/app/Actions/Auth/ResendVerificationAction.ts',
   'Actions/Auth/RevokeTokenAction': '../defaults/app/Actions/Auth/RevokeTokenAction.ts',
   'Actions/Auth/SocialCallbackAction': '../defaults/app/Actions/Auth/SocialCallbackAction.ts',
@@ -32,7 +33,6 @@ export const actions = {
   'Actions/Auth/VerifyAuthenticationAction': '../defaults/app/Actions/Auth/VerifyAuthenticationAction.ts',
   'Actions/Auth/VerifyEmailAction': '../defaults/app/Actions/Auth/VerifyEmailAction.ts',
   'Actions/Auth/VerifyRegistrationAction': '../defaults/app/Actions/Auth/VerifyRegistrationAction.ts',
-  'Actions/Auth/VerifyTwoFactorLoginAction': '../defaults/app/Actions/Auth/VerifyTwoFactorLoginAction.ts',
   'Actions/Auth/token-request': '../defaults/app/Actions/Auth/token-request.ts',
   'Actions/Billable/CheckoutAction': '../defaults/app/Actions/Billable/CheckoutAction.ts',
   'Actions/Blog/BlogDestroyAction': '../defaults/app/Actions/Blog/BlogDestroyAction.ts',
