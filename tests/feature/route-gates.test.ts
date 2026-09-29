@@ -42,6 +42,7 @@ const ALLOWED = new Map<string, string>([
   // credential each one checks IS its gate.
   ['POST /register', 'Creating an account is the act of becoming a user. Rate limited per address and per IP.'],
   ['POST /login', 'Checks the password, which is the gate. Rate limited per address and per IP.'],
+  ['POST /verify-two-factor-login', 'Step two of a sign-in, so it cannot require a session either. Its gate is the pair it demands: a single-use challenge token minted by LoginAction only after the password was already checked, plus a TOTP code verified against that account. Neither alone opens a session, and a spent challenge sends the visitor back to /login.'],
   ['POST /forgot', 'Checks nothing and reveals nothing: answers the same either way, so an address cannot be probed. Rate limited.'],
   ['POST /reset', 'The emailed token is the credential. Single use and expiring.'],
   ['POST /logout', 'Revokes whatever token the caller presents. Presenting someone else\'s is signing them out with a credential already held.'],

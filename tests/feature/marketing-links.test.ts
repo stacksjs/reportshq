@@ -45,7 +45,10 @@ function publicTemplates(): string[] {
     join(views, 'forgot.stx'),
     join(views, 'reset.stx'),
     join(views, 'account.stx'),
-    join(partials, 'AuthGuard.stx'),
+    // AuthGuard.stx is deliberately absent. The client pre-paint guard was
+    // deleted when auth moved to the server-rendered session (437970e): a page
+    // that renders its numbers and hides them in the browser still serves them
+    // to curl. reports-surface.test.ts asserts the server gate that replaced it.
   ]
 
   for (const group of ['features', 'use-cases', 'compare']) {
