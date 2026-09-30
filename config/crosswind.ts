@@ -67,6 +67,29 @@ export default {
         'series-other': 'var(--series-other)',
         grid: 'var(--grid)',
         axis: 'var(--axis)',
+
+        // --- @stacksjs/components' token vocabulary ------------------------
+        // The shipped components are written against their own semantic names
+        // (text-fg, bg-surface, border-line-strong, ...) used 300+ times across
+        // the 102 components. This palette already satisfied `line` and
+        // `accent`; the rest resolved to nothing, so a component that imposes
+        // no colour of its own still rendered half-styled - text fell back to
+        // inherit and panels had no background.
+        //
+        // Purely additive: none of these names appear in this app's markup, so
+        // no existing element changes. Does NOT fix <Button variant="primary">,
+        // which hard-codes bg-blue-500 - that is stacksjs/stx#1993.
+        // See statushqorg/status#20.
+        surface: 'var(--panel)',
+        'surface-sunken': 'var(--bg)',
+        'surface-raised': 'color-mix(in srgb, var(--accent) 8%, var(--panel))',
+        fg: 'var(--text)',
+        'fg-strong': 'var(--text)',
+        'fg-muted': 'var(--text-2)',
+        'fg-soft': 'var(--text-2)',
+        'fg-subtle': 'var(--text-3)',
+        'line-strong': 'color-mix(in srgb, var(--text-3) 55%, var(--border))',
+        'accent-solid': 'var(--accent)',
       },
       // Arrays, not strings: Crosswind joins the entries into the font stack.
       // The whole stack already lives in the custom property, so each is a
