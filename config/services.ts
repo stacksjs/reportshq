@@ -155,7 +155,10 @@ export default {
   },
 
   fcm: {
-    serverKey: String(env.FCM_SERVER_KEY || ''),
+    // No `serverKey`: stacks 0.75 dropped it from the fcm config and
+    // FCM_SERVER_KEY from StacksEnv, following Google's retirement of the
+    // legacy server-key API in favour of the service-account trio below.
+    // Nothing in this app read it and it was set in no .env file.
     projectId: String(env.FCM_PROJECT_ID || ''),
     clientEmail: String(env.FCM_CLIENT_EMAIL || ''),
     privateKey: String(env.FCM_PRIVATE_KEY || ''),
