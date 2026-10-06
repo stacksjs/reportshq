@@ -44,7 +44,7 @@ const signedIn = session.user !== null
             />
           </label>
 
-          <p id="error" class="text-sm text-warn" hidden></p>
+          <p id="error" class="text-sm text-warn" role="alert" hidden></p>
 
           <button
             id="submit"
@@ -75,9 +75,26 @@ const signedIn = session.user !== null
   var error = document.getElementById('error')
   var submit = document.getElementById('submit')
 
+  // The banner is an alert region, so writing to it announces the message. The
+  // fields need marking separately: without aria-invalid and a link to the
+  // text, the control itself still looks untouched to assistive technology.
+  function markInvalid(invalid) {
+    ['email'].forEach(function (id) {
+      var el = document.getElementById(id)
+      if (!el)
+        return
+      el.setAttribute('aria-invalid', invalid ? 'true' : 'false')
+      if (invalid)
+        el.setAttribute('aria-describedby', 'error')
+      else
+        el.removeAttribute('aria-describedby')
+    })
+  }
+
   function fail(message) {
     error.textContent = message
     error.hidden = !message
+    markInvalid(!!message)
     submit.disabled = false
     submit.textContent = 'Send the link'
   }
