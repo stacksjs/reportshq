@@ -67,9 +67,9 @@ const sections = [
         <p class="mt-2 leading-relaxed text-muted text-sm">
           One event when somebody signs up is enough to get a real report, and the funnel follows once you send the step after it.
         </p>
-        <a href="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
+        <StxLink to="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
           Start free
-        </a>
+        </StxLink>
       </div>
     </main>
 

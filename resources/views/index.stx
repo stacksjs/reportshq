@@ -255,12 +255,12 @@ const docLinks = [
             </p>
 
             <div class="flex flex-wrap gap-3 items-center mt-8">
-              <a href="/register" class="px-5 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
+              <StxLink to="/register" class="px-5 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
                 Start free
-              </a>
-              <a href="/pricing" class="px-5 py-2.5 no-underline text-ink text-sm border border-line rounded-lg hover:border-accent">
+              </StxLink>
+              <StxLink to="/pricing" class="px-5 py-2.5 no-underline text-ink text-sm border border-line rounded-lg hover:border-accent">
                 See pricing
-              </a>
+              </StxLink>
             </div>
 
             <p class="mt-4 text-sm text-subtle">
@@ -353,7 +353,7 @@ const docLinks = [
               refuses rather than guessing. Every bound the query API enforces is stated.
             </p>
           </div>
-          <a href="/docs" class="no-underline text-accent text-sm hover:underline">All documentation</a>
+          <StxLink to="/docs" class="no-underline text-accent text-sm hover:underline">All documentation</StxLink>
         </div>
 
         <div class="grid gap-4 lg:grid-cols-3 mt-10">
@@ -373,9 +373,9 @@ const docLinks = [
             Install the package, name a model you already have, and drop a block on the grid. It
             reads rows that are already in your database, so the first chart covers all of them.
           </p>
-          <a href="/register" class="inline-block mt-6 px-5 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
+          <StxLink to="/register" class="inline-block mt-6 px-5 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
             Create an account
-          </a>
+          </StxLink>
         </div>
       </section>
     </main>

@@ -81,10 +81,10 @@ const since = joinedLabel(row?.created_at)
           <p class="max-w-[60ch] text-muted text-sm">
             Sign in to see who you are here and to manage your session.
           </p>
-          <a
-            href="/login"
+          <StxLink
+            to="/login"
             class="inline-flex items-center mt-4 px-4 py-2 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg"
-          >Sign in</a>
+          >Sign in</StxLink>
         </div>
       @endif
     </main>

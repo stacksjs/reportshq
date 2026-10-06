@@ -71,9 +71,9 @@ const sections = [
         <p class="mt-2 leading-relaxed text-muted text-sm">
           CSV is on every plan. Scheduled delivery and XLSX come with the paid tiers, and the pricing page states exactly which.
         </p>
-        <a href="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
+        <StxLink to="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
           Start free
-        </a>
+        </StxLink>
       </div>
     </main>
 

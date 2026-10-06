@@ -21,10 +21,10 @@ const signedIn = session.user !== null
 
     <main class="grid place-items-center px-6 py-16 min-h-[100dvh]">
       <div class="max-w-sm w-full">
-        <a href="/" class="flex gap-2 items-center mb-8 no-underline">
+        <StxLink to="/" class="flex gap-2 items-center mb-8 no-underline">
           <i class="h-5 w-5 text-accent i-hugeicons-chart-histogram"></i>
           <span class="font-semibold text-ink tracking-tight">ReportsHQ</span>
-        </a>
+        </StxLink>
 
         <h1 class="font-semibold text-2xl tracking-tight">Sign in</h1>
         <p class="mb-6 mt-1 text-muted text-sm">Your reports are where you left them.</p>
@@ -104,14 +104,14 @@ const signedIn = session.user !== null
 
         <p class="mt-6 text-muted text-sm">
           No account yet?
-          <a href="/register" class="text-accent">Create one</a>
+          <StxLink to="/register" class="text-accent">Create one</StxLink>
         </p>
 
         {{-- Below the sign-in action, not beside the password field: somebody
              who knows their password should never be routed past a way to
              reset it. --}}
         <p class="mt-2 text-muted text-sm">
-          <a href="/forgot" class="text-subtle hover:text-ink">Forgot your password?</a>
+          <StxLink to="/forgot" class="text-subtle hover:text-ink">Forgot your password?</StxLink>
         </p>
       </div>
     </main>

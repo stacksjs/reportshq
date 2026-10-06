@@ -6,13 +6,13 @@
      bindings directly and cannot lose them. --}}
 <header class="bg-panel border-b border-line">
   <div class="flex flex-col gap-2 sm:flex-row sm:gap-4 sm:items-center sm:justify-between mx-auto px-4 sm:px-6 py-3 max-w-7xl">
-    <a href="/reports" class="flex gap-6 items-center self-start no-underline">
+    <StxLink to="/reports" class="flex gap-6 items-center self-start no-underline">
       <Wordmark />
-    </a>
+    </StxLink>
 
     <nav class="flex gap-1 items-center justify-between sm:justify-start w-full sm:w-auto">
-      <a href="/reports" class="inline-flex items-center px-3 min-h-11 text-muted text-sm hover:text-ink rounded-lg">Reports</a>
-      <a href="/account" class="inline-flex items-center px-3 min-h-11 text-muted text-sm hover:text-ink rounded-lg">Account</a>
+      <StxLink to="/reports" class="inline-flex items-center px-3 min-h-11 text-muted text-sm hover:text-ink rounded-lg">Reports</StxLink>
+      <StxLink to="/account" class="inline-flex items-center px-3 min-h-11 text-muted text-sm hover:text-ink rounded-lg">Account</StxLink>
       <button
         type="button"
         class="inline-flex items-center justify-center ml-1 h-11 w-11 text-muted border border-line rounded-lg theme-btn"

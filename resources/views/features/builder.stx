@@ -77,9 +77,9 @@ const shotCaption = 'The builder, with a block palette and resize corners on eve
           The free plan carries a real month of a small project's events, and the builder is the
           same one on every tier.
         </p>
-        <a href="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
+        <StxLink to="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
           Start free
-        </a>
+        </StxLink>
       </div>
     </main>
 

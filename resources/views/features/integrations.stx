@@ -72,9 +72,9 @@ const shotCaption = 'The whole installation, and the config the compiler reads. 
         <p class="mt-2 leading-relaxed text-muted text-sm">
           One install and a config block naming a model. Nothing to sign up to first, and nothing to deploy beside the application it reports on.
         </p>
-        <a href="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
+        <StxLink to="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
           Start free
-        </a>
+        </StxLink>
       </div>
     </main>
 

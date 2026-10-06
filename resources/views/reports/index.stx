@@ -39,7 +39,7 @@ const notice = user ? new License(process.env.REPORTSHQ_LICENSE).notice() : null
         <ul class="grid gap-3 mt-8 list-none">
           @foreach (reports as report)
             <li class="bg-panel border border-line rounded-xl">
-              <a href="/reports/{{ report.slug }}" class="flex gap-4 items-baseline justify-between p-5 no-underline">
+              <StxLink to="/reports/{{ report.slug }}" class="flex gap-4 items-baseline justify-between p-5 no-underline">
                 <span>
                   <span class="block font-medium text-ink">{{ report.name }}</span>
                   @if (report.description)
@@ -47,7 +47,7 @@ const notice = user ? new License(process.env.REPORTSHQ_LICENSE).notice() : null
                   @endif
                 </span>
                 <span class="text-subtle text-xs tracking-wide uppercase">{{ report.status }}</span>
-              </a>
+              </StxLink>
             </li>
           @endforeach
         </ul>

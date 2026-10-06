@@ -23,10 +23,10 @@ const usable = __resetToken !== '' && email !== ''
   <div class="min-h-[100dvh] text-ink bg-canvas">
     <main class="grid place-items-center px-6 py-16 min-h-[100dvh]">
       <div class="max-w-sm w-full">
-        <a href="/" class="flex gap-2 items-center mb-8 no-underline">
+        <StxLink to="/" class="flex gap-2 items-center mb-8 no-underline">
           <i class="h-5 w-5 text-accent i-hugeicons-chart-histogram"></i>
           <span class="font-semibold text-ink tracking-tight">ReportsHQ</span>
-        </a>
+        </StxLink>
 
         <h1 class="font-semibold text-2xl tracking-tight">Choose a new password</h1>
         @if (usable)
@@ -66,7 +66,7 @@ const usable = __resetToken !== '' && email !== ''
         </form>
 
         <p class="mt-6 text-muted text-sm">
-          <a href="/forgot" class="text-accent">Ask for a new link</a>
+          <StxLink to="/forgot" class="text-accent">Ask for a new link</StxLink>
         </p>
       </div>
     </main>

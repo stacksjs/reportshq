@@ -128,9 +128,9 @@ const compare = [
         <p class="mt-2 leading-relaxed text-muted text-sm">
           Metabase for the question nobody saw coming, this for the fifteen reports everyone reads every week. They are not really the same tool, and the second one should not need a server.
         </p>
-        <a href="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
+        <StxLink to="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
           Start free
-        </a>
+        </StxLink>
       </div>
     </main>
 

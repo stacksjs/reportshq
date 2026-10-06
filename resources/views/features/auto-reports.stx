@@ -72,9 +72,9 @@ const shotCaption = 'A Commerce report, drawn by the components that ship. The n
         <p class="mt-2 leading-relaxed text-muted text-sm">
           Name an Order or a User in the config file, run the migration, and open the reports. They are already populated, because the data was already there.
         </p>
-        <a href="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
+        <StxLink to="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
           Start free
-        </a>
+        </StxLink>
       </div>
     </main>
 

@@ -59,7 +59,7 @@ const notice = new License(process.env.REPORTSHQ_LICENSE).notice()
       @if (missing)
         <h1 class="font-semibold text-3xl tracking-tight">No such report</h1>
         <p class="mt-2 text-muted">There is no report called "{{ requested }}".</p>
-        <p class="mt-6"><a href="/reports" class="text-accent">Back to reports</a></p>
+        <p class="mt-6"><StxLink to="/reports" class="text-accent">Back to reports</StxLink></p>
       @else
         <header>
           <h1 class="font-semibold text-3xl tracking-tight">{{ report.name }}</h1>

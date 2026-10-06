@@ -21,10 +21,10 @@ const signedIn = session.user !== null
 
     <main class="grid place-items-center px-6 py-16 min-h-[100dvh]">
       <div class="max-w-sm w-full">
-        <a href="/" class="flex gap-2 items-center mb-8 no-underline">
+        <StxLink to="/" class="flex gap-2 items-center mb-8 no-underline">
           <i class="h-5 w-5 text-accent i-hugeicons-chart-histogram"></i>
           <span class="font-semibold text-ink tracking-tight">ReportsHQ</span>
-        </a>
+        </StxLink>
 
         <h1 class="font-semibold text-2xl tracking-tight">Create an account</h1>
         <p class="mb-6 mt-1 text-muted text-sm">A licence key, and reports that run inside your own application.</p>
@@ -83,7 +83,7 @@ const signedIn = session.user !== null
 
         <p class="mt-6 text-muted text-sm">
           Already have an account?
-          <a href="/login" class="text-accent">Sign in</a>
+          <StxLink to="/login" class="text-accent">Sign in</StxLink>
         </p>
       </div>
     </main>

@@ -232,9 +232,9 @@ const faqs = [
           {{ freeApplications }} application, unlimited reports, no card, and the same builder everyone else gets.
           Describe one model and the first block draws from rows you already have.
         </p>
-        <a href="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
+        <StxLink to="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
           Create an account
-        </a>
+        </StxLink>
       </section>
     </main>
 
