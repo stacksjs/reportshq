@@ -56,7 +56,7 @@ const usable = __resetToken !== '' && email !== ''
 
           <p class="-mt-2 text-subtle text-xs">At least 10 characters. Length beats punctuation.</p>
 
-          <p id="error" class="text-sm text-warn" hidden></p>
+          <p id="error" class="text-sm text-warn" role="alert" hidden></p>
 
           <button
             id="submit"
@@ -84,9 +84,20 @@ const usable = __resetToken !== '' && email !== ''
   var error = document.getElementById('error')
   var submit = document.getElementById('submit')
 
+  // The banner is an alert region, so writing to it announces the message.
+  // The field needs marking separately: without aria-invalid and a link to the
+  // text, the control itself still looks untouched to assistive technology.
   function fail(message) {
     error.textContent = message
     error.hidden = !message
+    var pw = document.getElementById('password')
+    if (pw) {
+      pw.setAttribute('aria-invalid', message ? 'true' : 'false')
+      if (message)
+        pw.setAttribute('aria-describedby', 'error')
+      else
+        pw.removeAttribute('aria-describedby')
+    }
     submit.disabled = false
     submit.textContent = 'Save it'
   }
