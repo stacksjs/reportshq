@@ -5,7 +5,7 @@
 // footer read. A hub page maintained separately from the list of pages is a hub
 // page that stops linking to the newest one, and nobody notices for months.
 import { useSeoMeta } from 'stx'
-import { HUBS, pagesIn, pathFor } from '../../../app/Marketing/pages'
+import { HUBS, pagesIn, pathFor } from '~/app/Marketing/pages'
 
 const hub = HUBS.features
 const canonical = 'https://reportshq.org/features'

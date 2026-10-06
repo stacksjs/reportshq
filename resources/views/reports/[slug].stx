@@ -12,8 +12,8 @@
  * nobody reads. That failure is silent, which is why it is worth a comment.
  */
 import { elementHtml, License } from '@reportshq/stacks'
-import { sessionFrom } from '../../../app/Support/session'
-import { reportHandlers } from '../../../app/Support/reports'
+import { sessionFrom } from '~/app/Support/session'
+import { reportHandlers } from '~/app/Support/reports'
 
 const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
 const user = session.user

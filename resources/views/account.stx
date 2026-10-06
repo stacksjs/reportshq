@@ -5,7 +5,7 @@
 // than about a project: who they are, and how to stop being signed in. Team
 // billing arrives with #17.
 import { db as __db } from '@stacksjs/database'
-import { sessionFrom } from '../../../app/Support/session'
+import { sessionFrom } from '~/app/Support/session'
 
 const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
 const user = session.user

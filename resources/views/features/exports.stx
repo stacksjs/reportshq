@@ -1,6 +1,6 @@
 <script server>
 import { useSeoMeta } from 'stx'
-import { metaTitleFor, pageFor } from '../../../app/Marketing/pages'
+import { metaTitleFor, pageFor } from '~/app/Marketing/pages'
 
 const page = pageFor('features', 'exports')!
 const canonical = 'https://reportshq.org/features/exports'

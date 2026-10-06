@@ -5,7 +5,7 @@
 // AuthGuard and no app chrome. It does the opposite check instead: somebody who
 // already has a session is sent to their reports rather than shown a form
 // asking them to do something they have already done.
-import { sessionFrom } from '../../../app/Support/session'
+import { sessionFrom } from '~/app/Support/session'
 
 const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
 const signedIn = session.user !== null

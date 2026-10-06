@@ -4,7 +4,7 @@
 // The token and address come from the query string, which is where the email
 // put them. They are read here only to hand back to the API: the page never
 // decides whether a token is valid, because a page cannot be trusted to.
-import { param, sessionFrom } from '../../../app/Support/session'
+import { param, sessionFrom } from '~/app/Support/session'
 
 // Resolved for parity with the other auth views; this page does not bounce a
 // signed-in visitor (see below), so nothing is read off it.

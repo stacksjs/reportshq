@@ -5,7 +5,7 @@
 // sitemap is built from, so a new page is linked from every page on the site
 // the moment it is added. A footer maintained by hand is where internal links
 // go to become stale, and nothing ever surfaces the omission.
-import { pagesIn, pathFor } from '../../app/Marketing/pages'
+import { pagesIn, pathFor } from '~/app/Marketing/pages'
 
 const footerColumns = [
   {

@@ -6,8 +6,8 @@
  * passed from one component to another in this version. Page to component works
  * fine, which is what makes that easy to miss.
  */
-import { sessionFrom } from '../../../app/Support/session'
-import { reportHandlers } from '../../../app/Support/reports'
+import { sessionFrom } from '~/app/Support/session'
+import { reportHandlers } from '~/app/Support/reports'
 import { License } from '@reportshq/stacks'
 
 const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
