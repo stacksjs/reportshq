@@ -10,9 +10,21 @@
      narrower than the card grids, and a trail that does not start above the
      heading it belongs to reads as a stray line of text.
 
-     A partial rather than a component, for the reason the rest of this app uses
-     partials: stx drops props passed component to component in this version, so
-     shared chrome built as a component would silently render empty. --}}
+     A partial rather than a component. The stated reason used to be that stx
+     dropped props passed component to component, so shared chrome built as a
+     component rendered empty, and that is why the rest of this app uses
+     partials too.
+
+     That is fixed as of stx 0.2.395, checked by rendering a
+     page -> Outer -> Inner chain: the inner component receives the page's prop
+     intact. So the reason no longer holds, here or for the other partials, and
+     anyone reading it as a constraint should stop.
+
+     What is left is a preference rather than a blocker. `<Breadcrumb>` renders
+     the same semantics this does, and would take `breadcrumbWidth` through
+     className, which lands on the <nav> (a width competes with nothing, so the
+     append-order caveat in stacksjs/stx#1993 does not bite here). analyticshq
+     already calls the component from its own breadcrumb partial. --}}
 <nav aria-label="Breadcrumb" class="px-6 pt-8 mx-auto {{ breadcrumbWidth }}">
   <ol class="flex flex-wrap gap-2 items-center list-none text-sm text-subtle">
     @foreach (breadcrumbs as crumb)
