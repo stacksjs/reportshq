@@ -50,7 +50,7 @@ const usable = __resetToken !== '' && email !== ''
               type="password"
               autocomplete="new-password"
               required
-              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg"
+              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg" aria-describedby="error"
             />
           </label>
 
@@ -93,10 +93,6 @@ const usable = __resetToken !== '' && email !== ''
     var pw = document.getElementById('password')
     if (pw) {
       pw.setAttribute('aria-invalid', message ? 'true' : 'false')
-      if (message)
-        pw.setAttribute('aria-describedby', 'error')
-      else
-        pw.removeAttribute('aria-describedby')
     }
     submit.disabled = false
     submit.textContent = 'Save it'

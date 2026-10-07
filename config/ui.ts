@@ -35,6 +35,27 @@ export default {
 
   partialsDir: 'partials',
 
+  /*
+   * stx's client-script DOM guard: 25 rules at script-validation.js:1-127,
+   * run by process.js on every non-server <script> body. serve.js forwards the
+   * key only when it is literally present (`..."strict" in stxConfig`), so an
+   * absent key means every violation is collected and then silently dropped,
+   * which is how this app accumulated them unseen.
+   *
+   * Warning-first, matching bughq, loghq, statushq and analyticshq: the
+   * warnings are the migration queue rather than a build break. Ratchet
+   * failOnViolation to true once the queue is empty.
+   *
+   * allowPatterns stays EMPTY. The filter is a substring match on the rule's
+   * message or pattern source and is rule-global with no way to scope it to one
+   * call site, so a single entry can silently disable several rules at once.
+   */
+  strict: {
+    enabled: true,
+    failOnViolation: false,
+    allowPatterns: [],
+  },
+
   // Whether this app serves the framework's default views, which include a
   // demo storefront (/cart, /checkout/*, /orders/:id) alongside the error
   // pages and mail previews. `true` serves all of them and is the historical
