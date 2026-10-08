@@ -15,7 +15,12 @@ const signedIn = session.user !== null
     {{-- Already signed in: bounce before anything paints, the same way the
          guard does in the other direction. --}}
     @if (signedIn)
-      <script>window.location.replace('/reports')</script>
+      <script>
+        // A pre-paint bounce. navigate() is not in scope here: a plain <script> gets no
+        // auto-imports, and the redirect has to beat first paint, which is the point.
+        // stx-strict-ignore-next-line window.location location.replace()
+        window.location.replace('/reports')
+      </script>
     @endif
 
     <main class="grid place-items-center px-6 py-16 min-h-[100dvh]">
