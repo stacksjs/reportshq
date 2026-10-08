@@ -1,5 +1,4 @@
 <script server>
-import { useSeoMeta } from 'stx'
 import { metaTitleFor, pageFor } from '~/app/Marketing/pages'
 
 const page = pageFor('use-cases', 'agencies')!

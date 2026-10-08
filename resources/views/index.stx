@@ -9,7 +9,6 @@
 //
 // The sample is stated as a sample. Numbers on a marketing page that imply a
 // real customer's business are a lie with a chart on it.
-import { useSeoMeta } from 'stx'
 import { PLANS } from '~/app/Billing/limits'
 
 const siteUrl = 'https://reportshq.org'

@@ -4,7 +4,6 @@
 // Rendered from app/Marketing/pages.ts, which is also what the sitemap and the
 // footer read. A hub page maintained separately from the list of pages is a hub
 // page that stops linking to the newest one, and nobody notices for months.
-import { useSeoMeta } from 'stx'
 import { HUBS, pagesIn, pathFor } from '~/app/Marketing/pages'
 
 const hub = HUBS['use-cases']
