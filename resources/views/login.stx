@@ -37,74 +37,78 @@ const signedIn = session.user !== null
         {{-- A real form, so a password manager recognises it and the enter key
              submits. The script intercepts it; without the script it still
              posts somewhere sensible rather than nowhere. --}}
-        <form id="signin" method="post" action="/api/auth/login" class="grid gap-4">
-          <label class="block">
-            <span class="block mb-1 text-muted text-sm">Email</span>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autocomplete="username"
-              required
-              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg" aria-describedby="error"
-            />
-          </label>
+        <form id="signin" method="post" action="/api/auth/login">
+          <div class="grid gap-4">
+            <label class="block">
+              <span class="block mb-1 text-muted text-sm">Email</span>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autocomplete="username"
+                required
+                class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg" aria-describedby="error"
+              />
+            </label>
 
-          <label class="block">
-            <span class="block mb-1 text-muted text-sm">Password</span>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autocomplete="current-password"
-              required
-              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg" aria-describedby="error"
-            />
-          </label>
+            <label class="block">
+              <span class="block mb-1 text-muted text-sm">Password</span>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                required
+                class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg" aria-describedby="error"
+              />
+            </label>
 
-          {{-- Off by default: a shared machine should not opt into a month-long
-               session by accident. Checked lengthens the session to 30 days;
-               unchecked is the one-week baseline. --}}
-          <label class="flex gap-2 items-center text-muted text-sm cursor-pointer select-none">
-            <input id="remember" name="remember" type="checkbox" class="h-4 w-4 accent-accent" />
-            <span>Keep me signed in for 30 days</span>
-          </label>
+            {{-- Off by default: a shared machine should not opt into a month-long
+                 session by accident. Checked lengthens the session to 30 days;
+                 unchecked is the one-week baseline. --}}
+            <label class="flex gap-2 items-center text-muted text-sm cursor-pointer select-none">
+              <input id="remember" name="remember" type="checkbox" class="h-4 w-4 accent-accent" />
+              <span>Keep me signed in for 30 days</span>
+            </label>
 
-          <p id="error" class="text-sm text-warn" role="alert" hidden></p>
+            <p id="error" class="text-sm text-warn" role="alert" hidden></p>
 
-          <button
-            id="submit"
-            type="submit"
-            class="px-4 py-2.5 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
-          >Sign in</button>
+            <button
+              id="submit"
+              type="submit"
+              class="px-4 py-2.5 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
+            >Sign in</button>
+          </div>
         </form>
 
         {{-- Second step, revealed only when the account has 2FA enabled. Dormant
              until an enrollment surface ships, but present so a 2FA account can
              never sign in halfway and stall. --}}
-        <form id="twofa" method="post" action="/api/auth/verify-two-factor-login" class="grid gap-4" hidden>
-          <h2 class="font-semibold text-lg tracking-tight">Two-factor code</h2>
-          <p class="-mt-2 text-muted text-sm">Enter the 6-digit code from your authenticator app.</p>
-          <label class="block">
-            <span class="block mb-1 text-muted text-sm">Authentication code</span>
-            <input
-              id="code"
-              name="code"
-              type="text"
-              inputmode="numeric"
-              autocomplete="one-time-code"
-              maxlength="6"
-              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg"
-            />
-          </label>
+        <form id="twofa" method="post" action="/api/auth/verify-two-factor-login" hidden>
+          <div class="grid gap-4">
+            <h2 class="font-semibold text-lg tracking-tight">Two-factor code</h2>
+            <p class="-mt-2 text-muted text-sm">Enter the 6-digit code from your authenticator app.</p>
+            <label class="block">
+              <span class="block mb-1 text-muted text-sm">Authentication code</span>
+              <input
+                id="code"
+                name="code"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                maxlength="6"
+                class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg"
+              />
+            </label>
 
-          <p id="twofa-error" class="text-sm text-warn" role="alert" hidden></p>
+            <p id="twofa-error" class="text-sm text-warn" role="alert" hidden></p>
 
-          <button
-            id="twofa-submit"
-            type="submit"
-            class="px-4 py-2.5 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
-          >Verify and sign in</button>
+            <button
+              id="twofa-submit"
+              type="submit"
+              class="px-4 py-2.5 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
+            >Verify and sign in</button>
+          </div>
         </form>
 
         <p class="mt-6 text-muted text-sm">
