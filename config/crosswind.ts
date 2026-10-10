@@ -33,6 +33,11 @@ import type { CrosswindConfig, Theme } from '@cwcss/crosswind'
 export default {
   theme: {
     extend: {
+      borderRadius: {
+        control: '8px',
+        panel: '0.75rem',
+        pill: '999px',
+      },
       colors: {
         canvas: 'var(--bg)',
         panel: 'var(--panel)',
@@ -68,28 +73,67 @@ export default {
         grid: 'var(--grid)',
         axis: 'var(--axis)',
 
-        // --- @stacksjs/components' token vocabulary ------------------------
-        // The shipped components are written against their own semantic names
-        // (text-fg, bg-surface, border-line-strong, ...) used 300+ times across
-        // the 102 components. This palette already satisfied `line` and
-        // `accent`; the rest resolved to nothing, so a component that imposes
-        // no colour of its own still rendered half-styled - text fell back to
-        // inherit and panels had no background.
-        //
-        // Purely additive: none of these names appear in this app's markup, so
-        // no existing element changes. Does NOT fix <Button variant="primary">,
-        // which hard-codes bg-blue-500 - that is stacksjs/stx#1993.
-        // See statushqorg/status#20.
-        surface: 'var(--panel)',
+        // Complete component roles follow the same palette as the reports.
+        // Keep content as a surface and ink paired with its solid/soft fill.
+        // Theme entries override library defaults without cascade-layer tricks.
+        'surface': 'var(--panel)',
         'surface-sunken': 'var(--bg)',
         'surface-raised': 'color-mix(in srgb, var(--accent) 8%, var(--panel))',
-        fg: 'var(--text)',
+        'surface-hover': 'color-mix(in srgb, var(--text) 6%, var(--panel))',
+        'surface-raised-hover': 'color-mix(in srgb, var(--accent) 14%, var(--panel))',
+        'surface-sunken-hover': 'color-mix(in srgb, var(--text) 6%, var(--bg))',
+        'page': 'var(--bg)',
+        'content': 'var(--panel)',
+        'field': 'var(--panel)',
+        'field-hover': 'color-mix(in srgb, var(--text) 6%, var(--panel))',
+        'fg': 'var(--text)',
         'fg-strong': 'var(--text)',
         'fg-muted': 'var(--text-2)',
         'fg-soft': 'var(--text-2)',
         'fg-subtle': 'var(--text-3)',
         'line-strong': 'color-mix(in srgb, var(--text-3) 55%, var(--border))',
+        'line-hover': 'color-mix(in srgb, var(--text-2) 70%, var(--border))',
+        'link': 'var(--accent)',
+        'link-hover': 'color-mix(in srgb, var(--accent) 85%, var(--text))',
         'accent-solid': 'var(--accent)',
+        'accent-solid-hover': 'color-mix(in srgb, var(--accent) 92%, var(--text))',
+        'accent-soft-ink': 'color-mix(in srgb, var(--accent) 85%, var(--text))',
+        'success': 'var(--pos)',
+        'success-solid': 'var(--pos)',
+        'success-solid-hover': 'color-mix(in srgb, var(--pos) 92%, var(--text))',
+        'success-ink': 'var(--accent-ink)',
+        'success-soft': 'color-mix(in srgb, var(--pos) 8%, var(--panel))',
+        'success-soft-ink': 'color-mix(in srgb, var(--pos) 85%, var(--text))',
+        'danger': 'var(--neg)',
+        'danger-solid': 'var(--neg)',
+        'danger-solid-hover': 'color-mix(in srgb, var(--neg) 92%, var(--text))',
+        'danger-ink': 'var(--accent-ink)',
+        'danger-soft': 'color-mix(in srgb, var(--neg) 8%, var(--panel))',
+        'danger-soft-ink': 'color-mix(in srgb, var(--neg) 85%, var(--text))',
+        'warning': 'var(--warn)',
+        'warning-solid': 'var(--warn)',
+        'warning-solid-hover': 'color-mix(in srgb, var(--warn) 92%, var(--text))',
+        'warning-ink': 'var(--accent-ink)',
+        'warning-soft': 'color-mix(in srgb, var(--warn) 8%, var(--panel))',
+        'warning-soft-ink': 'color-mix(in srgb, var(--warn) 85%, var(--text))',
+        'info': 'var(--text-2)',
+        'info-solid': 'var(--text-2)',
+        'info-solid-hover': 'color-mix(in srgb, var(--text-2) 92%, var(--text))',
+        'info-ink': 'var(--accent-ink)',
+        'info-soft': 'color-mix(in srgb, var(--text-2) 8%, var(--panel))',
+        'info-soft-ink': 'color-mix(in srgb, var(--text-2) 85%, var(--text))',
+        'secondary': 'var(--text-2)',
+        'secondary-solid': 'var(--text-2)',
+        'secondary-solid-hover': 'color-mix(in srgb, var(--text-2) 92%, var(--text))',
+        'secondary-ink': 'var(--accent-ink)',
+        'secondary-soft': 'color-mix(in srgb, var(--text-2) 8%, var(--panel))',
+        'secondary-soft-ink': 'color-mix(in srgb, var(--text-2) 85%, var(--text))',
+        'danger-fg': 'var(--neg)',
+        'danger-fg-subtle': 'var(--neg)',
+        'danger-line': 'var(--neg)',
+        'danger-focus': 'var(--neg)',
+        'inverse': 'var(--text)',
+        'inverse-ink': 'var(--bg)',
       },
       // Arrays, not strings: Crosswind joins the entries into the font stack.
       // The whole stack already lives in the custom property, so each is a
