@@ -44,40 +44,44 @@ const since = joinedLabel(row?.created_at)
         <h1 class="font-semibold text-2xl tracking-tight">Account</h1>
         <p class="mb-8 mt-1 text-muted text-sm">Who you are here, and how to sign out.</p>
 
-        <div class="bg-panel border border-line divide-line divide-y rounded-xl">
-          <div class="flex gap-4 items-baseline justify-between px-5 py-4">
-            <span class="text-muted text-sm">Name</span>
-            <span class="text-ink text-sm">{{ user.name }}</span>
-          </div>
-          <div class="flex gap-4 items-baseline justify-between px-5 py-4">
-            <span class="text-muted text-sm">Email</span>
-            <span class="text-ink text-sm">{{ user.email }}</span>
-          </div>
-          @if (since)
+        <Card padding="none" className="!overflow-visible">
+          <div class="divide-line divide-y">
             <div class="flex gap-4 items-baseline justify-between px-5 py-4">
-              <span class="text-muted text-sm">Member since</span>
-              <span class="text-ink text-sm">{{ since }}</span>
+              <span class="text-muted text-sm">Name</span>
+              <span class="text-ink text-sm">{{ user.name }}</span>
             </div>
-          @endif
-        </div>
+            <div class="flex gap-4 items-baseline justify-between px-5 py-4">
+              <span class="text-muted text-sm">Email</span>
+              <span class="text-ink text-sm">{{ user.email }}</span>
+            </div>
+            @if (since)
+              <div class="flex gap-4 items-baseline justify-between px-5 py-4">
+                <span class="text-muted text-sm">Member since</span>
+                <span class="text-ink text-sm">{{ since }}</span>
+              </div>
+            @endif
+          </div>
+        </Card>
 
-        <div class="mt-6 p-5 border border-line rounded-xl">
-          <h2 class="font-medium text-sm">Sign out</h2>
-          <p class="mb-4 mt-1 max-w-[60ch] text-muted text-sm">
-            This ends the session everywhere it was being used, not just in this tab. The token is
-            revoked rather than forgotten, so a copy of it stops working too.
-          </p>
-          <button
-            id="signout"
-            type="button"
-            class="px-4 py-2 font-medium text-ink text-sm border border-line rounded-lg hover:border-accent"
-          >Sign out</button>
+        <div class="mt-6">
+          <Card padding="none" className="report-action-panel">
+            <h2 class="font-medium text-sm">Sign out</h2>
+            <p class="mb-4 mt-1 max-w-[60ch] text-muted text-sm">
+              This ends the session everywhere it was being used, not just in this tab. The token is
+              revoked rather than forgotten, so a copy of it stops working too.
+            </p>
+            <button
+              id="signout"
+              type="button"
+              class="px-4 py-2 font-medium text-ink text-sm border border-line rounded-lg hover:border-accent"
+            >Sign out</button>
+          </Card>
         </div>
       @else
         <h1 class="font-semibold text-2xl tracking-tight">Account</h1>
         <p class="mb-8 mt-1 text-muted text-sm">You are not signed in.</p>
 
-        <div class="p-5 border border-line rounded-xl">
+        <Card padding="none" className="report-action-panel">
           <p class="max-w-[60ch] text-muted text-sm">
             Sign in to see who you are here and to manage your session.
           </p>
@@ -85,7 +89,7 @@ const since = joinedLabel(row?.created_at)
             to="/login"
             class="inline-flex items-center mt-4 px-4 py-2 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg"
           >Sign in</StxLink>
-        </div>
+        </Card>
       @endif
     </main>
   </div>

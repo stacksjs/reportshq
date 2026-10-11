@@ -31,6 +31,11 @@ import type { CrosswindConfig, Theme } from '@cwcss/crosswind'
  * @see https://github.com/cwcss/crosswind
  */
 export default {
+  shortcuts: {
+    // Account action panels keep the page surface and existing 20px inset.
+    // Do not clip keyboard focus rings on links or buttons inside a Card.
+    'report-action-panel': '!p-5 !bg-transparent !overflow-visible',
+  },
   theme: {
     extend: {
       borderRadius: {
