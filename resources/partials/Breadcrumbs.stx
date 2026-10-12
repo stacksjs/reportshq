@@ -1,46 +1,33 @@
-{{-- Breadcrumbs for the marketing pages.
+{{-- Breadcrumbs for the marketing pages, on the shared <Breadcrumb>.
 
      Reads two things from the including page: `breadcrumbs`, an array of
      `{ label, href? }` with the deepest last, and `breadcrumbWidth`, the
      container width of that page's own content. The last entry is the current
      page and carries no link, because a link to where you already are is a link
-     nobody wants.
+     nobody wants. That array shape is the component's `items` shape, so it
+     passes straight through.
 
-     The width is passed in rather than fixed here because the prose pages are
-     narrower than the card grids, and a trail that does not start above the
-     heading it belongs to reads as a stray line of text.
+     The width goes through className, which lands on the <nav>. A width
+     competes with nothing the component sets, so the append-order caveat in
+     stacksjs/stx#1993 does not bite here. It is passed in rather than fixed
+     because the prose pages are narrower than the card grids, and a trail that
+     does not start above the heading it belongs to reads as a stray line.
 
-     A partial rather than a component. The stated reason used to be that stx
-     dropped props passed component to component, so shared chrome built as a
-     component rendered empty, and that is why the rest of this app uses
-     partials too.
+     This was hand-written until now for a reason that is gone: stx used to drop
+     props passed component to component, so shared chrome built as a component
+     rendered empty. Fixed as of 0.2.395.
 
-     That is fixed as of stx 0.2.395, checked by rendering a
-     page -> Outer -> Inner chain: the inner component receives the page's prop
-     intact. So the reason no longer holds, here or for the other partials, and
-     anyone reading it as a constraint should stop.
+     What was left was a styling difference, and it is deliberate rather than
+     incidental. The component paints separators with `fg-soft` and links with
+     `fg-muted`; this file used to paint the separator `text-line`, the hairline
+     --border, which measured 1.23:1 against the page in light and 1.18:1 in
+     dark. A divider is allowed to be seen. `fg-soft` is --text-3 here (it used
+     to be --text-2, the same value as fg-muted, which would have made the
+     separator exactly as loud as the labels it divides - fixed separately), so
+     it lands at 4.72:1 and 5.36:1. The current page also gains font-medium.
 
-     What is left is a preference rather than a blocker. `<Breadcrumb>` renders
-     the same semantics this does, and would take `breadcrumbWidth` through
-     className, which lands on the <nav> (a width competes with nothing, so the
-     append-order caveat in stacksjs/stx#1993 does not bite here). analyticshq
-     already calls the component from its own breadcrumb partial. --}}
-<nav aria-label="Breadcrumb" class="px-6 pt-8 mx-auto {{ breadcrumbWidth }}">
-  <ol class="flex flex-wrap gap-2 items-center list-none text-sm text-subtle">
-    @foreach (breadcrumbs as crumb)
-      @if (!loop.first)
-        {{-- Decorative, so it is hidden from a screen reader, which gets the
-             list structure instead. --}}
-        <li aria-hidden="true" class="text-line">/</li>
-      @endif
-
-      <li>
-        @if (crumb.href)
-          <a href="{{ crumb.href }}" class="no-underline text-muted hover:text-ink">{{ crumb.label }}</a>
-        @else
-          <span aria-current="page" class="text-ink">{{ crumb.label }}</span>
-        @endif
-      </li>
-    @endforeach
-  </ol>
-</nav>
+     `list-none` and `no-underline` are not passed on: measured on the served
+     page, the component's own markup already computes list-style-type: none,
+     padding-left: 0 and text-decoration-line: none, so repeating them would be
+     cargo. --}}
+<Breadcrumb className="px-6 pt-8 mx-auto {{ breadcrumbWidth }}" :items="breadcrumbs" />

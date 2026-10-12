@@ -8,6 +8,7 @@ import { mergeCssConfig } from '../../node_modules/@stacksjs/stx/dist/ts-css-con
 
 const root = resolve(import.meta.dir, '../..')
 const cardPath = resolve(root, 'node_modules/@stacksjs/components/src/ui/card/Card.stx')
+const breadcrumbPath = resolve(root, 'node_modules/@stacksjs/components/src/ui/breadcrumb/Breadcrumb.stx')
 
 // Exercise the real page markup and installed components with explicit view
 // data. Session lookup and report queries are separate backend responsibilities;
@@ -18,7 +19,7 @@ async function renderView(view: string, data: Record<string, unknown>) {
   const dependencies = new Set<string>()
   const rendered = await processDirectives(template, {
     ...data,
-    __importedComponents: new Map([['card', cardPath]]),
+    __importedComponents: new Map([['card', cardPath], ['breadcrumb', breadcrumbPath]]),
   }, file, {
     componentsDir: resolve(root, 'resources/components'),
     partialsDir: resolve(root, 'resources/partials'),
@@ -27,6 +28,10 @@ async function renderView(view: string, data: Record<string, unknown>) {
   expect(html).not.toContain('[Component Error')
   expect(html).not.toContain('[Foreach Error')
   expect(html).not.toContain('<Card')
+  expect(html).not.toContain('<Breadcrumb')
+  // An unresolved component is an HTML COMMENT, not a [Component Error], so it
+  // passes every assertion above while rendering nothing. Name it directly.
+  expect(html).not.toMatch(/could not be resolved/)
   return { html, dependencies }
 }
 
@@ -103,6 +108,40 @@ describe('shared report panels', () => {
    * crosswind changed its emission order.
    */
   const useCases = ['agencies', 'commerce', 'content', 'saas-users'] as const
+
+  test('the marketing breadcrumb trail is the shared component, rendered server side', async () => {
+    const { html, dependencies } = await renderView('use-cases/content', {
+      breadcrumbs: [
+        { label: 'Home', href: '/' },
+        { label: 'Use cases', href: '/use-cases' },
+        { label: 'Content reporting' },
+      ],
+      breadcrumbWidth: 'max-w-3xl',
+      sections: [],
+      page: { title: 'Use case', description: '' },
+    })
+    expect([...dependencies]).toContain(breadcrumbPath)
+
+    /*
+     * Server-rendered, not hydrated: `:items` is visible to the server for this
+     * component, so the trail is in the markup a crawler and a no-JS visitor
+     * get. That is the whole reason this is a partial on every marketing page.
+     */
+    // Scoped to the trail: the page FOOTER also links to every use case, so a
+    // whole-document assertion about /use-cases/content proves nothing.
+    const trail = html.match(/<nav[^>]*aria-label="Breadcrumb"[\s\S]*?<\/nav>/)?.[0]
+    expect(trail).toBeDefined()
+    expect(trail).toContain('aria-current="page"')
+    expect(trail).toMatch(/aria-current="page">\s*Content reporting\s*<\/span>/)
+    expect(trail).toContain('href="/use-cases"')
+    // The width this app passes has to survive onto the nav.
+    expect(trail).toMatch(/^<nav class="[^"]*max-w-3xl[^"]*"/)
+    // The deepest crumb is the current page, so it is not a link.
+    expect(trail).not.toContain('href="/use-cases/content"')
+    // Separators are decorative; the list structure carries the order.
+    expect(trail).toContain('aria-hidden="true"')
+    expect((trail!.match(/<li\b/g) ?? []).length).toBe(3)
+  })
 
   for (const slug of useCases) {
     test(`the ${slug} call to action is a Card and keeps its 16px radius`, async () => {
