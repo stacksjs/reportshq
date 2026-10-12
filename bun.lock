@@ -52,6 +52,10 @@
       },
     },
   },
+  "overrides": {
+    "@stacksjs/stx": "0.2.480",
+    "bun-plugin-stx": "0.2.480",
+  },
   "packages": {
     "@bughq/sdk": ["@bughq/sdk@0.2.2", "", {}, "sha512-OySn397nSGHmFv4qu8/HUhX25sb+ORKCk94yOt/OR1vymScXPJPAA5eV9WcxrnzVUPvNOgEhp4lfEDm8MVS8Kw=="],
 
