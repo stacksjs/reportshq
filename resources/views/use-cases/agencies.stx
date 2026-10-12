@@ -65,7 +65,15 @@ const sections = [
         @endforeach
       </div>
 
-      <div class="mt-16 p-8 bg-panel border border-line rounded-2xl">
+      {{-- The closing call to action, identical on all four use-case pages but
+           for its copy. <Card> owns the fill, the border and the padding; the
+           radius stays `rounded-2xl`, because 16px is this app's marketing
+           radius (17 sites) rather than the 12px `rounded-panel` the dashboard
+           uses. `!` because className is appended to the class ATTRIBUTE and
+           attribute order does not decide CSS: `rounded-2xl` and the component's
+           own `rounded-panel` are single-class selectors of equal specificity,
+           so without it the winner is whichever crosswind emits later. --}}
+      <Card padding="lg" className="mt-16 !rounded-2xl">
         <h2 class="font-semibold text-xl tracking-tight">One project per client</h2>
         <p class="mt-2 leading-relaxed text-muted text-sm">
           The paid tiers carry enough projects and share links for a small book of clients. The pricing page has the counts.
@@ -73,7 +81,7 @@ const sections = [
         <StxLink to="/register" class="inline-block mt-5 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">
           Start free
         </StxLink>
-      </div>
+      </Card>
     </main>
 
     @include('SiteFooter')

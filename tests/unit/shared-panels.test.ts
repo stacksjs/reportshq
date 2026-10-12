@@ -93,6 +93,49 @@ describe('shared report panels', () => {
     expect(reports.html).not.toContain('undefined')
   })
 
+  /*
+   * The four use-case pages close with the same call to action, which was four
+   * byte-identical hand-rolled panels. On <Card> the one thing that does not
+   * come from the component is the radius: these are marketing pages at 16px,
+   * not the 12px `rounded-panel` the dashboard uses, and className is appended
+   * to the class attribute rather than to the stylesheet, so only `!` decides
+   * it. Without that the panels would quietly round to 12px the next time
+   * crosswind changed its emission order.
+   */
+  const useCases = ['agencies', 'commerce', 'content', 'saas-users'] as const
+
+  for (const slug of useCases) {
+    test(`the ${slug} call to action is a Card and keeps its 16px radius`, async () => {
+      // The harness strips <script server>, so the two lists the layout walks
+      // have to come in as data; the copy itself is what the page hard-codes.
+      const { html, dependencies } = await renderView(`use-cases/${slug}`, {
+        breadcrumbs: [{ label: 'Home', href: '/' }],
+        breadcrumbWidth: 'max-w-3xl',
+        sections: [],
+        page: { title: 'Use case', description: '' },
+      })
+      expect([...dependencies]).toContain(cardPath)
+      expect(html).toContain('rounded-panel')
+      expect(html).toContain('!rounded-2xl')
+      expect(html).toContain('href="/register"')
+      expect(html).toContain('Start free')
+      // The hand-rolled panel is gone rather than wrapped in the component.
+      expect(html).not.toContain('p-8 bg-panel border border-line rounded-2xl')
+    })
+  }
+
+  test('rounded-2xl beats the component radius because it is marked important', async () => {
+    const engine = await loadCssEngine()
+    if (!engine)
+      throw new Error('The installed STX CSS engine is required')
+    const generator = new engine.CSSGenerator(mergeCssConfig(engine.defaultConfig || engine.config, theme).config)
+    generator.generate('!rounded-2xl')
+    generator.generate('rounded-panel')
+    const css = generator.toCSS(false, false)
+    expect(css).toContain('border-radius: 1rem !important')
+    expect(css).toContain('border-radius: 0.75rem;')
+  })
+
   for (const [user, message] of [
     [null, 'Sign in to see the reports this application runs on its own tables.'],
     [{ name: 'Mara' }, 'Nothing described yet. Add a model to config/reportshq.ts.'],
