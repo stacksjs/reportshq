@@ -216,6 +216,15 @@ const docLinks = [
          In the body because stx generates the head itself; a module script runs
          after parse wherever it sits. --}}
     <link rel="stylesheet" href="/reportshq-charts.css">
+    <script type="module" src="/reportshq-charts.js"></script>
+
+    @include('SiteNav')
+
+    <main>
+{{-- Inside <main> for the reason pricing.stx explains: outside it this block
+    is never removed on the way out and never added on the way in. The
+    <link> above stays where it is -- it is the built chart stylesheet, a
+    shared asset rather than this page's own rules. --}}
     <style>
       /* A custom element is inline with no intrinsic size, so a chart that
          sizes itself to its container collapses to nothing and renders its
@@ -232,11 +241,6 @@ const docLinks = [
       stacks-bar-chart svg, stacks-line-chart svg, stacks-donut-chart svg,
       stacks-funnel-chart svg { width: 100%; height: 100%; display: block; }
     </style>
-    <script type="module" src="/reportshq-charts.js"></script>
-
-    @include('SiteNav')
-
-    <main>
       {{-- Hero. Split rather than centred: the claim and the proof belong side
            by side, and a centred headline over a gradient is the shape every
            other analytics landing page already has. --}}

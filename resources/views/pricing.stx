@@ -128,6 +128,52 @@ const faqs = [
     @include('SiteNav')
 
     <main class="mx-auto px-6 py-16 max-w-6xl">
+{{-- Inside <main>, which is the router's container, so this travels with the
+    page. Outside it the block was both never removed on the way out and never
+    added on the way in: arriving here from a link left `.price-yearly` with no
+    rule, so BOTH prices showed at once, while arriving by a full load left the
+    rule applying to every page clicked to afterwards. --}}
+<style>
+/*
+ * The billing toggle, in CSS alone.
+ *
+ * The checkbox is the state. Yearly prices are hidden until it is checked, and
+ * monthly prices hide in its place. Nothing here needs to run, so the toggle
+ * works on the first paint rather than after a bundle arrives.
+ *
+ * The input keeps its native focus behaviour and is only visually hidden, so it
+ * is still reachable and operable from the keyboard and still announced as a
+ * checkbox with its label.
+ */
+.price-yearly {
+  display: none;
+}
+
+.billing-input:checked ~ .tiers .price-monthly {
+  display: none;
+}
+
+.billing-input:checked ~ .tiers .price-yearly {
+  display: block;
+}
+
+.billing-input:checked ~ label .billing-track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.billing-input:checked ~ label .billing-knob {
+  background: var(--accent-ink);
+  transform: translateX(1rem);
+}
+
+/* The focus ring belongs on the visible control, since the input itself is
+   off-screen and a keyboard user would otherwise see nothing move. */
+.billing-input:focus-visible ~ label .billing-track {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+</style>
       <div class="max-w-[52ch]">
         <h1 class="font-semibold text-4xl tracking-tighter md:text-5xl">Pricing that reads like the product</h1>
         <p class="mt-4 leading-relaxed text-base text-muted">
@@ -241,44 +287,3 @@ const faqs = [
   </div>
 </template>
 
-<style>
-/*
- * The billing toggle, in CSS alone.
- *
- * The checkbox is the state. Yearly prices are hidden until it is checked, and
- * monthly prices hide in its place. Nothing here needs to run, so the toggle
- * works on the first paint rather than after a bundle arrives.
- *
- * The input keeps its native focus behaviour and is only visually hidden, so it
- * is still reachable and operable from the keyboard and still announced as a
- * checkbox with its label.
- */
-.price-yearly {
-  display: none;
-}
-
-.billing-input:checked ~ .tiers .price-monthly {
-  display: none;
-}
-
-.billing-input:checked ~ .tiers .price-yearly {
-  display: block;
-}
-
-.billing-input:checked ~ label .billing-track {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.billing-input:checked ~ label .billing-knob {
-  background: var(--accent-ink);
-  transform: translateX(1rem);
-}
-
-/* The focus ring belongs on the visible control, since the input itself is
-   off-screen and a keyboard user would otherwise see nothing move. */
-.billing-input:focus-visible ~ label .billing-track {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-</style>
