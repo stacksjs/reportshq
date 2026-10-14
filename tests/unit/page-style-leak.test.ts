@@ -27,6 +27,13 @@
  *     and linked as a stylesheet. They are not page CSS.
  *   - coming-soon.stx -- a standalone maintenance document with its own
  *     <!DOCTYPE> and <head>, served outside the router entirely.
+ *
+ * index.stx and pricing.stx no longer have a block to place: both moved into
+ * config/crosswind.ts PAGE_CSS under stx-standards rule 3, which is a stronger
+ * version of what this file enforces -- CSS in the one <style data-crosswind>
+ * tag the router preserves cannot be outside the container or left behind. The
+ * second test below is what pricing.stx's move makes unfalsifiable rather than
+ * merely passing.
  */
 import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
@@ -83,5 +90,43 @@ describe('page style leak', () => {
         continue
       expect(`${name}: ${/<style/.test(s.slice(end))}`).toBe(`${name}: false`)
     }
+  })
+
+  test('only the documented exemptions still carry a style block', () => {
+    /*
+     * stx-standards rule 3, as an allowlist. Both entries are exemptions with a
+     * reason, not debt:
+     *
+     *   charts/*.stx    compiled by `buddy build --web-components` into
+     *                   @scope (stacks-bar-chart){...} rules in
+     *                   public/reportshq-charts.css, which ships to
+     *                   packages/laravel and packages/stacks. A consumer there
+     *                   has no crosswind, so a utility class would style
+     *                   nothing -- and the @scope encapsulation would be lost.
+     *   coming-soon.stx a complete standalone document, own <!DOCTYPE>, own
+     *                   <head>, own fonts and its own :root palette (--brand,
+     *                   not the app's --accent). Its `*` reset and `body` rules
+     *                   would repaint every other page from a shared preflight.
+     *
+     * Shrink it only with a reason that survives reading those two.
+     */
+    const all: string[] = []
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir)) {
+        const full = join(dir, entry)
+        if (statSync(full).isDirectory())
+          walk(full)
+        else if (entry.endsWith('.stx') && /^[ \t]*<style[ >]/m.test(blank(readFileSync(full, 'utf8'))))
+          all.push(full.slice(ROOT.length + 1))
+      }
+    }
+    walk(join(ROOT, 'resources'))
+    expect(all.sort()).toEqual([
+      'resources/components/charts/BarChart.stx',
+      'resources/components/charts/DonutChart.stx',
+      'resources/components/charts/HeatmapChart.stx',
+      'resources/components/charts/LineChart.stx',
+      'resources/views/coming-soon.stx',
+    ])
   })
 })

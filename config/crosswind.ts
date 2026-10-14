@@ -30,7 +30,86 @@ import type { CrosswindConfig, Theme } from '@cwcss/crosswind'
  *
  * @see https://github.com/cwcss/crosswind
  */
+/*
+ * Page CSS that cannot be a utility, kept in the typed config rather than a
+ * <style> block in the view (stx-standards rule 3).
+ *
+ * The chart components under resources/components/charts are deliberately NOT
+ * here. Their <style> blocks are build inputs: `buddy build --web-components`
+ * compiles each one into an @scope (stacks-bar-chart){...} rule inside
+ * public/reportshq-charts.css, which then ships to packages/laravel and
+ * packages/stacks. A consumer there loads that stylesheet and the bundle and
+ * has no crosswind at all, so a utility class would style nothing, and the
+ * @scope encapsulation would be lost on the way. tests/unit/page-style-leak.ts
+ * has said so since before this file did.
+ */
+const PAGE_CSS = `
+/*
+ * views/index.stx. A custom element is inline with no intrinsic size, so a
+ * chart that sizes itself to its container collapses to nothing and renders
+ * its axis labels into a zero-height box. The package's own stylesheet does
+ * this for the report grid; the marketing page lays them out itself and has to
+ * say so too.
+ *
+ * Element selectors on custom elements, so there is no class to hang a utility
+ * on. Nothing in that page sets display or min-height on them.
+ */
+stacks-big-number, stacks-bar-chart, stacks-line-chart,
+stacks-donut-chart, stacks-table-chart, stacks-funnel-chart { display: block; }
+stacks-bar-chart, stacks-line-chart, stacks-donut-chart { min-height: 13rem; }
+stacks-big-number { min-height: 4.5rem; }
+/*
+ * The chart draws into a viewBox and leaves sizing to its container. An SVG
+ * with no width resolves to zero, so the paths are correct and invisible,
+ * which looks like a data problem and is not one.
+ */
+stacks-bar-chart svg, stacks-line-chart svg, stacks-donut-chart svg,
+stacks-funnel-chart svg { width: 100%; height: 100%; display: block; }
+
+/*
+ * views/pricing.stx. The billing toggle, in CSS alone.
+ *
+ * The checkbox is the state. Yearly prices are hidden until it is checked, and
+ * monthly prices hide in its place. Nothing here needs to run, so the toggle
+ * works on the first paint rather than after a bundle arrives. The input keeps
+ * its native focus behaviour and is only visually hidden, so it stays
+ * reachable from the keyboard and still announced as a checkbox with its label.
+ *
+ * None of this is expressible as a utility: every rule is driven by a sibling
+ * checkbox's :checked state, on elements the checkbox does not contain.
+ *
+ * Three declarations carry !important, and they are the ones whose element also
+ * carries a utility for the same property -- the track has \`bg-panel\` and
+ * \`border-line\`, the knob has \`bg-subtle\`. Those are unlayered and this is
+ * @layer cw-base, and an unlayered rule beats a layered one at any specificity,
+ * so without the mark the toggle would flip and nothing would change colour.
+ * \`background-color\` rather than the \`background\` shorthand, so the override
+ * is exactly as wide as the utility it has to beat.
+ */
+.price-yearly { display: none; }
+.billing-input:checked ~ .tiers .price-monthly { display: none; }
+.billing-input:checked ~ .tiers .price-yearly { display: block; }
+.billing-input:checked ~ label .billing-track {
+  background-color: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+.billing-input:checked ~ label .billing-knob {
+  background-color: var(--accent-ink) !important;
+  transform: translateX(1rem);
+}
+/*
+ * The focus ring belongs on the visible control, since the input itself is
+ * off-screen and a keyboard user would otherwise see nothing move. No utility
+ * on the track sets an outline, so this needs no mark.
+ */
+.billing-input:focus-visible ~ label .billing-track {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+`
+
 export default {
+  preflights: [{ getCSS: () => PAGE_CSS }],
   shortcuts: {
     // Account action panels keep the page surface and existing 20px inset.
     // Do not clip keyboard focus rings on links or buttons inside a Card.
