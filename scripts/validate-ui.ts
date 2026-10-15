@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 
 const root = process.cwd()
@@ -35,7 +35,21 @@ function report(file: string, source: string, index: number, message: string): v
 
 const files = filesIn(resources)
 const markupFiles = files.filter(file => /\.(?:stx|html)$/.test(file))
-const combined = files.map(file => readFileSync(file, 'utf8')).join('\n')
+/*
+ * The two app-wide checks at the bottom read resources/ PLUS the CSS config.
+ * Resources alone stopped being enough once page <style> blocks moved into
+ * config/crosswind.ts under stx-standards rule 3: the focus and breakpoint
+ * treatments are still declared, in the one <style data-crosswind> tag the
+ * router preserves, and a resources-only corpus cannot see them. statushq hit
+ * exactly that -- CI red on main and deploy-prod skipped for two commits.
+ * Missing the config throws rather than reading empty, because a check with
+ * nothing to search always passes.
+ */
+const cssConfig = resolve(root, 'config/crosswind.ts')
+if (!existsSync(cssConfig))
+  throw new Error(`validate-ui: expected the CSS config at ${relative(root, cssConfig)}`)
+
+const combined = [...files, cssConfig].map(file => readFileSync(file, 'utf8')).join('\n')
 
 for (const file of markupFiles) {
   const original = readFileSync(file, 'utf8')
@@ -80,7 +94,13 @@ for (const file of markupFiles) {
 
 if (!/(?:focus-visible|:focus|focus:|focus-within)/.test(combined))
   issues.add('resources: no visible keyboard focus treatment found')
-if (!/(?:@media|\b(?:sm|md|lg|xl):)/.test(combined))
+/*
+ * The utility half needs a class-token boundary, not \b: \b sits between the
+ * hyphen and the s in `--radius-sm:`, so a single custom property name
+ * satisfied this check on its own and it could not fail. Found in statushq,
+ * where every @media block could be removed and the check still passed.
+ */
+if (!/(?:@media|(?:^|[\s"'`:])(?:sm|md|lg|xl):)/m.test(combined))
   issues.add('resources: no responsive breakpoint treatment found')
 
 console.log(`Validated ${markupFiles.length} UI templates across desktop, tablet, and mobile contracts.`)
