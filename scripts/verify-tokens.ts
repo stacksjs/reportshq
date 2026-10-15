@@ -1,8 +1,8 @@
 /**
  * Proves the design system actually reaches the page.
  *
- * Two things can break silently between public/tokens.css, config/crosswind.ts
- * and a template:
+ * Two things can break silently between the token declarations, the utilities
+ * that map onto them and a template:
  *
  *   1. A renamed custom property. `var(--gone)` does not error, it falls back
  *      to the property's initial value, so `text-subtle` quietly becomes black.
@@ -13,13 +13,17 @@
  *
  * Both look like "slightly wrong colours" in a screenshot and like nothing in a
  * diff. This asserts the contract instead: every token the config references is
- * declared in tokens.css for BOTH themes, and every contrast ratio quoted in
- * the token reference is the ratio those hex values actually produce.
+ * declared for BOTH themes, and every contrast ratio quoted in the token
+ * reference is the ratio those hex values actually produce.
+ *
+ * Both halves now live in config/crosswind.ts -- the TOKENS preflight declares
+ * the custom properties, theme.extend maps utilities onto them -- so this reads
+ * the TOKENS block out of that file rather than public/tokens.css, which was
+ * deleted when the declarations moved into `preflights`.
  *
  * Run: bun scripts/verify-tokens.ts
  */
 
-const TOKENS = new URL('../public/tokens.css', import.meta.url).pathname
 const CROSSWIND = new URL('../config/crosswind.ts', import.meta.url).pathname
 const REFERENCE = new URL('../resources/views/design-tokens.stx', import.meta.url).pathname
 
@@ -29,8 +33,24 @@ function fail(message: string): void {
   failures.push(message)
 }
 
-const tokensCss = await Bun.file(TOKENS).text()
 const crosswindTs = await Bun.file(CROSSWIND).text()
+
+/**
+ * The TOKENS template literal, sliced out by its delimiters. Deliberately not
+ * the whole config: `blockFor(':root {')` and the em-dash check below would
+ * otherwise also read the prose and the PAGE_CSS rules, and a `--x:` written
+ * in a comment would count as a declaration.
+ */
+const tokensCss = (() => {
+  const open = crosswindTs.indexOf('const TOKENS = `')
+  if (open < 0)
+    throw new Error('config/crosswind.ts no longer declares `const TOKENS = `; did the tokens move again?')
+  const start = crosswindTs.indexOf('`', open) + 1
+  const end = crosswindTs.indexOf('\n`', start)
+  if (end < 0)
+    throw new Error('the TOKENS template literal in config/crosswind.ts is not closed')
+  return crosswindTs.slice(start, end).replace(/\\`/g, '`')
+})()
 const referenceStx = await Bun.file(REFERENCE).text()
 
 // --- 1. Every custom property the utilities map onto is declared ------------
@@ -186,7 +206,7 @@ for (const [label, block] of [['light', light], ['dark', dark]] as const) {
 
 // --- 5. No em-dashes anywhere the reader can see them ----------------------
 
-for (const [name, source] of [['tokens.css', tokensCss], ['design-tokens.stx', referenceStx]] as const) {
+for (const [name, source] of [['the TOKENS preflight', tokensCss], ['design-tokens.stx', referenceStx]] as const) {
   if (/[—–]/.test(source))
     fail(`${name} contains an em-dash or en-dash, which the house rules ban in user-visible copy`)
 }

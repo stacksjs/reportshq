@@ -100,7 +100,7 @@ export default {
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { name: 'description', content: 'Reports that run inside your own Laravel application, against your own database. Install a package, point it at the models you already have, and the numbers never leave your servers.' },
         // Both themes are declared so the browser paints its own chrome (form
-        // controls, scrollbars) correctly before tokens.css arrives.
+        // controls, scrollbars) correctly before the generated sheet arrives.
         { name: 'color-scheme', content: 'light dark' },
       ],
       link: [
@@ -110,9 +110,6 @@ export default {
         // Geist for text, Geist Mono for every figure. display=swap so a slow
         // font never blocks the first paint of a report.
         { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap' },
-        // Design tokens, once, for every route. Everything else that styles
-        // this app resolves its colours from here.
-        { rel: 'stylesheet', href: '/tokens.css' },
       ],
     },
   },

@@ -10,7 +10,8 @@
 // like nothing at all in a diff. Here they are visible.
 //
 // Ratios are computed, not estimated: see scripts/verify-tokens.ts, which
-// recomputes them from public/tokens.css and fails if this page has drifted.
+// recomputes them from the TOKENS preflight in config/crosswind.ts and fails
+// if this page has drifted.
 
 const surfaces = [
   { name: 'canvas', token: '--bg', utility: 'bg-canvas', note: 'The page itself.' },
