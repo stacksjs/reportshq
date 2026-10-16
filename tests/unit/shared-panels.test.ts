@@ -9,6 +9,7 @@ import { mergeCssConfig } from '../../node_modules/@stacksjs/stx/dist/ts-css-con
 const root = resolve(import.meta.dir, '../..')
 const cardPath = resolve(root, 'node_modules/@stacksjs/components/src/ui/card/Card.stx')
 const breadcrumbPath = resolve(root, 'node_modules/@stacksjs/components/src/ui/breadcrumb/Breadcrumb.stx')
+const accountSource = readFileSync(resolve(root, 'resources/views/account.stx'), 'utf8')
 
 // Exercise the real page markup and installed components with explicit view
 // data. Session lookup and report queries are separate backend responsibilities;
@@ -45,7 +46,27 @@ describe('shared report panels', () => {
     expect(html).toContain('Mara Santos')
     expect(html).toContain('mara@example.test')
     expect(html).toContain('18 September 2026')
-    expect(html).toMatch(/<button\s+id="signout"\s+type="button"/)
+    /*
+     * The `id` this used to match existed for one reason: a DOM-walking script
+     * held the button by it and wrote its label and `disabled` by hand. Sign-out
+     * is client state now, so the id is gone and the two things worth pinning
+     * are that the control is still a NATIVE button, and that it is wired to
+     * both halves of that state -- the handler, and the signal that stops a
+     * second click while the first is in flight.
+     */
+    const signOut = /<button[^>]*@click="handleSignOut"[^>]*>/.exec(html)?.[0] ?? ''
+    expect(signOut).not.toBe('')
+    expect(signOut).toContain('type="button"')
+    expect(signOut).toContain(':disabled="signingOut()"')
+    /*
+     * And that it has a label at all, asserted against the source because this
+     * harness cannot see one: renderView strips <script>, so `signingOut` is
+     * undefined and the label mustache renders empty here. In the real render it
+     * survives as a mustache plus x-cloak and the runtime fills it, so an empty
+     * button is invisible rather than unlabelled -- but nothing else in this file
+     * would notice if the label were dropped outright.
+     */
+    expect(accountSource).toMatch(/>\{\{ signingOut\(\) \? '[^']+' : '[^']+' \}\}<\/button>/)
     expect(html).not.toContain('role="button"')
     expect(html).not.toContain('You are not signed in.')
   })
@@ -55,7 +76,7 @@ describe('shared report panels', () => {
     expect([...dependencies]).toContain(cardPath)
     expect(html).toContain('You are not signed in.')
     expect(html).toContain('href="/login"')
-    expect(html).not.toContain('id="signout"')
+    expect(html).not.toContain('handleSignOut')
     expect(html).not.toContain('Member since')
   })
 
@@ -87,7 +108,7 @@ describe('shared report panels', () => {
 
   test('optional profile and report text can be absent inside shared panels', async () => {
     const account = await renderView('account', { user: { name: 'Mara', email: 'mara@example.test' }, since: '' })
-    expect(account.html).toContain('id="signout"')
+    expect(account.html).toContain('@click="handleSignOut"')
     expect(account.html).not.toContain('Member since')
     const reports = await renderView('reports/index', {
       user: { name: 'Mara' },
