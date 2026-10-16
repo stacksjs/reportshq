@@ -114,7 +114,7 @@ const series = [1, 2, 3, 4, 5]
             @foreach (series as swatch)
               <div class="flex-1 bg-series-{{ swatch }} rounded-t" style="height: {{ 100 - (swatch - 1) * 13 }}%"></div>
             @endforeach
-            <div class="flex-1 bg-series-other rounded-t" style="height: 35%"></div>
+            <div class="flex-1 h-[35%] bg-series-other rounded-t"></div>
           </div>
           <div class="flex flex-wrap gap-x-6 gap-y-2 mt-6">
             @foreach (series as swatch)

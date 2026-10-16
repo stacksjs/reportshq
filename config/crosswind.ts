@@ -393,6 +393,23 @@ export default {
     // Account action panels keep the page surface and existing 20px inset.
     // Do not clip keyboard focus rings on links or buttons inside a Card.
     'report-action-panel': '!p-5 !bg-transparent !overflow-visible',
+
+    /*
+     * Off-screen but still announced: a label that belongs to a field whose
+     * placeholder carries the visible text.
+     *
+     * coming-soon.stx already named this class and then wrote the whole rule
+     * inline beside it, which meant the class did nothing -- it was defined
+     * NOWHERE, here or in any page. Deleting the inline style on the strength of
+     * the class name would have put the label on screen. Defining it is what
+     * makes the name true.
+     *
+     * The declarations reproduce that inline rule exactly, `clip` included.
+     * `clip` is deprecated in favour of `clip-path: inset(50%)`, but swapping it
+     * changes which browsers hide the label, and that is a separate decision
+     * from moving the rule out of the markup.
+     */
+    'visually-hidden': 'absolute w-px h-px overflow-hidden [clip:rect(0_0_0_0)]',
   },
   theme: {
     extend: {

@@ -335,7 +335,7 @@ const siteDescription = 'Reports that run inside your own Stacks or Laravel appl
       </p>
 
       <form id="subscribe-form" novalidate>
-        <label for="subscribe-email" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Email address</label>
+        <label for="subscribe-email" class="visually-hidden">Email address</label>
         <input id="subscribe-email" class="cs-input" type="email" name="email" autocomplete="email" placeholder="you@example.com" required>
         <button class="cs-btn" type="submit">Notify me</button>
       </form>
