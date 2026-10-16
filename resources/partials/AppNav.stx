@@ -4,6 +4,40 @@
      component to another (stacksjs/stx#1937), and this needs the page's own
      data. A partial is included into the page's scope, so it reads the page's
      bindings directly and cannot lose them. --}}
+<script client>
+// The theme switch (stx-standards rule 8).
+//
+// This was an inline `onclick` that hand-rolled the whole thing: read
+// data-theme off document.documentElement, flipped it, toggled the `dark`
+// class and wrote localStorage['reportshq_theme'] -- three prohibited APIs in
+// one attribute, and an attribute is also the one place the stx validator does
+// not look, so it reported this file clean while it was the worst offender in
+// the app.
+//
+// Every value it hardcoded is already declared in config/ui.ts:
+//
+//   colorMode: { storageKey: 'reportshq_theme', attribute: 'data-theme',
+//                darkClass: 'dark', initialMode: 'auto' }
+//
+// and the pre-paint boot script publishes them as window.__STX_COLOR_MODE__,
+// which is where useColorMode() reads them from. Checked on the served page
+// rather than assumed, because this app's boot script is generated: it carries
+// storageKey "reportshq_theme", attribute "data-theme" and darkClass "dark",
+// so the stored preference carries over untouched and the boot script and this
+// block cannot drift apart the way two copies of the same constants would.
+//
+// `toggle()` is what the old handler computed by hand: flip the RESOLVED
+// theme, which already accounts for the OS preference when nothing is stored.
+// Two things come free -- it subscribes to the cross-tab `storage` event, so
+// changing the theme in one tab updates the others, and it registers an
+// onDestroy cleanup.
+const theme = useColorMode()
+
+function toggleTheme(): void {
+  theme.toggle()
+}
+</script>
+
 <header class="bg-panel border-b border-line">
   <div class="flex flex-col gap-2 sm:flex-row sm:gap-4 sm:items-center sm:justify-between mx-auto px-4 sm:px-6 py-3 max-w-7xl">
     <StxLink to="/reports" class="flex gap-6 items-center self-start no-underline">
@@ -17,7 +51,7 @@
         type="button"
         class="inline-flex items-center justify-center ml-1 h-11 w-11 text-muted border border-line rounded-lg theme-btn"
         aria-label="Switch theme"
-        onclick="(function(r){var d=r.getAttribute('data-theme')==='dark';r.setAttribute('data-theme',d?'light':'dark');r.classList.toggle('dark',!d);try{localStorage.setItem('reportshq_theme',d?'light':'dark')}catch(e){}})(document.documentElement)"
+        @click="toggleTheme"
       >
         <i class="h-4 w-4 i-hugeicons-sun-03 ic-sun"></i>
         <i class="h-4 w-4 i-hugeicons-moon-02 ic-moon"></i>
