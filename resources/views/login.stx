@@ -11,6 +11,176 @@ const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : und
 const signedIn = session.user !== null
 </script>
 
+<script client>
+// Submitting the form, as stx client code rather than the DOM-walking script
+// this used to be (stx-standards rule 8).
+//
+// ## What it replaced
+//
+// A bare `<script>` IIFE that held six `document.getElementById` handles
+// (`signin`, `error`, `submit`, `twofa`, `twofa-error`, `twofa-submit`), read
+// three more by id on every submit, toggled `.hidden` on two forms to move
+// between steps, wrote button labels and `disabled` by hand, and left the page
+// with `window.location.replace`. Thirteen prohibited calls in all.
+//
+// Everything it did with ids is now state: `step` owns which form is on screen,
+// `error` and `twofaError` own the banners, `loading` owns both buttons. The
+// markup reads those signals, so there is no element to find and nothing to
+// keep in sync by hand.
+//
+// ## Two things worth knowing before changing this
+//
+// `navigate('/reports', { replace: true })` is deliberate, not decoration. The
+// old code used `window.location.replace` and said why: the back button should
+// not return to a sign-in form the person has already used. Plain `navigate()`
+// pushes, so dropping the option would quietly reintroduce that. Measured in
+// the served runtime rather than assumed -- `navigate(url, options)` reads
+// `opts.replace` and calls `location.replace` (or passes `{replace}` to the
+// router), so the old behaviour is preserved exactly.
+//
+// The two forms are toggled with `:hidden`, not wrapped in `@if`, and that is
+// the one place this conversion deliberately departs from bughq's login. A
+// client `@if` compiles to an attribute plus `x-cloak`, and the emitted
+// `[x-cloak]{display:none !important}` means the form is invisible until the
+// runtime resolves it -- so a runtime that never arrives leaves a stranger
+// looking at an empty page. `:hidden` inverts that: the credentials form is
+// visible by default and the 2FA form carries a static `hidden` attribute, so
+// with no runtime at all the page looks exactly as it did before this change.
+//
+// That is also why both forms keep their `method` and `action`. This block only
+// binds once the runtime has loaded, and a submit before that still has to go
+// somewhere sensible rather than nowhere -- the same reason the signed-in
+// bounce below is still a plain script.
+const error = state('')
+const twofaError = state('')
+const loading = state(false)
+// 'credentials' -> (only for a 2FA-enabled account) 'twofa'.
+const step = state('credentials')
+// Minted by the login endpoint when the account has 2FA on; exchanged with the
+// TOTP code. Single-use.
+const challengeToken = state('')
+// The "remember me" choice captured at step one and re-sent with the code, so a
+// 2FA account is issued the same session length (30 days vs the one-week
+// baseline) instead of being silently downgraded.
+const rememberChoice = state(false)
+
+// The code field does not exist until `step` re-renders, so a focus issued in
+// the same tick reads a null ref. 20ms and debounced, matching the same
+// problem's solution in bughq's settings.stx: the composable owns the timer and
+// drops it on destroy.
+const codeField = useRef('code')
+const focusCode = useDebounce(() => codeField.current?.focus(), 20)
+
+/** What /api/auth/login and /api/auth/verify-two-factor-login answer with. */
+interface LoginResponse {
+  message?: string
+  requires_two_factor?: boolean
+  challenge_token?: string
+}
+
+// Reading an uncontrolled field is two narrowings: `e.target` is an EventTarget
+// and `form.elements` hands back Elements, and neither carries a `.value`. A
+// field the markup does not contain reads as empty rather than throwing -- the
+// endpoint validates what it is sent regardless.
+function fieldValue(form: HTMLFormElement, name: string): string {
+  const el = form.elements.namedItem(name)
+  return el instanceof HTMLInputElement ? el.value : ''
+}
+
+/** A checkbox reads by `.checked`, not `.value` (which is the constant 'on'). */
+function fieldChecked(form: HTMLFormElement, name: string): boolean {
+  const el = form.elements.namedItem(name)
+  return el instanceof HTMLInputElement ? el.checked : false
+}
+
+async function handleSubmit(event: SubmitEvent): Promise<void> {
+  event.preventDefault()
+  if (loading())
+    return
+  const form = event.target
+  if (!(form instanceof HTMLFormElement))
+    return
+
+  loading.set(true)
+  error.set('')
+  const remember = fieldChecked(form, 'remember')
+  rememberChoice.set(remember)
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: fieldValue(form, 'email'), password: fieldValue(form, 'password'), remember }),
+    })
+
+    if (res.ok) {
+      navigate('/reports', { replace: true })
+      return
+    }
+
+    const data: LoginResponse = await res.json().catch(() => ({}))
+    // A 2FA-enabled account: no session yet, just a challenge. Move to the code
+    // step and put the cursor in the field.
+    if (data.requires_two_factor && data.challenge_token) {
+      challengeToken.set(data.challenge_token)
+      twofaError.set('')
+      step.set('twofa')
+      focusCode()
+      return
+    }
+    error.set(data.message || 'Could not sign you in.')
+  }
+  catch {
+    error.set('Could not reach the server.')
+  }
+  finally {
+    loading.set(false)
+  }
+}
+
+async function handleTwoFactor(event: SubmitEvent): Promise<void> {
+  event.preventDefault()
+  if (loading())
+    return
+  const form = event.target
+  if (!(form instanceof HTMLFormElement))
+    return
+
+  loading.set(true)
+  twofaError.set('')
+
+  try {
+    const res = await fetch('/api/auth/verify-two-factor-login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ challenge_token: challengeToken(), code: fieldValue(form, 'code'), remember: rememberChoice() }),
+    })
+
+    if (res.ok) {
+      navigate('/reports', { replace: true })
+      return
+    }
+
+    const data: LoginResponse = await res.json().catch(() => ({}))
+    // Challenge tokens are single-use, so a bad code sends the person back to
+    // the start rather than letting them retry a spent challenge. The message
+    // lands on the first step's banner, which is where they now are.
+    step.set('credentials')
+    challengeToken.set('')
+    error.set(data.message || 'Could not sign you in.')
+  }
+  catch {
+    // A network failure spent nothing, so the code step stays put.
+    twofaError.set('Could not reach the server.')
+  }
+  finally {
+    loading.set(false)
+  }
+}
+</script>
+
 <template>
   <div class="min-h-[100dvh] text-ink bg-canvas">
     {{-- Already signed in: bounce before anything paints, the same way the
@@ -35,9 +205,9 @@ const signedIn = session.user !== null
         <p class="mb-6 mt-1 text-muted text-sm">Your reports are where you left them.</p>
 
         {{-- A real form, so a password manager recognises it and the enter key
-             submits. The script intercepts it; without the script it still
-             posts somewhere sensible rather than nowhere. --}}
-        <form id="signin" method="post" action="/api/auth/login">
+             submits. The client block intercepts it; without the runtime it
+             still posts somewhere sensible rather than nowhere. --}}
+        <form method="post" action="/api/auth/login" @submit="handleSubmit" :hidden="step() !== 'credentials'">
           <div class="grid gap-4">
             <label class="block">
               <span class="block mb-1 text-muted text-sm">Email</span>
@@ -47,7 +217,9 @@ const signedIn = session.user !== null
                 type="email"
                 autocomplete="username"
                 required
-                class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg" aria-describedby="error"
+                class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg"
+                :aria-invalid="error() ? 'true' : 'false'"
+                :aria-describedby="error() ? 'error' : ''"
               />
             </label>
 
@@ -59,7 +231,9 @@ const signedIn = session.user !== null
                 type="password"
                 autocomplete="current-password"
                 required
-                class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg" aria-describedby="error"
+                class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg"
+                :aria-invalid="error() ? 'true' : 'false'"
+                :aria-describedby="error() ? 'error' : ''"
               />
             </label>
 
@@ -71,26 +245,29 @@ const signedIn = session.user !== null
               <span>Keep me signed in for 30 days</span>
             </label>
 
-            <p id="error" class="text-sm text-warn" role="alert" hidden></p>
+            @if (error())
+              <p id="error" class="text-sm text-warn" role="alert">{{ error() }}</p>
+            @endif
 
             <button
-              id="submit"
               type="submit"
+              :disabled="loading()"
               class="px-4 py-2.5 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
-            >Sign in</button>
+            >{{ loading() ? 'Signing in' : 'Sign in' }}</button>
           </div>
         </form>
 
-        {{-- Second step, revealed only when the account has 2FA enabled. Dormant
+        {{-- Second step, reached only when the account has 2FA enabled. Dormant
              until an enrollment surface ships, but present so a 2FA account can
              never sign in halfway and stall. --}}
-        <form id="twofa" method="post" action="/api/auth/verify-two-factor-login" hidden>
+        <form method="post" action="/api/auth/verify-two-factor-login" @submit="handleTwoFactor" hidden :hidden="step() !== 'twofa'">
           <div class="grid gap-4">
             <h2 class="font-semibold text-lg tracking-tight">Two-factor code</h2>
             <p class="-mt-2 text-muted text-sm">Enter the 6-digit code from your authenticator app.</p>
             <label class="block">
               <span class="block mb-1 text-muted text-sm">Authentication code</span>
               <input
+                ref="code"
                 id="code"
                 name="code"
                 type="text"
@@ -98,16 +275,20 @@ const signedIn = session.user !== null
                 autocomplete="one-time-code"
                 maxlength="6"
                 class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg"
+                :aria-invalid="twofaError() ? 'true' : 'false'"
+                :aria-describedby="twofaError() ? 'twofa-error' : ''"
               />
             </label>
 
-            <p id="twofa-error" class="text-sm text-warn" role="alert" hidden></p>
+            @if (twofaError())
+              <p id="twofa-error" class="text-sm text-warn" role="alert">{{ twofaError() }}</p>
+            @endif
 
             <button
-              id="twofa-submit"
               type="submit"
+              :disabled="loading()"
               class="px-4 py-2.5 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
-            >Verify and sign in</button>
+            >{{ loading() ? 'Verifying' : 'Verify and sign in' }}</button>
           </div>
         </form>
 
@@ -125,134 +306,4 @@ const signedIn = session.user !== null
       </div>
     </main>
   </div>
-
-{{-- Submitting the form.
-
-     A plain script for the same reason as the guard: this page has to work
-     before the runtime is loaded, and the whole page is one form. --}}
-<script>
-(function () {
-  var form = document.getElementById('signin')
-  if (!form) return
-
-  var error = document.getElementById('error')
-  var submit = document.getElementById('submit')
-  var twofa = document.getElementById('twofa')
-  var twofaError = document.getElementById('twofa-error')
-  var twofaSubmit = document.getElementById('twofa-submit')
-
-  // The 2FA step is a separate request, so the "remember me" choice made at
-  // step one is captured here and re-sent with the code — otherwise a 2FA
-  // account would be silently downgraded to the baseline week.
-  var rememberChoice = false
-  var challengeToken = null
-
-  // Each banner is an alert region, so writing to one announces it. The fields
-  // need marking separately: without aria-invalid and a link to the message,
-  // the control itself still looks untouched to assistive technology.
-  function markInvalid(ids, describedBy, invalid) {
-    ids.forEach(function (id) {
-      var el = document.getElementById(id)
-      if (!el)
-        return
-      el.setAttribute('aria-invalid', invalid ? 'true' : 'false')
-    })
-  }
-
-  function fail(message) {
-    error.textContent = message
-    error.hidden = !message
-    markInvalid(['email', 'password'], 'error', !!message)
-    submit.disabled = false
-    submit.textContent = 'Sign in'
-  }
-
-  function twofaFail(message) {
-    twofaError.textContent = message
-    twofaError.hidden = !message
-    markInvalid(['code'], 'twofa-error', !!message)
-    twofaSubmit.disabled = false
-    twofaSubmit.textContent = 'Verify and sign in'
-  }
-
-  form.addEventListener('submit', function (event) {
-    event.preventDefault()
-    fail('')
-    submit.disabled = true
-    submit.textContent = 'Signing in'
-
-    var remember = document.getElementById('remember')
-    rememberChoice = !!(remember && remember.checked)
-
-    fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({
-        email: document.getElementById('email').value,
-        password: document.getElementById('password').value,
-        remember: rememberChoice,
-      }),
-    }).then(function (res) {
-      if (res.ok) {
-        // replace, not assign: the back button should not return to a sign-in
-        // form the person has already used.
-        window.location.replace('/reports')
-        return
-      }
-
-      return res.json().then(function (data) {
-        // 2FA-enabled account: reveal the code step and carry the challenge.
-        if (data && data.requires_two_factor && data.challenge_token) {
-          challengeToken = data.challenge_token
-          form.hidden = true
-          twofa.hidden = false
-          document.getElementById('code').focus()
-          return
-        }
-        fail((data && data.message) || 'Could not sign you in.')
-      }).catch(function () { fail('Could not sign you in.') })
-    }).catch(function () {
-      fail('Could not reach the server.')
-    })
-  })
-
-  twofa.addEventListener('submit', function (event) {
-    event.preventDefault()
-    twofaFail('')
-    twofaSubmit.disabled = true
-    twofaSubmit.textContent = 'Verifying'
-
-    fetch('/api/auth/verify-two-factor-login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({
-        challenge_token: challengeToken,
-        code: document.getElementById('code').value,
-        remember: rememberChoice,
-      }),
-    }).then(function (res) {
-      if (res.ok) {
-        window.location.replace('/reports')
-        return
-      }
-
-      return res.json().then(function (data) {
-        // Challenge tokens are single-use; a failure sends the person back to
-        // the start rather than letting them retry a spent challenge.
-        twofa.hidden = true
-        form.hidden = false
-        fail((data && data.message) || 'Could not sign you in.')
-      }).catch(function () {
-        twofa.hidden = true
-        form.hidden = false
-        fail('Could not sign you in.')
-      })
-    }).catch(function () {
-      twofaFail('Could not reach the server.')
-    })
-  })
-}())
-</script>
 </template>
