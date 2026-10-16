@@ -357,9 +357,27 @@ const siteDescription = 'Reports that run inside your own Stacks or Laravel appl
     <script>
       // Plain holding-page script (not an stx SFC block): posts the email to
       // the same rate-limited endpoint the framework form used.
+      //
+      // The three getElementById calls below are marked rather than converted,
+      // and this is the case the marker exists for (stx-standards rule 8,
+      // §12.1). This file is not a view composed into a layout -- it is a
+      // self-contained <!DOCTYPE html> document with its own <head> and inline
+      // styles, and it loads no stx runtime. A `<script client>` block needs
+      // that runtime to bind, so converting this would not move the code to
+      // composables, it would stop it running at all: the form would silently
+      // do nothing on the one page whose whole job is collecting addresses
+      // while the app is down.
+      //
+      // Marked per call site rather than added to `allowPatterns`, which is a
+      // rule-global substring filter with no per-file scoping -- allowing
+      // getElementById here would stop the validator reporting it everywhere
+      // else in the app.
       ;(function () {
+        // stx-strict-ignore-next-line document.getElementById()
         var form = document.getElementById('subscribe-form')
+        // stx-strict-ignore-next-line document.getElementById()
         var input = document.getElementById('subscribe-email')
+        // stx-strict-ignore-next-line document.getElementById()
         var note = document.getElementById('form-note')
         if (!form || !input || !note) return
 
