@@ -42,7 +42,7 @@ const sections = [
   },
   {
     "heading": "Delivery runs on your own queue",
-    "body": "Scheduled mail goes out through the mailer and queue the application already has, so it obeys whatever sending rules you already enforce. Note that the recipient list is a plain field and is not validated against anything — a reporting tool that emails on a timer deserves the same review you would give any other outbound mail."
+    "body": "Scheduled mail goes out through the mailer and queue the application already has, so it obeys whatever sending rules you already enforce. Note that the recipient list is a plain field and is not validated against anything. A reporting tool that emails on a timer deserves the same review you would give any other outbound mail."
   }
 ]
 </script>
