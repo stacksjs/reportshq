@@ -11,6 +11,82 @@ const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : und
 const signedIn = session.user !== null
 </script>
 
+<script client>
+// Submitting the form, as stx client code rather than the DOM-walking script
+// this used to be (stx-standards rule 8). The same conversion as login.stx,
+// which carries the longer note on why each replacement is the one it is; this
+// page is the simpler half of it -- one form, no second step.
+//
+// It replaced a bare script holding `signin`, `error` and `submit` by id,
+// reading three more fields by id on every submit, and writing the banner, the
+// three `aria-invalid` attributes, the button label and `disabled` by hand.
+// `error` and `loading` own all of that now.
+//
+// The form keeps `method` and `action`, and is not wrapped in `@if`, for the
+// reason spelled out in login.stx: a client `@if` compiles to an attribute plus
+// x-cloak, and `[x-cloak]{display:none !important}` would leave a stranger
+// looking at an empty page if the runtime never arrived. A page that must
+// render for somebody with no account has to survive that.
+const error = state('')
+const loading = state(false)
+
+/** What /api/auth/register answers with. */
+interface RegisterResponse {
+  message?: string
+}
+
+// `e.target` is an EventTarget and `form.elements` hands back Elements, so
+// reading a field is two narrowings. A field the markup does not contain reads
+// as empty rather than throwing -- the endpoint validates what it is sent.
+function fieldValue(form: HTMLFormElement, name: string): string {
+  const el = form.elements.namedItem(name)
+  return el instanceof HTMLInputElement ? el.value : ''
+}
+
+async function handleSubmit(event: SubmitEvent): Promise<void> {
+  event.preventDefault()
+  if (loading())
+    return
+  const form = event.target
+  if (!(form instanceof HTMLFormElement))
+    return
+
+  loading.set(true)
+  error.set('')
+
+  try {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: fieldValue(form, 'name'),
+        email: fieldValue(form, 'email'),
+        password: fieldValue(form, 'password'),
+      }),
+    })
+
+    if (res.ok) {
+      // replace, not assign: the back button should not return to a form the
+      // person has already used. navigate(url, options) reads opts.replace and
+      // calls location.replace, so this is the old behaviour, not an
+      // approximation of it.
+      navigate('/reports', { replace: true })
+      return
+    }
+
+    const data: RegisterResponse = await res.json().catch(() => ({}))
+    error.set(data.message || 'Could not create that account.')
+  }
+  catch {
+    error.set('Could not reach the server.')
+  }
+  finally {
+    loading.set(false)
+  }
+}
+</script>
+
 <template>
   <div class="min-h-[100dvh] text-ink bg-canvas">
     {{-- Already signed in: bounce before anything paints, the same way the
@@ -37,7 +113,7 @@ const signedIn = session.user !== null
         {{-- A real form, so a password manager recognises it and the enter key
              submits. The script intercepts it; without the script it still
              posts somewhere sensible rather than nowhere. --}}
-        <form id="signin" method="post" action="/api/auth/register" class="grid gap-4">
+        <form method="post" action="/api/auth/register" class="grid gap-4" @submit="handleSubmit">
           <label class="block">
             <span class="block mb-1 text-muted text-sm">Name</span>
             <input
@@ -46,7 +122,9 @@ const signedIn = session.user !== null
               type="text"
               autocomplete="name"
               required
-              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg" aria-describedby="error"
+              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg"
+              :aria-invalid="error() ? 'true' : 'false'"
+              :aria-describedby="error() ? 'error' : ''"
             />
           </label>
 
@@ -58,7 +136,9 @@ const signedIn = session.user !== null
               type="email"
               autocomplete="username"
               required
-              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg" aria-describedby="error"
+              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg"
+              :aria-invalid="error() ? 'true' : 'false'"
+              :aria-describedby="error() ? 'error' : ''"
             />
           </label>
 
@@ -70,20 +150,24 @@ const signedIn = session.user !== null
               type="password"
               autocomplete="new-password"
               required
-              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg" aria-describedby="error"
+              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg"
+              :aria-invalid="error() ? 'true' : 'false'"
+              :aria-describedby="error() ? 'error' : ''"
             />
           </label>
 
           {{-- Stated up front rather than as a rejection after the fact. --}}
           <p class="-mt-2 text-subtle text-xs">At least 10 characters. Length beats punctuation.</p>
 
-          <p id="error" class="text-sm text-warn" role="alert" hidden></p>
+          @if (error())
+            <p id="error" class="text-sm text-warn" role="alert">{{ error() }}</p>
+          @endif
 
           <button
-            id="submit"
             type="submit"
+            :disabled="loading()"
             class="px-4 py-2.5 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
-          >Create account</button>
+          >{{ loading() ? 'Creating' : 'Create account' }}</button>
         </form>
 
         <p class="mt-6 text-muted text-sm">
@@ -94,68 +178,4 @@ const signedIn = session.user !== null
     </main>
   </div>
 
-{{-- Submitting the form.
-
-     A plain script for the same reason as the guard: this page has to work
-     before the runtime is loaded, and the whole page is one form. --}}
-<script>
-(function () {
-  var form = document.getElementById('signin')
-  if (!form) return
-
-  var error = document.getElementById('error')
-  var submit = document.getElementById('submit')
-
-  // The banner is an alert region, so writing to it announces the message. The
-  // fields need marking separately: without aria-invalid and a link to the
-  // text, the control itself still looks untouched to assistive technology.
-  function markInvalid(invalid) {
-    ['name', 'email', 'password'].forEach(function (id) {
-      var el = document.getElementById(id)
-      if (!el)
-        return
-      el.setAttribute('aria-invalid', invalid ? 'true' : 'false')
-    })
-  }
-
-  function fail(message) {
-    error.textContent = message
-    error.hidden = !message
-    markInvalid(!!message)
-    submit.disabled = false
-    submit.textContent = 'Create account'
-  }
-
-  form.addEventListener('submit', function (event) {
-    event.preventDefault()
-    fail('')
-    submit.disabled = true
-    submit.textContent = 'Creating'
-
-    fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({
-        name: document.getElementById('name').value,
-        email: document.getElementById('email').value,
-        password: document.getElementById('password').value,
-      }),
-    }).then(function (res) {
-      if (res.ok) {
-        // replace, not assign: the back button should not return to a sign-in
-        // form the person has already used.
-        window.location.replace('/reports')
-        return
-      }
-
-      return res.json().then(function (data) {
-        fail((data && data.message) || 'Could not create that account.')
-      }).catch(function () { fail('Could not create that account.') })
-    }).catch(function () {
-      fail('Could not reach the server.')
-    })
-  })
-}())
-</script>
 </template>
