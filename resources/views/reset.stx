@@ -19,6 +19,82 @@ const email = param(pageQuery, 'email') ?? ''
 const usable = __resetToken !== '' && email !== ''
 </script>
 
+<script client>
+// Submitting the form, as stx client code rather than the DOM-walking script
+// this used to be (stx-standards rule 8). login.stx carries the longer note on
+// why each replacement is the one it is.
+//
+// It replaced a bare script holding `signin`, `error` and `submit` by id, which
+// read the token, the address and the new password by id on submit and wrote
+// the banner, the aria-invalid attribute, the button label and `disabled` by
+// hand. `error` and `loading` own all of that now.
+//
+// The token and the address are still carried by hidden inputs rather than
+// closed over from the server block. They are server values, and a client block
+// that named them would have them serialised into the page as script data on
+// top of the markup that already holds them -- two copies of a single-use
+// credential where one will do.
+const error = state('')
+const loading = state(false)
+
+/** What /api/auth/reset answers with. */
+interface ResetResponse {
+  message?: string
+}
+
+// `e.target` is an EventTarget and `form.elements` hands back Elements, so
+// reading a field is two narrowings. A field the markup does not contain reads
+// as empty rather than throwing -- the endpoint decides whether a token is
+// good, which is the whole reason this page does not try to.
+function fieldValue(form: HTMLFormElement, name: string): string {
+  const el = form.elements.namedItem(name)
+  return el instanceof HTMLInputElement ? el.value : ''
+}
+
+async function handleSubmit(event: SubmitEvent): Promise<void> {
+  event.preventDefault()
+  if (loading())
+    return
+  const form = event.target
+  if (!(form instanceof HTMLFormElement))
+    return
+
+  loading.set(true)
+  error.set('')
+
+  try {
+    const res = await fetch('/api/auth/reset', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: fieldValue(form, 'email'),
+        token: fieldValue(form, 'token'),
+        password: fieldValue(form, 'password'),
+      }),
+    })
+
+    if (res.ok) {
+      // To sign-in rather than straight into the app: the reset revoked every
+      // session, including any this browser was holding, so there is nothing to
+      // walk into. replace, not assign -- the link is spent, and the back
+      // button should not return to a form that will now be refused.
+      navigate('/login', { replace: true })
+      return
+    }
+
+    const data: ResetResponse = await res.json().catch(() => ({}))
+    error.set(data.message || 'Could not save that password.')
+  }
+  catch {
+    error.set('Could not reach the server.')
+  }
+  finally {
+    loading.set(false)
+  }
+}
+</script>
+
 <template>
   <div class="min-h-[100dvh] text-ink bg-canvas">
     <main class="grid place-items-center px-6 py-16 min-h-[100dvh]">
@@ -38,31 +114,42 @@ const usable = __resetToken !== '' && email !== ''
         {{-- A real form, so a password manager recognises it and the enter key
              submits. The script intercepts it; without the script it still
              posts somewhere sensible rather than nowhere. --}}
-        <form id="signin" method="post" action="/api/auth/reset" class="grid gap-4" @if (!usable) hidden @endif>
-          <input id="token" type="hidden" value="{{ __resetToken }}" />
-          <input id="email" type="hidden" value="{{ email }}" />
+        <form method="post" action="/api/auth/reset" @submit="handleSubmit" @if (!usable) hidden @endif>
+          {{-- The grid lives here, not on the form: `hidden` is only
+               [hidden]{display:none} in the UA sheet, so a display utility
+               on the form itself outranks it -- which is why a link with no
+               token used to say so and then show the password field anyway.
+               login.stx is built this way for the same reason. --}}
+          <div class="grid gap-4">
+            <input id="token" name="token" type="hidden" value="{{ __resetToken }}" />
+            <input id="email" name="email" type="hidden" value="{{ email }}" />
 
-          <label class="block">
-            <span class="block mb-1 text-muted text-sm">New password</span>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autocomplete="new-password"
-              required
-              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg" aria-describedby="error"
-            />
-          </label>
+            <label class="block">
+              <span class="block mb-1 text-muted text-sm">New password</span>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autocomplete="new-password"
+                required
+                class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg"
+                  :aria-invalid="error() ? 'true' : 'false'"
+                  :aria-describedby="error() ? 'error' : ''"
+              />
+            </label>
 
-          <p class="-mt-2 text-subtle text-xs">At least 10 characters. Length beats punctuation.</p>
+            <p class="-mt-2 text-subtle text-xs">At least 10 characters. Length beats punctuation.</p>
 
-          <p id="error" class="text-sm text-warn" role="alert" hidden></p>
+            @if (error())
+              <p id="error" class="text-sm text-warn" role="alert">{{ error() }}</p>
+            @endif
 
-          <button
-            id="submit"
-            type="submit"
-            class="px-4 py-2.5 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
-          >Save it</button>
+            <button
+              type="submit"
+              :disabled="loading()"
+              class="px-4 py-2.5 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
+            >{{ loading() ? 'Saving' : 'Save it' }}</button>
+          </div>
         </form>
 
         <p class="mt-6 text-muted text-sm">
@@ -72,63 +159,4 @@ const usable = __resetToken !== '' && email !== ''
     </main>
   </div>
 
-{{-- Submitting the form.
-
-     A plain script for the same reason as the guard: this page has to work
-     before the runtime is loaded, and the whole page is one form. --}}
-<script>
-(function () {
-  var form = document.getElementById('signin')
-  if (!form) return
-
-  var error = document.getElementById('error')
-  var submit = document.getElementById('submit')
-
-  // The banner is an alert region, so writing to it announces the message.
-  // The field needs marking separately: without aria-invalid and a link to the
-  // text, the control itself still looks untouched to assistive technology.
-  function fail(message) {
-    error.textContent = message
-    error.hidden = !message
-    var pw = document.getElementById('password')
-    if (pw) {
-      pw.setAttribute('aria-invalid', message ? 'true' : 'false')
-    }
-    submit.disabled = false
-    submit.textContent = 'Save it'
-  }
-
-  form.addEventListener('submit', function (event) {
-    event.preventDefault()
-    fail('')
-    submit.disabled = true
-    submit.textContent = 'Saving'
-
-    fetch('/api/auth/reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({
-        email: document.getElementById('email').value,
-        token: document.getElementById('token').value,
-        password: document.getElementById('password').value,
-      }),
-    }).then(function (res) {
-      if (res.ok) {
-        // To sign-in rather than straight into the app: the reset revoked every
-        // session, including any this browser was holding, so there is nothing
-        // to walk into.
-        window.location.replace('/login')
-        return
-      }
-
-      return res.json().then(function (data) {
-        fail((data && data.message) || 'Could not save that password.')
-      }).catch(function () { fail('Could not save that password.') })
-    }).catch(function () {
-      fail('Could not reach the server.')
-    })
-  })
-}())
-</script>
 </template>
