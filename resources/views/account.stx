@@ -31,6 +31,52 @@ function joinedLabel(value: unknown): string {
 const since = joinedLabel(row?.created_at)
 </script>
 
+<script client>
+// Signing out, as stx client code rather than the DOM-walking script this used
+// to be (stx-standards rule 8). It replaced a bare script that held the button
+// by id and wrote its label and `disabled` by hand; `signingOut` owns both now.
+//
+// The navigation deliberately does not depend on the response being ok, which
+// is how this behaved before. Whatever the server says, the intent was to end
+// the session, and leaving somebody on an account page after they asked to
+// leave is worse than acting on a request the server may have already honoured.
+// Only a request that never completed puts the button back.
+const signingOut = state(false)
+
+async function handleSignOut(): Promise<void> {
+  if (signingOut())
+    return
+  signingOut.set(true)
+
+  try {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+    // `reload` as well as `replace`, and both are load-bearing.
+    //
+    // replace: the back button should not return to a page belonging to a
+    // session that no longer exists.
+    //
+    // reload: navigate() hands a plain call to the client router, which swaps
+    // the page fragment and keeps the surrounding document -- so signing out
+    // left the signed-in nav (Reports, Account) sitting above the sign-in form
+    // it had just loaded. `reload` takes navigate()'s other branch,
+    // location.replace(), which throws the document away and is what the old
+    // code did. Measured, not assumed: the router branch also silently did
+    // nothing at all when called from inside this scope, while the identical
+    // call worked from the page, so the fragment path was not an option here
+    // even setting the stale chrome aside.
+    navigate('/login', { replace: true, reload: true })
+  }
+  catch {
+    signingOut.set(false)
+  }
+}
+</script>
+
 <template>
   <div class="min-h-[100dvh] text-ink bg-canvas">
     @include('AppNav')
@@ -71,10 +117,11 @@ const since = joinedLabel(row?.created_at)
               revoked rather than forgotten, so a copy of it stops working too.
             </p>
             <button
-              id="signout"
               type="button"
-              class="px-4 py-2 font-medium text-ink text-sm border border-line rounded-lg hover:border-accent"
-            >Sign out</button>
+              @click="handleSignOut"
+              :disabled="signingOut()"
+              class="px-4 py-2 font-medium text-ink text-sm border border-line rounded-lg hover:border-accent disabled:opacity-60"
+            >{{ signingOut() ? 'Signing out' : 'Sign out' }}</button>
           </Card>
         </div>
       @else
@@ -94,29 +141,4 @@ const since = joinedLabel(row?.created_at)
     </main>
   </div>
 
-<script>
-(function () {
-  var button = document.getElementById('signout')
-  if (!button) return
-
-  button.addEventListener('click', function () {
-    button.disabled = true
-    button.textContent = 'Signing out'
-
-    fetch('/api/auth/logout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: '{}',
-    }).then(function () {
-      // replace rather than assign: the back button should not return to a
-      // page belonging to a session that no longer exists.
-      window.location.replace('/login')
-    }).catch(function () {
-      button.disabled = false
-      button.textContent = 'Sign out'
-    })
-  })
-}())
-</script>
 </template>
