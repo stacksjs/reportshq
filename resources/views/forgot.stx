@@ -10,6 +10,83 @@ const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : und
 const signedIn = session.user !== null
 </script>
 
+<script client>
+// Submitting the form, as stx client code rather than the DOM-walking script
+// this used to be (stx-standards rule 8). login.stx carries the longer note on
+// why each replacement is the one it is.
+//
+// It replaced a bare script holding `signin`, `error`, `submit` and `done` by
+// id, which wrote the banner text, the `aria-invalid` attribute, the button
+// label and `disabled` by hand, and swapped the form for the confirmation by
+// toggling `.hidden` on both.
+//
+// `done` is the confirmation, and it is deliberately the whole success state:
+// non-empty means sent, which both reveals the message and hides the form. The
+// message itself comes from the response body, because the endpoint answers
+// the same way whether or not the address has an account -- the point being
+// that this page must not reveal which. A default is kept here only for a
+// response that arrives without one.
+//
+// The form is toggled with `:hidden` rather than wrapped in `@if`, for the
+// reason spelled out in login.stx: a client `@if` compiles to an attribute plus
+// x-cloak, and `[x-cloak]{display:none !important}` would leave somebody who
+// cannot sign in looking at an empty page if the runtime never arrived. The
+// confirmation does use `@if`, since being absent is exactly its no-runtime
+// state -- it carried a static `hidden` attribute before.
+const error = state('')
+const done = state('')
+const loading = state(false)
+
+/** What /api/auth/forgot answers with. */
+interface ForgotResponse {
+  message?: string
+}
+
+// `e.target` is an EventTarget and `form.elements` hands back Elements, so
+// reading a field is two narrowings. A field the markup does not contain reads
+// as empty rather than throwing -- the endpoint validates what it is sent.
+function fieldValue(form: HTMLFormElement, name: string): string {
+  const el = form.elements.namedItem(name)
+  return el instanceof HTMLInputElement ? el.value : ''
+}
+
+async function handleSubmit(event: SubmitEvent): Promise<void> {
+  event.preventDefault()
+  if (loading())
+    return
+  const form = event.target
+  if (!(form instanceof HTMLFormElement))
+    return
+
+  loading.set(true)
+  error.set('')
+
+  try {
+    const res = await fetch('/api/auth/forgot', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: fieldValue(form, 'email') }),
+    })
+
+    // Parsed on both paths: the confirmation wording comes from the body.
+    const data: ForgotResponse = await res.json().catch(() => ({}))
+
+    if (res.ok) {
+      done.set(data.message || 'If that email has an account, a reset link is on its way.')
+      return
+    }
+    error.set(data.message || 'Could not send that link.')
+  }
+  catch {
+    error.set('Could not reach the server.')
+  }
+  finally {
+    loading.set(false)
+  }
+}
+</script>
+
 <template>
   <div class="min-h-[100dvh] text-ink bg-canvas">
     {{-- Already signed in: bounce before anything paints, the same way the
@@ -36,29 +113,42 @@ const signedIn = session.user !== null
         {{-- A real form, so a password manager recognises it and the enter key
              submits. The script intercepts it; without the script it still
              posts somewhere sensible rather than nowhere. --}}
-        <form id="signin" method="post" action="/api/auth/forgot" class="grid gap-4">
-          <label class="block">
-            <span class="block mb-1 text-muted text-sm">Email</span>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autocomplete="username"
-              required
-              class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg" aria-describedby="error"
-            />
-          </label>
+        <form method="post" action="/api/auth/forgot" @submit="handleSubmit" :hidden="!!done()">
+          {{-- The grid lives here, not on the form: `hidden` is only
+               [hidden]{display:none} in the UA sheet, so a display
+               utility on the form itself outranks it and the form stays
+               on screen beside the confirmation. login.stx is built this
+               way for the same reason. --}}
+          <div class="grid gap-4">
+            <label class="block">
+              <span class="block mb-1 text-muted text-sm">Email</span>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autocomplete="username"
+                required
+                class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg"
+                :aria-invalid="error() ? 'true' : 'false'"
+                :aria-describedby="error() ? 'error' : ''"
+              />
+            </label>
 
-          <p id="error" class="text-sm text-warn" role="alert" hidden></p>
+            @if (error())
+              <p id="error" class="text-sm text-warn" role="alert">{{ error() }}</p>
+            @endif
 
-          <button
-            id="submit"
-            type="submit"
-            class="px-4 py-2.5 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
-          >Send the link</button>
+            <button
+              type="submit"
+              :disabled="loading()"
+              class="px-4 py-2.5 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
+            >{{ loading() ? 'Sending' : 'Send the link' }}</button>
+          </div>
         </form>
 
-        <p id="done" class="mt-4 p-3 text-muted text-sm border border-line rounded-lg" hidden></p>
+        @if (done())
+          <p id="done" role="status" class="mt-4 p-3 text-muted text-sm border border-line rounded-lg">{{ done() }}</p>
+        @endif
 
         <p class="mt-6 text-muted text-sm">
           Remembered it?
@@ -68,65 +158,4 @@ const signedIn = session.user !== null
     </main>
   </div>
 
-{{-- Submitting the form.
-
-     A plain script for the same reason as the guard: this page has to work
-     before the runtime is loaded, and the whole page is one form. --}}
-<script>
-(function () {
-  var form = document.getElementById('signin')
-  if (!form) return
-
-  var error = document.getElementById('error')
-  var submit = document.getElementById('submit')
-
-  // The banner is an alert region, so writing to it announces the message. The
-  // fields need marking separately: without aria-invalid and a link to the
-  // text, the control itself still looks untouched to assistive technology.
-  function markInvalid(invalid) {
-    ['email'].forEach(function (id) {
-      var el = document.getElementById(id)
-      if (!el)
-        return
-      el.setAttribute('aria-invalid', invalid ? 'true' : 'false')
-    })
-  }
-
-  function fail(message) {
-    error.textContent = message
-    error.hidden = !message
-    markInvalid(!!message)
-    submit.disabled = false
-    submit.textContent = 'Send the link'
-  }
-
-  form.addEventListener('submit', function (event) {
-    event.preventDefault()
-    fail('')
-    submit.disabled = true
-    submit.textContent = 'Sending'
-
-    fetch('/api/auth/forgot', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify({ email: document.getElementById('email').value }),
-    }).then(function (res) {
-      return res.json().then(function (data) {
-        if (res.ok) {
-          // The same confirmation whether or not the address has an account.
-          var done = document.getElementById('done')
-          done.textContent = (data && data.message) || 'If that email has an account, a reset link is on its way.'
-          done.hidden = false
-          form.hidden = true
-          return
-        }
-        fail((data && data.message) || 'Could not send that link.')
-      }).catch(function () { fail('Could not send that link.') })
-    }).catch(function () {
-      fail('Could not reach the server.')
-    })
-  })
-}())
-</script>
 </template>
