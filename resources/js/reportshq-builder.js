@@ -5,6 +5,29 @@
  * make its own UI work is a package that fails differently in every application
  * it is installed into, and this is two hundred lines.
  *
+ * ## On stx-standards rule 8, and why this file is outside it
+ *
+ * This file is full of document.getElementById and friends, and they stay.
+ * Rule 8 governs vanilla DOM in *stx templates*, and this is not one. It is
+ * not mounted in this app at all (AGENTS.md says so), and `build:charts`
+ * copies it verbatim into packages/laravel/resources/js/builder.js,
+ * packages/stacks/resources/dist/builder.js and public/reportshq/builder.js,
+ * where Charts/Assets.php inlines it into a Blade view. It runs in Laravel
+ * applications that have no stx, no composables and no runtime to offer a
+ * useRef() or a navigate(); that is the whole reason the header above insists
+ * on plain JavaScript with no build step.
+ *
+ * So the calls below carry no `stx-strict-ignore-next-line` markers either.
+ * Markers exist to tell the stx validator and this repo's readers that a call
+ * is a deliberate exemption. The validator never reads this file -- it scans
+ * views, and this is neither a view nor referenced by one -- while twenty-five
+ * stx-specific comments would ship inlined into other people's pages, where
+ * the convention they name does not exist. One note here is worth more than
+ * twenty-five there.
+ *
+ * A source sweep over resources/ will therefore keep reporting this file. That
+ * is the sweep's net being wider than the standard, not a gap to close.
+ *
  * Every rule below was learned from the hosted builder, several of them the
  * expensive way, and they are written here rather than rediscovered:
  *
