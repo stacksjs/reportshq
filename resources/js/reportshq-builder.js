@@ -17,16 +17,19 @@
  * useRef() or a navigate(); that is the whole reason the header above insists
  * on plain JavaScript with no build step.
  *
- * So the calls below carry no `stx-strict-ignore-next-line` markers either.
- * Markers exist to tell the stx validator and this repo's readers that a call
- * is a deliberate exemption. The validator never reads this file -- it scans
- * views, and this is neither a view nor referenced by one -- while twenty-five
- * stx-specific comments would ship inlined into other people's pages, where
- * the convention they name does not exist. One note here is worth more than
- * twenty-five there.
+ * Every call below still carries a `stx-strict-ignore-next-line` marker, so a
+ * source sweep over resources/ reports this file clean rather than reporting
+ * twenty-five findings that all resolve to the paragraph above. The markers
+ * are documentation, not enforcement: the stx validator scans views, and this
+ * is neither a view nor referenced by one, so it never reads this file.
  *
- * A source sweep over resources/ will therefore keep reporting this file. That
- * is the sweep's net being wider than the standard, not a gap to close.
+ * They do ship. `build:charts` copies this file verbatim into both packages,
+ * and Charts/Assets.php inlines it, so these comments reach Laravel and Stacks
+ * applications where the convention they name does not exist. That cost is
+ * accepted deliberately in exchange for a sweep that stays at zero and an
+ * exemption that is visible at each call site rather than only in this header.
+ * If the inlined payload ever matters, strip comments at the copy step rather
+ * than removing the markers here.
  *
  * Every rule below was learned from the hosted builder, several of them the
  * expensive way, and they are written here rather than rediscovered:
@@ -47,6 +50,7 @@
  *   applied over the top.
  */
 (() => {
+  // stx-strict-ignore-next-line document.querySelector
   const root = document.querySelector('.rhq-builder')
   if (!root) return
 
@@ -59,6 +63,7 @@
    * form, so a Stacks page cannot write the JSON there: it emits the braces
    * literally and this dies parsing them.
    */
+  // stx-strict-ignore-next-line document.getElementById
   const choicesNode = document.getElementById('rhq-choices')
   const choices = JSON.parse(root.dataset.choices || (choicesNode ? choicesNode.textContent : '{}'))
 
@@ -70,8 +75,11 @@
    * packages: a second copy is a second set of rules about what a drag meant,
    * and the two would agree right up until somebody fixed a bug in one.
    */
+  // stx-strict-ignore-next-line window.location
   const base = root.dataset.endpoint || window.location.pathname.replace(/\/edit\/?$/, '')
+  // stx-strict-ignore-next-line document.getElementById
   const state = document.getElementById('rhq-state')
+  // stx-strict-ignore-next-line document.getElementById
   const drafted = document.getElementById('rhq-drafted')
 
   function say(text) {
@@ -85,6 +93,7 @@
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         // Laravel puts it in a meta tag; a Stacks app says so on the root.
+        // stx-strict-ignore-next-line document.querySelector
         'X-CSRF-TOKEN': root.dataset.csrf || (document.querySelector('meta[name=csrf-token]') || {}).content || '',
         'X-Requested-With': 'XMLHttpRequest',
       },
@@ -95,6 +104,7 @@
 
   /* ---- Adding, which must work with no grid on the page ------------------ */
 
+  // stx-strict-ignore-next-line document.querySelector
   Array.prototype.forEach.call(document.querySelectorAll('.rhq-add'), (button) => {
     button.addEventListener('click', () => {
       say('Adding')
@@ -102,12 +112,14 @@
       post('/blocks', { kind: button.dataset.kind }).then((response) => {
         // A reload rather than an optimistic insert: the new block has to be
         // rendered by the engine anyway, and the server already knows how.
+        // stx-strict-ignore-next-line window.location
         if (response.ok) window.location.reload()
         else say('Could not add that')
       }).catch(() => { say('Could not add that') })
     })
   })
 
+  // stx-strict-ignore-next-line document.getElementById
   const publish = document.getElementById('rhq-publish')
   if (publish) {
     publish.addEventListener('click', () => {
@@ -122,6 +134,7 @@
 
   /* ---- Arranging --------------------------------------------------------- */
 
+  // stx-strict-ignore-next-line document.getElementById
   const grid = document.getElementById('rhq-grid')
   if (!grid) return
 
@@ -304,6 +317,7 @@
 
   // Keyboard equivalents, because a grid that can only be arranged by dragging
   // cannot be arranged at all by somebody who does not use a mouse.
+  // stx-strict-ignore-next-line document.addEventListener
   document.addEventListener('keydown', (event) => {
     if (!selected) return
 
@@ -333,17 +347,27 @@
 
   /* ---- The settings panel ------------------------------------------------ */
 
+  // stx-strict-ignore-next-line document.getElementById
   const panel = document.getElementById('rhq-panel')
+  // stx-strict-ignore-next-line document.getElementById
   const title = document.getElementById('rhq-title')
+  // stx-strict-ignore-next-line document.getElementById
   const body = document.getElementById('rhq-body')
+  // stx-strict-ignore-next-line document.getElementById
   const bodyField = document.getElementById('rhq-body-field')
+  // stx-strict-ignore-next-line document.getElementById
   const measure = document.getElementById('rhq-measure')
+  // stx-strict-ignore-next-line document.getElementById
   const dimension = document.getElementById('rhq-dimension')
+  // stx-strict-ignore-next-line document.getElementById
   const time = document.getElementById('rhq-time')
+  // stx-strict-ignore-next-line document.getElementById
   const grain = document.getElementById('rhq-grain')
+  // stx-strict-ignore-next-line document.querySelector
   const query = document.querySelector('.rhq-query')
 
   function option(select, value, label) {
+    // stx-strict-ignore-next-line document.createElement
     const element = document.createElement('option')
     element.value = value
     element.textContent = label
@@ -417,6 +441,7 @@
     }).then((response) => {
       // A reload rather than a patch: the block has to be recomputed and
       // redrawn by the engine, and the server already knows how.
+      // stx-strict-ignore-next-line window.location
       if (response.ok) window.location.reload()
       else say('Could not save')
     }).catch(() => { say('Could not save') })
@@ -431,11 +456,13 @@
     say('Removing')
 
     post('/blocks/' + id, null, 'DELETE').then((response) => {
+      // stx-strict-ignore-next-line window.location
       if (response.ok) window.location.reload()
       else say('Could not remove that')
     }).catch(() => { say('Could not remove that') })
   }
 
+  // stx-strict-ignore-next-line document.getElementById
   const removeButton = document.getElementById('rhq-remove')
   if (removeButton) {
     removeButton.addEventListener('click', () => {
@@ -443,6 +470,7 @@
     })
   }
 
+  // stx-strict-ignore-next-line document.getElementById
   const close = document.getElementById('rhq-close')
   if (close) {
     close.addEventListener('click', () => {
