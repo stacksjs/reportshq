@@ -403,6 +403,20 @@ jobs:
               systemctl show \"\$u\" -p Environment 2>/dev/null | tr ' ' '\n' | grep -E '^DB_(CONNECTION|DATABASE|HOST)=' | sed 's/^/     /' || true; \
             done" || echo "   (could not inspect units)"
 
+          # Does the schema match what the ledger claims. This is the question
+          # the single-table probe below could only hint at: `buddy migrate`
+          # compares files to the `migrations` table, so a migration recorded
+          # as applied that never took effect leaves it reporting "already up
+          # to date" forever. scripts/verify-schema.ts replays the CREATE, DROP
+          # and RENAME of every applied migration and asks the database whether
+          # what survives is actually there.
+          #
+          # `|| true`: the smoke already fails the deploy for this, and two
+          # checks failing for one cause teaches people to skip both.
+          echo "-- schema against the migration ledger"
+          $SSH "cd ${APP_DIR}/current && set -a && . ${APP_DIR}/shared/.env && set +a && \
+            bun scripts/verify-schema.ts 2>&1 | sed 's/^/   /'" || true
+
           echo "-- does the migrator's database actually hold the subscribers table"
           $SSH "cd ${APP_DIR}/current && set -a && . ${APP_DIR}/shared/.env && set +a && \
             bun -e 'const { db } = await import(\"@stacksjs/database\"); \
