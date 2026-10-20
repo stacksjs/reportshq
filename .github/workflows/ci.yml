@@ -357,14 +357,6 @@ jobs:
           APP_DIR=/var/www/reportshq-main
           SSH="ssh -o StrictHostKeyChecking=no root@${{ secrets.DEPLOY_HOST }}"
 
-          if [ "${MIGRATE:-}" != "true" ]; then
-            echo "::notice::Skipped. Set the repository variable DB_MIGRATE_ON_DEPLOY=true to apply migrations on deploy."
-            echo "Migrations in this release: $(ls database/migrations/*.sql | wc -l | tr -d ' ')"
-            echo "The box's applied set is NOT read here: that needs the database, and reading it"
-            echo "is the same connection this step is not yet authorised to make."
-            exit 0
-          fi
-
           # Fail with the reason rather than a shell error further down. The
           # release symlink is what `buddy deploy` just activated; if it is not
           # there, the deploy did not land where this step expects and running
@@ -373,6 +365,57 @@ jobs:
             || { echo "::error::${APP_DIR}/current is not on ${{ secrets.DEPLOY_HOST }}; check the deploy path before migrating"; exit 1; }
           $SSH "test -r ${APP_DIR}/shared/.env" \
             || { echo "::error::${APP_DIR}/shared/.env is missing or unreadable; migrate cannot resolve the database without it"; exit 1; }
+
+          # ---------------------------------------------------------------
+          # Which database is which.
+          #
+          # This exists because a migrate step that does not say what it
+          # touched is how a whole class of problem stays invisible. On the
+          # first real run here, `buddy migrate` reported "your production
+          # database is already up to date" while POST /api/email/subscribe
+          # went on answering 500 from its first read of `subscribers`. Both
+          # statements can be true at once, and only if the migrator and the
+          # running service resolve DIFFERENT databases.
+          #
+          # What makes that hard to spot is the auth tables: @stacksjs/auth
+          # creates them lazily on first token issue, so a database nothing
+          # ever migrated still answers a login with 401 and looks alive.
+          # `users` present and `subscribers` absent is exactly that shape.
+          #
+          # Prints, never changes, and never fails the step: a diagnostic that
+          # can fail a deploy is one people route around. Passwords are not
+          # read here, only which engine and which database name or file.
+          # ---------------------------------------------------------------
+          echo "== database identity =="
+          echo "-- what the migrator resolves, from shared/.env"
+          $SSH "set -a; . ${APP_DIR}/shared/.env; set +a; \
+            printf '   connection=%s database=%s host=%s\n' \"\${DB_CONNECTION:-unset}\" \"\${DB_DATABASE:-unset}\" \"\${DB_HOST:-unset}\"; \
+            if [ \"\${DB_CONNECTION:-}\" = sqlite ]; then \
+              f=\"\${DB_DATABASE_PATH:-${APP_DIR}/current/database/stacks.sqlite}\"; \
+              printf '   sqlite file=%s\n' \"\$f\"; \
+              ls -l \"\$f\" 2>/dev/null || echo '   (that file does not exist)'; \
+            fi" || echo "   (could not read shared/.env)"
+
+          echo "-- what the running service resolves"
+          $SSH "for u in \$(systemctl list-units --no-legend --plain 'reportshq*' 2>/dev/null | awk '{print \$1}'); do \
+              printf '   unit=%s\n' \"\$u\"; \
+              systemctl show \"\$u\" -p WorkingDirectory -p EnvironmentFile 2>/dev/null | sed 's/^/     /'; \
+              systemctl show \"\$u\" -p Environment 2>/dev/null | tr ' ' '\n' | grep -E '^DB_(CONNECTION|DATABASE|HOST)=' | sed 's/^/     /' || true; \
+            done" || echo "   (could not inspect units)"
+
+          echo "-- does the migrator's database actually hold the subscribers table"
+          $SSH "cd ${APP_DIR}/current && set -a && . ${APP_DIR}/shared/.env && set +a && \
+            bun -e 'const { db } = await import(\"@stacksjs/database\"); \
+              try { const r = await db.selectFrom(\"subscribers\").select([\"id\"]).limit(1).execute(); \
+                console.log(\"   subscribers: readable, \" + r.length + \" row(s) sampled\") } \
+              catch (e) { console.log(\"   subscribers: NOT readable -> \" + (e && e.message)) }'" \
+            || echo "   (probe did not run)"
+
+          if [ "${MIGRATE:-}" != "true" ]; then
+            echo "::notice::Migrations not applied. Set the repository variable DB_MIGRATE_ON_DEPLOY=true to apply them on deploy."
+            echo "Migrations in this release: $(ls database/migrations/*.sql | wc -l | tr -d ' ')"
+            exit 0
+          fi
 
           echo "== migrate (additive; auto-declines the destructive drops) =="
           # `buddy migrate` is a fastCommand that SKIPS the preloader's keyed
