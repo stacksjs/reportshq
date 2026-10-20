@@ -313,6 +313,84 @@ jobs:
           APP_DOMAIN: reportshq.org
         run: ./buddy deploy --prod --yes
 
+      # Apply pending migrations to the box, which no step has ever done here.
+      #
+      # This job shipped code and never touched the schema. The box's database
+      # is therefore whatever was applied to it by hand at some point, and
+      # everything added since is missing. That is not theoretical: the
+      # newsletter form on the coming-soon page answers 500 in production,
+      #
+      #     POST https://reportshq.org/api/email/subscribe  ->  500
+      #
+      # while a path that genuinely does not exist answers 404, so the route is
+      # registered and the framework's SubscriberEmailAction is running and
+      # throwing. Its first statement reads `subscribers`. Meanwhile /api/auth/
+      # login answers 401, so `users` is there and queryable. Some of the schema
+      # exists and some does not, which is exactly the shape of a database that
+      # was migrated once by hand and never again.
+      #
+      # OFF BY DEFAULT, and deliberately. The first run applies every migration
+      # this box has never seen, which is most of 210 files against a live
+      # Postgres holding real data. That is not something to discover from a
+      # push. Set the repository variable DB_MIGRATE_ON_DEPLOY to "true" when
+      # someone has looked at what is pending and is watching the run; until
+      # then this step says what it would do and changes nothing.
+      #
+      # `printf 'Y\nn\n'` answers the two prompts: Y runs the migrations, n
+      # declines the destructive drops. Non-interactive runs otherwise refuse
+      # both. The second answer is the one that matters on a box with data.
+      #
+      # NOT `|| echo "::warning::"`, and loghq's copy of this step carries the
+      # scar that explains why: it used to swallow failures, and that app went
+      # live serving `no such table: users` under a green tick, because the
+      # migration refused and the step shrugged (stacksjs/stacks#2347). An app
+      # that cannot read its own database has not deployed.
+      #
+      # One more reason this runs on the box rather than from the runner: the
+      # database is Postgres over loopback (config/cloud.ts), so there is no
+      # route to it from here.
+      - name: Migrate the production database
+        env:
+          MIGRATE: ${{ vars.DB_MIGRATE_ON_DEPLOY }}
+        run: |
+          set -euo pipefail
+          APP_DIR=/var/www/reportshq-main
+          SSH="ssh -o StrictHostKeyChecking=no root@${{ secrets.DEPLOY_HOST }}"
+
+          if [ "${MIGRATE:-}" != "true" ]; then
+            echo "::notice::Skipped. Set the repository variable DB_MIGRATE_ON_DEPLOY=true to apply migrations on deploy."
+            echo "Migrations in this release: $(ls database/migrations/*.sql | wc -l | tr -d ' ')"
+            echo "The box's applied set is NOT read here: that needs the database, and reading it"
+            echo "is the same connection this step is not yet authorised to make."
+            exit 0
+          fi
+
+          # Fail with the reason rather than a shell error further down. The
+          # release symlink is what `buddy deploy` just activated; if it is not
+          # there, the deploy did not land where this step expects and running
+          # a migration against a half-known layout is the wrong next move.
+          $SSH "test -d ${APP_DIR}/current" \
+            || { echo "::error::${APP_DIR}/current is not on ${{ secrets.DEPLOY_HOST }}; check the deploy path before migrating"; exit 1; }
+          $SSH "test -r ${APP_DIR}/shared/.env" \
+            || { echo "::error::${APP_DIR}/shared/.env is missing or unreadable; migrate cannot resolve the database without it"; exit 1; }
+
+          echo "== migrate (additive; auto-declines the destructive drops) =="
+          # `buddy migrate` is a fastCommand that SKIPS the preloader's keyed
+          # autoLoadEnv, so it never decrypts .env.<env> itself. Source the
+          # already-decrypted shared/.env first so the plaintext config is in
+          # the shell environment before buddy loads. `.env.keys` is sourced
+          # only if it exists: unlike loghq, nothing here provisions it, and a
+          # box that resolves its config without one must not fail on its absence.
+          # An `if` rather than `[ -r f ] && . f || true`, because that form also
+          # swallows a FAILURE to source a file that is present, which is the one
+          # case worth stopping for.
+          $SSH "cd ${APP_DIR}/current \
+            && set -a \
+            && . ${APP_DIR}/shared/.env \
+            && if [ -r ${APP_DIR}/shared/.env.keys ]; then . ${APP_DIR}/shared/.env.keys; fi \
+            && set +a \
+            && printf 'Y\nn\n' | bun node_modules/@stacksjs/buddy/dist/cli.js migrate"
+
       # A deploy exiting 0 does not mean the site works: a release can ship, the
       # unit can start, and every request can still 500. These are the pages a
       # stranger actually lands on.
