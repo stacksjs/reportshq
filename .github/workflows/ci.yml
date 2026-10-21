@@ -403,19 +403,23 @@ jobs:
               systemctl show \"\$u\" -p Environment 2>/dev/null | tr ' ' '\n' | grep -E '^DB_(CONNECTION|DATABASE|HOST)=' | sed 's/^/     /' || true; \
             done" || echo "   (could not inspect units)"
 
-          # Does the schema match what the ledger claims. This is the question
-          # the single-table probe below could only hint at: `buddy migrate`
+          # Does the schema match what the ledger claims. `buddy migrate`
           # compares files to the `migrations` table, so a migration recorded
           # as applied that never took effect leaves it reporting "already up
-          # to date" forever. scripts/verify-schema.ts replays the CREATE, DROP
-          # and RENAME of every applied migration and asks the database whether
-          # what survives is actually there.
+          # to date" forever. `migrate:status` is the framework's own answer to
+          # that: it compares the files on disk, the ledger AND the live schema,
+          # names any migration whose effects are gone, and offers --reconcile
+          # to repair. It replaces scripts/verify-schema.ts, which did the same
+          # job by hand and less well - that script read the flat corpus on a
+          # postgres box, matched none of the ledger's filenames, and reported
+          # "0 table(s) claimed by applied migrations" as though all were well.
           #
-          # `|| true`: the smoke already fails the deploy for this, and two
-          # checks failing for one cause teaches people to skip both.
+          # `|| true`: it exits 1 on drift, and the smoke already fails the
+          # deploy for this. Two checks failing for one cause teaches people to
+          # skip both.
           echo "-- schema against the migration ledger"
           $SSH "cd ${APP_DIR}/current && set -a && . ${APP_DIR}/shared/.env && set +a && \
-            bun scripts/verify-schema.ts 2>&1 | sed 's/^/   /'" || true
+            bun node_modules/@stacksjs/buddy/dist/cli.js migrate:status 2>&1 | sed 's/^/   /'" || true
 
           echo "-- does the migrator's database actually hold the subscribers table"
           $SSH "cd ${APP_DIR}/current && set -a && . ${APP_DIR}/shared/.env && set +a && \
