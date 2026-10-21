@@ -21,10 +21,31 @@
  * ever held data.
  */
 import { readdirSync, readFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
-import { db } from '@stacksjs/database'
+import { join } from 'node:path'
+import { config } from '@stacksjs/config'
+import { db, resolveMigrationDirectory } from '@stacksjs/database'
 
-const MIGRATIONS_DIR = resolve(import.meta.dir, '../database/migrations')
+/**
+ * Which corpus this database is actually migrated from.
+ *
+ * `database/migrations` is not one directory. The runner calls
+ * `resolveMigrationDirectory(dialect)`, which returns `database/migrations/
+ * <dialect>` when that exists and the flat directory otherwise - so on this app
+ * postgres reads 18 files from `database/migrations/postgres` while sqlite
+ * reads 209 from the flat corpus. The first version of this script hardcoded
+ * the flat path, so against the production postgres box it compared 209 sqlite
+ * filenames to a ledger holding postgres ones, found no overlap, and reported
+ * "0 table(s) claimed by applied migrations" - a clean bill of health from a
+ * check that was reading the wrong directory. Resolve it the way the runner
+ * does instead.
+ *
+ * The dialect comes from the environment first: the deploy step exports it by
+ * sourcing shared/.env before running this, while `config.database.default` is
+ * resolved from whichever .env the config loader found and stays `sqlite`
+ * locally even when DB_CONNECTION says otherwise.
+ */
+const DIALECT = process.env.DB_CONNECTION || config?.database?.default || 'sqlite'
+const MIGRATIONS_DIR = resolveMigrationDirectory(DIALECT)
 
 /**
  * Replay what the applied migrations did to the set of table NAMES.
@@ -144,6 +165,7 @@ if (import.meta.main) {
       return !(renamedTo && live.has(renamedTo))
     })
 
+  console.log(`schema: dialect ${DIALECT}, corpus ${MIGRATIONS_DIR}`)
   console.log(`schema: ${onDisk.length} migration file(s), ${recorded.length} recorded as applied, ${pending.length} pending`)
   console.log(`schema: ${claimed.size} table(s) claimed by applied migrations, ${live.size} table(s) live`)
 
