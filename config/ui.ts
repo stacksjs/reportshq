@@ -52,7 +52,22 @@ export default {
    */
   strict: {
     enabled: true,
-    failOnViolation: false,
+    // Hard-fail on a prohibited DOM call in a developer's own environment,
+    // warn everywhere else. An ALLOWLIST deliberately, not `!== 'prod'`:
+    // APP_ENV is typed 'local'|'dev'|'stage'|'prod' (config/env.ts) with no
+    // 'production' member, and .env ships 'development', which is outside
+    // that enum -- so any predicate written against 'production' is TRUE in
+    // production, the exact inversion this guards against. An unset APP_ENV
+    // falls through to warn-only for the same reason: a missing variable must
+    // not be what turns a page into a 500. That covers the real production
+    // path twice over: APP_ENV ships dotenvx-encrypted in .env.production, so
+    // it arrives either decrypted as 'prod' or, if the key is missing, as the
+    // literal 'encrypted:v2:...' string — and neither is in the list.
+    //
+    // A violation under this flag is a real HTTP 500 with the custom /500 page
+    // (bun-plugin-stx serve.js:11111,11133), not a blank 200 -- verified
+    // against the installed copy.
+    failOnViolation: ['local', 'dev', 'development'].includes(process.env.APP_ENV ?? ''),
     allowPatterns: [],
   },
 
