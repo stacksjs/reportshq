@@ -53,6 +53,29 @@ route.post('/verify-two-factor-login', 'Actions/Auth/VerifyTwoFactorLoginAction'
 route.post('/logout', 'Actions/Auth/LogoutAction').skipCsrf()
 
 /**
+ * Two-factor enrolment for the account page.
+ *
+ * These resolve to the framework's own JSON actions in @stacksjs/defaults
+ * (Actions/Auth/*), the same string-resolution the session actions above use;
+ * this app carries none of them in app/Actions/Auth. generate makes a fresh
+ * secret, stashes it server-side with a short TTL and returns the otpauth URI +
+ * secret for the authenticator app; enable verifies the 6-digit code against
+ * that stash and only then persists users.two_factor_secret, so the server never
+ * trusts a client-supplied secret; disable re-confirms the account password
+ * first, because turning a second factor off is the first thing a session thief
+ * would try.
+ *
+ * Unlike the five public endpoints above, these act on the signed-in user, so
+ * they carry `.middleware('auth')` individually - the /api/auth group is the one
+ * surface deliberately NOT behind `auth` at the registry level (a session is
+ * what /login exists to create). skipCsrf matches the rest: the cookie is
+ * SameSite=Lax and these fetches send no CSRF token.
+ */
+route.post('/generate-two-factor-secret', 'Actions/Auth/GenerateTwoFactorSecretAction').middleware('auth').skipCsrf().rateLimit(10, 'minute')
+route.post('/enable-two-factor', 'Actions/Auth/EnableTwoFactorAction').middleware('auth').skipCsrf().rateLimit(10, 'minute')
+route.post('/disable-two-factor', 'Actions/Auth/DisableTwoFactorAction').middleware('auth').skipCsrf().rateLimit(10, 'minute')
+
+/**
  * Ask for a reset link.
  *
  * Always answers the same, whether or not the address has an account. A

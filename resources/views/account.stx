@@ -4,11 +4,22 @@
 // Deliberately small. It holds the things that are true about a person rather
 // than about a project: who they are, and how to stop being signed in. Team
 // billing arrives with #17.
+import { getTwoFactorState } from '@stacksjs/auth'
 import { db as __db } from '@stacksjs/database'
 import { sessionFrom } from '~/app/Support/session'
 
 const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
 const user = session.user
+
+// Whether TOTP two-factor is on, read server-side so the first paint is already
+// right (this page renders the user on the server, there is no /api/me to ask).
+// Only this boolean is bridged to the client; getTwoFactorState also returns the
+// secret, which must never leave the server. Fails closed to "off" on a read
+// error - the safer wrong answer, since it offers re-setup rather than implying
+// a protection that is not there.
+const twoFactorEnabled = user
+  ? (await getTwoFactorState(Number(user.id)).catch(() => ({ enabled: false }))).enabled
+  : false
 
 // When the account was opened. Shown because "member since" is the one fact a
 // person cannot look up anywhere else in the product.
@@ -29,6 +40,10 @@ function joinedLabel(value: unknown): string {
 }
 
 const since = joinedLabel(row?.created_at)
+
+// The one value the client block reads off the server: the initial 2FA state.
+// Declared explicitly rather than left to the implicit name-scrape bridge.
+defineClientPayload({ twoFactorEnabled })
 </script>
 
 <script client>
@@ -42,6 +57,129 @@ const since = joinedLabel(row?.created_at)
 // leave is worse than acting on a request the server may have already honoured.
 // Only a request that never completed puts the button back.
 const signingOut = state(false)
+
+// --- Two-factor authentication ------------------------------------------
+// TOTP enrolment over same-origin fetches to /api/auth. The secret is generated
+// and stashed server-side (generate-two-factor-secret, delete-on-read); this
+// page only shows it and sends back the 6-digit code, never the secret. The
+// initial on/off comes from the server (defineClientPayload); enable/disable
+// flip it locally so there is no reload.
+const twoFaEnabled = state(twoFactorEnabled === true)
+const twoFaBusy = state(false)
+const twoFaError = state('')
+// { secret, uri } while a setup is mid-flight, null otherwise. Its presence is
+// what swaps the panel from the pitch to the confirm form.
+const twoFaSetup = state<{ secret: string, uri: string } | null>(null)
+
+/** What generate-two-factor-secret answers with (qr is ignored here). */
+interface TwoFaSetupResponse { secret?: string, uri?: string }
+
+async function startTwoFaSetup(): Promise<void> {
+  if (twoFaBusy())
+    return
+  twoFaBusy.set(true)
+  twoFaError.set('')
+  try {
+    const res = await fetch('/api/auth/generate-two-factor-secret', { method: 'POST', credentials: 'same-origin' })
+    if (!res.ok) {
+      twoFaError.set('Could not start setup. Please try again.')
+      return
+    }
+    const d = await res.json().catch(() => ({})) as TwoFaSetupResponse
+    if (!d.secret || !d.uri) {
+      twoFaError.set('Could not start setup. Please try again.')
+      return
+    }
+    twoFaSetup.set({ secret: d.secret, uri: d.uri })
+  }
+  catch {
+    twoFaError.set('Could not reach the server. Check your connection and try again.')
+  }
+  finally {
+    twoFaBusy.set(false)
+  }
+}
+
+function cancelTwoFaSetup(): void {
+  twoFaSetup.set(null)
+  twoFaError.set('')
+}
+
+async function confirmTwoFa(event: SubmitEvent): Promise<void> {
+  event.preventDefault()
+  if (twoFaBusy())
+    return
+  const form = event.target
+  if (!(form instanceof HTMLFormElement))
+    return
+  const codeEl = form.elements.namedItem('code')
+  const code = codeEl instanceof HTMLInputElement ? codeEl.value.trim() : ''
+  // Checked here so a typo answers at once; the server re-verifies against the
+  // stashed secret regardless.
+  if (!/^\d{6}$/.test(code)) {
+    twoFaError.set('Enter the 6-digit code from your authenticator app.')
+    return
+  }
+  twoFaBusy.set(true)
+  twoFaError.set('')
+  try {
+    const res = await fetch('/api/auth/enable-two-factor', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    })
+    if (!res.ok) {
+      twoFaError.set('That code did not match. Check your authenticator app and try again.')
+      return
+    }
+    twoFaEnabled.set(true)
+    twoFaSetup.set(null)
+  }
+  catch {
+    twoFaError.set('Could not reach the server. Check your connection and try again.')
+  }
+  finally {
+    twoFaBusy.set(false)
+  }
+}
+
+async function disableTwoFa(event: SubmitEvent): Promise<void> {
+  event.preventDefault()
+  if (twoFaBusy())
+    return
+  const form = event.target
+  if (!(form instanceof HTMLFormElement))
+    return
+  const passwordEl = form.elements.namedItem('password')
+  const password = passwordEl instanceof HTMLInputElement ? passwordEl.value : ''
+  if (!password) {
+    twoFaError.set('Confirm your password to turn two-factor off.')
+    return
+  }
+  twoFaBusy.set(true)
+  twoFaError.set('')
+  try {
+    const res = await fetch('/api/auth/disable-two-factor', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    })
+    if (!res.ok) {
+      twoFaError.set('Incorrect password. Two-factor is still on.')
+      return
+    }
+    twoFaEnabled.set(false)
+    form.reset()
+  }
+  catch {
+    twoFaError.set('Could not reach the server. Check your connection and try again.')
+  }
+  finally {
+    twoFaBusy.set(false)
+  }
+}
 
 async function handleSignOut(): Promise<void> {
   if (signingOut())
@@ -108,6 +246,60 @@ async function handleSignOut(): Promise<void> {
             @endif
           </div>
         </Card>
+
+        <div class="mt-6">
+          <Card padding="none" className="report-action-panel">
+            <div class="flex gap-4 items-start justify-between">
+              <div>
+                <h2 class="font-medium text-sm">Two-factor authentication</h2>
+                <p class="mt-1 text-muted text-sm">{{ twoFaEnabled() ? 'On. Sign-in needs a code from your authenticator app.' : 'Off.' }}</p>
+              </div>
+              @if (!twoFaEnabled() && !twoFaSetup())
+                <button type="button" @click="startTwoFaSetup" :disabled="twoFaBusy()" :aria-busy="twoFaBusy()" class="shrink-0 px-4 py-2 font-medium text-ink text-sm border border-line rounded-lg hover:border-accent disabled:opacity-60">{{ twoFaBusy() ? 'Starting' : 'Set up' }}</button>
+              @endif
+            </div>
+
+            @if (twoFaError())
+              <p class="mt-3 text-sm text-warn" role="alert">{{ twoFaError() }}</p>
+            @endif
+
+            {{-- Off, nothing in progress: the pitch. --}}
+            @if (!twoFaEnabled() && !twoFaSetup())
+              <p class="mt-3 max-w-[60ch] text-muted text-sm">Add a second step at sign-in so a stolen password alone cannot open your account. Works with any authenticator app (1Password, Google Authenticator, Authy).</p>
+            @endif
+
+            {{-- Setup mid-flight: the secret and otpauth link, then the code. The
+                 secret is held server-side for 10 minutes; re-opening setup
+                 replaces it, so the code must come from the last secret shown. --}}
+            @if (!twoFaEnabled() && twoFaSetup())
+              <p class="mt-3 max-w-[60ch] text-muted text-sm">Add this secret to your authenticator app, then enter the 6-digit code it shows. The secret is held for 10 minutes.</p>
+              <p class="mb-1 mt-3 text-subtle text-xs">Secret (enter manually)</p>
+              <p class="px-3 py-2 break-all text-ink text-sm tracking-[0.08em] bg-panel border border-line rounded-lg [font-family:var(--mono)]">{{ twoFaSetup()?.secret }}</p>
+              <p class="mt-2 text-muted text-sm">On this device? <a :href="twoFaSetup()?.uri" class="text-accent">open in your authenticator app</a> instead of typing it.</p>
+              <form @submit="confirmTwoFa" class="mt-4">
+                <label class="block">
+                  <span class="block mb-1 text-muted text-sm">6-digit code</span>
+                  <input name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required placeholder="000000" class="px-3 py-2 max-w-[12rem] w-full text-ink text-sm tracking-[0.3em] bg-panel border border-line rounded-lg [font-family:var(--mono)]" :aria-invalid="twoFaError() ? 'true' : 'false'" />
+                </label>
+                <div class="flex gap-3 items-center mt-3">
+                  <button type="submit" :disabled="twoFaBusy()" :aria-busy="twoFaBusy()" class="px-4 py-2 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60">{{ twoFaBusy() ? 'Confirming' : 'Confirm and enable' }}</button>
+                  <button type="button" @click="cancelTwoFaSetup" :disabled="twoFaBusy()" class="px-4 py-2 font-medium text-ink text-sm border border-line rounded-lg hover:border-accent disabled:opacity-60">Cancel</button>
+                </div>
+              </form>
+            @endif
+
+            {{-- Enabled: offer to turn off, password re-confirmed server-side. --}}
+            @if (twoFaEnabled())
+              <form @submit="disableTwoFa" class="mt-4 max-w-sm">
+                <label class="block">
+                  <span class="block mb-1 text-muted text-sm">Confirm your password to turn this off</span>
+                  <input name="password" type="password" autocomplete="current-password" required placeholder="Your password" class="px-3 py-2 w-full text-ink text-sm bg-panel border border-line rounded-lg" :aria-invalid="twoFaError() ? 'true' : 'false'" />
+                </label>
+                <button type="submit" :disabled="twoFaBusy()" :aria-busy="twoFaBusy()" class="mt-3 px-4 py-2 font-medium text-sm text-warn border border-line rounded-lg hover:border-warn disabled:opacity-60">{{ twoFaBusy() ? 'Turning off' : 'Turn off two-factor' }}</button>
+              </form>
+            @endif
+          </Card>
+        </div>
 
         <div class="mt-6">
           <Card padding="none" className="report-action-panel">
