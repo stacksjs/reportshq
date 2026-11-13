@@ -8,11 +8,10 @@
     "Chris Breuer <chris@stacksjs.com>"
   ],
   "license": "MIT",
-  "homepage": "https://github.com/stacksjs/reportshq/tree/main/storage/framework/libs/packages/elements#readme",
+  "homepage": "https://github.com/stacksjs/reportshq#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/stacksjs/reportshq.git",
-    "directory": "storage/framework/libs/packages/elements"
+    "url": "git+https://github.com/stacksjs/reportshq.git"
   },
   "bugs": {
     "url": "https://github.com/stacksjs/reportshq/issues"
@@ -27,12 +26,12 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.js",
+      "types": "./dist/index.d.ts",
       "import": "./dist/bundle.js",
       "default": "./dist/bundle.js"
     },
     "./*": {
-      "types": "./dist/*.d.js",
+      "types": "./dist/*.d.ts",
       "import": "./dist/*.js",
       "default": "./dist/*.js"
     },

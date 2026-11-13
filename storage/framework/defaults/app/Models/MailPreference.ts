@@ -1,5 +1,5 @@
 import { defineModel } from '@stacksjs/orm'
-import { schema } from '@stacksjs/validation'
+import { schema } from '@stacksjs/validation/runtime'
 
 export default defineModel({
   name: 'MailPreference',
@@ -213,6 +213,14 @@ export default defineModel({
       validation: {
         rule: schema.string().max(20_000),
       },
+    },
+  },
+
+  dashboard: {
+    columns: ['mailbox', 'accountName', 'theme', 'language', 'displayDensity'],
+    // Prose, asked for in a box with room for it.
+    fields: {
+      vacationMessage: { input: 'longtext' },
     },
   },
 } as const)

@@ -1,5 +1,5 @@
 import { defineModel, parentOwnership } from '@stacksjs/orm'
-import { schema } from '@stacksjs/validation'
+import { schema } from '@stacksjs/validation/runtime'
 
 /**
  * One field of a Form. `name` is the machine key submissions store values
@@ -27,6 +27,8 @@ export default defineModel({
   ownership: parentOwnership('Form', 'form_id'),
 
   traits: {
+    // So a fresh seed fills its dashboard page (stacksjs/stacks#3000).
+    useSeeder: { count: 10 },
     useTimestamps: true,
     useApi: {
       middleware: ['auth'],

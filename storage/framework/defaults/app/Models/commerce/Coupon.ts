@@ -1,5 +1,5 @@
 import { defineModel } from '@stacksjs/orm'
-import { schema } from '@stacksjs/validation'
+import { schema } from '@stacksjs/validation/runtime'
 
 export default defineModel({
   name: 'Coupon',
@@ -55,6 +55,7 @@ export default defineModel({
     description: {
       order: 2,
       fillable: true,
+      type: 'text',
       validation: {
         rule: schema.string(),
       },
@@ -106,7 +107,11 @@ export default defineModel({
           min: 'Discount value must be greater than 0.01',
         },
       },
-      factory: faker => faker.number.int({ min: 5, max: 50 }),
+      // A percentage stays a plain number; a fixed amount is integer minor units
+      // ($5 to $50). discountType is declared above, so the seeder has drawn it.
+      factory: (faker, { discountType }) => discountType === 'fixed_amount'
+        ? faker.helpers.arrayElement([500, 1000, 1500, 2000, 2500, 5000])
+        : faker.number.int({ min: 5, max: 50 }),
     },
 
     minOrderAmount: {
@@ -118,7 +123,8 @@ export default defineModel({
           min: 'Min order amount must be greater than 0',
         },
       },
-      factory: faker => faker.number.int({ min: 0, max: 50 }),
+      // Integer minor units: no minimum, or $25 to $100.
+      factory: faker => faker.helpers.arrayElement([0, 2500, 5000, 7500, 10000]),
     },
 
     maxDiscountAmount: {
@@ -130,7 +136,8 @@ export default defineModel({
           min: 'Max discount amount must be greater than 0',
         },
       },
-      factory: faker => faker.number.int({ min: 5, max: 100 }),
+      // Integer minor units: $10 to $100.
+      factory: faker => faker.number.int({ min: 1000, max: 10000 }),
     },
 
     freeProductId: {
@@ -139,7 +146,9 @@ export default defineModel({
       validation: {
         rule: schema.string(),
       },
-      factory: faker => faker.string.uuid(),
+      // Stored and shown, never resolved: nothing redeems or joins on it yet,
+      // so what it holds is left to the feature that does. No factory, so a
+      // seed does not invent one (stacksjs/stacks#3002).
     },
 
     usageLimit: {

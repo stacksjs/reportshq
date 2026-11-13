@@ -1,5 +1,5 @@
 import { defineModel } from '@stacksjs/orm'
-import { schema } from '@stacksjs/validation'
+import { schema } from '@stacksjs/validation/runtime'
 
 export default defineModel({
   name: 'Request',
@@ -28,6 +28,7 @@ export default defineModel({
   ownership: false,
 
   traits: {
+    gdpr: { basis: 'legitimate_interests', purpose: 'Request log for debugging and abuse prevention' },
     useTimestamps: true,
     useSoftDeletes: true,
     useSeeder: {
@@ -47,9 +48,11 @@ export default defineModel({
     method: {
       fillable: true,
       validation: {
-        rule: schema.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD']),
+        // Observations include rejected methods (for example PROPFIND -> 405).
+        // An enum of application verbs silently lost those requests at insert.
+        rule: schema.string().max(255),
         message: {
-          enum: 'method must be a valid HTTP method',
+          string: 'method must be an HTTP method token',
           required: 'method is required',
         },
       },
@@ -93,6 +96,7 @@ export default defineModel({
     },
 
     ip_address: {
+      personal: true,
       fillable: true,
       validation: {
         rule: schema.string(),
@@ -117,6 +121,7 @@ export default defineModel({
     },
 
     user_agent: {
+      personal: true,
       fillable: true,
       validation: {
         rule: schema.string(),
@@ -129,6 +134,7 @@ export default defineModel({
 
     error_message: {
       fillable: true,
+      type: 'text',
       validation: {
         rule: schema.string(),
         message: {
@@ -136,6 +142,14 @@ export default defineModel({
         },
       },
       factory: faker => faker.helpers.maybe(() => faker.lorem.sentence(), { probability: 0.2 }),
+    },
+  },
+
+  dashboard: {
+    columns: ['method', 'path', 'statusCode', 'durationMs', 'ipAddress', 'createdAt'],
+    // Stored in milliseconds: "634 ms", "1.2 s".
+    fields: {
+      durationMs: { label: 'Duration', format: 'duration' },
     },
   },
 } as const)

@@ -192,7 +192,7 @@
             </div>
           </div>
 
-          <div :show="isFiltersSection" class="space-y-6">
+          <div :show="isFiltersSection" class="flex flex-col gap-6">
             <EmailSettingsList
               title="Filter Rules"
               description="Keep a reusable list of mailbox filter expressions."
@@ -211,7 +211,7 @@
             />
           </div>
 
-          <div :show="isLabelsSection" class="space-y-6">
+          <div :show="isLabelsSection" class="flex flex-col gap-6">
             <EmailSettingsList
               title="Mailbox Labels"
               description="Create labels that integrations can apply to incoming conversations."
@@ -262,9 +262,9 @@ import type {
   MailTheme,
   NotificationSound,
   ReplyBehavior,
-} from '~/storage/framework/defaults/functions/mail-preferences'
-import { fetchInboxActivity } from '~/storage/framework/defaults/functions/inbox'
-import { fetchMailPreference, saveMailPreference } from '~/storage/framework/defaults/functions/mail-preferences'
+} from '@stacksjs/defaults/functions/mail-preferences'
+import { fetchInboxActivity } from '@stacksjs/defaults/functions/inbox'
+import { fetchMailPreference, saveMailPreference } from '@stacksjs/defaults/functions/mail-preferences'
 
 interface SettingsSection {
   id: string

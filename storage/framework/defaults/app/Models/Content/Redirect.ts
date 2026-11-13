@@ -1,5 +1,5 @@
 import { defineModel, siteOwnership } from '@stacksjs/orm'
-import { schema } from '@stacksjs/validation'
+import { schema } from '@stacksjs/validation/runtime'
 
 /**
  * A path-level redirect on a site. Written automatically when a page's slug
@@ -26,6 +26,8 @@ export default defineModel({
   ownership: siteOwnership(),
 
   traits: {
+    // So a fresh seed fills its dashboard page (stacksjs/stacks#3000).
+    useSeeder: { count: 5 },
     useTimestamps: true,
     useApi: {
       middleware: ['auth'],

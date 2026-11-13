@@ -1,5 +1,5 @@
 import { defineModel } from '@stacksjs/orm'
-import { schema } from '@stacksjs/validation'
+import { schema } from '@stacksjs/validation/runtime'
 
 export default defineModel({
   name: 'PrintDevice',
@@ -100,7 +100,7 @@ export default defineModel({
       validation: {
         rule: schema.unix(),
         message: {
-          invalid: 'Invalid timestamp format',
+          unix: 'Invalid timestamp format',
         },
       },
       factory: faker => faker.date.recent().getTime(),

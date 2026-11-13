@@ -1,5 +1,5 @@
 import { defineModel, teamMembershipOwnership } from '@stacksjs/orm'
-import { schema } from '@stacksjs/validation'
+import { schema } from '@stacksjs/validation/runtime'
 
 export default defineModel({
   name: 'Team',
@@ -75,6 +75,12 @@ export default defineModel({
   },
 
   dashboard: {
+    columns: ['name', 'memberCount', 'status', 'createdAt'],
+    // A count of members is called what it counts.
+    fields: {
+      memberCount: { label: 'Members' },
+      description: { input: 'longtext' },
+    },
     highlight: true,
   },
 } as const)

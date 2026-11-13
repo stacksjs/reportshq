@@ -1,5 +1,5 @@
-import { Action } from '@stacksjs/actions'
-import { db } from '@stacksjs/database'
+import { Action } from '@stacksjs/actions/runtime'
+import { db } from '@stacksjs/database/runtime'
 import { response } from '@stacksjs/router'
 import { dashboardOperationalError } from '../dashboard-response'
 import {
@@ -42,7 +42,7 @@ async function notificationDeliveryOverview() {
     db
       .selectFrom('notification_deliveries')
       .select(['channel', 'status', db.fn.count('id').as('count')])
-      .groupBy(['channel', 'status'])
+      .groupBy('channel', 'status')
       .execute() as unknown as Promise<ChannelStatusCountRow[]>,
     db
       .selectFrom('notification_deliveries')

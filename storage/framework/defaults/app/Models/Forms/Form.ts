@@ -1,5 +1,5 @@
 import { defineModel, siteOwnership } from '@stacksjs/orm'
-import { schema } from '@stacksjs/validation'
+import { schema } from '@stacksjs/validation/runtime'
 
 /**
  * A user-defined form: inquiry, permission slip, event registration,
@@ -28,6 +28,8 @@ export default defineModel({
   ownership: siteOwnership(),
 
   traits: {
+    // So a fresh seed fills its dashboard page (stacksjs/stacks#3000).
+    useSeeder: { count: 3 },
     useUuid: true,
     useTimestamps: true,
     useApi: {

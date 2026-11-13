@@ -1,5 +1,5 @@
 import { defineModel } from '@stacksjs/orm'
-import { schema } from '@stacksjs/validation'
+import { schema } from '@stacksjs/validation/runtime'
 
 export default defineModel({
   name: 'EmailList',
@@ -135,6 +135,14 @@ export default defineModel({
         rule: schema.number(),
       },
       factory: () => 1,
+    },
+  },
+
+  dashboard: {
+    columns: ['name', 'status', 'subscriberCount', 'activeCount', 'isPublic', 'createdAt'],
+    // Prose, asked for in a box with room for it.
+    fields: {
+      description: { input: 'longtext' },
     },
   },
 } as const)

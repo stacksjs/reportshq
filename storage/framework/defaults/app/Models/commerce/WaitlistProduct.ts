@@ -1,5 +1,5 @@
 import { customerOwnership, defineModel } from '@stacksjs/orm'
-import { schema } from '@stacksjs/validation'
+import { schema } from '@stacksjs/validation/runtime'
 
 export default defineModel({
   name: 'WaitlistProduct',
@@ -13,12 +13,13 @@ export default defineModel({
   ownership: customerOwnership(),
 
   traits: {
+    gdpr: { subject: { via: 'Customer' }, erasure: 'delete', basis: 'consent', purpose: 'Back-in-stock waitlist' },
     useUuid: true,
     useTimestamps: true,
     useSearch: {
-      displayable: ['id', 'name', 'email', 'phone', 'partySize', 'notificationPreference', 'source', 'notes', 'status'],
+      displayable: ['id', 'name', 'email', 'phone', 'quantity', 'notificationPreference', 'source', 'notes', 'status'],
       searchable: ['name', 'email', 'phone', 'source'],
-      sortable: ['name', 'partySize', 'createdAt', 'updatedAt', 'status'],
+      sortable: ['name', 'quantity', 'createdAt', 'updatedAt', 'status'],
       filterable: ['notificationPreference', 'source', 'status'],
     },
 
@@ -37,6 +38,7 @@ export default defineModel({
 
   attributes: {
     name: {
+      personal: true,
       order: 1,
       fillable: true,
       validation: {
@@ -49,6 +51,7 @@ export default defineModel({
     },
 
     email: {
+      personal: true,
       order: 2,
       fillable: true,
       validation: {
@@ -61,6 +64,7 @@ export default defineModel({
     },
 
     phone: {
+      personal: true,
       order: 3,
       fillable: true,
       validation: {
@@ -106,6 +110,7 @@ export default defineModel({
     },
 
     notes: {
+      personal: true,
       order: 7,
       fillable: true,
       validation: {
@@ -152,5 +157,9 @@ export default defineModel({
 
   dashboard: {
     highlight: true,
+    // Prose, asked for in a box with room for it.
+    fields: {
+      notes: { input: 'longtext' },
+    },
   },
 } as const)

@@ -1,5 +1,5 @@
 import { defineModel, siteOwnership } from '@stacksjs/orm'
-import { schema } from '@stacksjs/validation'
+import { schema } from '@stacksjs/validation/runtime'
 
 /**
  * A real CMS page: a block document served publicly at `path` on its site.
@@ -204,6 +204,13 @@ export default defineModel({
         },
       },
       factory: faker => faker.number.int({ min: 0, max: 100 }),
+    },
+  },
+
+  dashboard: {
+    // Prose, asked for in a box with room for it.
+    fields: {
+      metaDescription: { input: 'longtext' },
     },
   },
 } as const)

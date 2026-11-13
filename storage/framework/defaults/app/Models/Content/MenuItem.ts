@@ -1,5 +1,5 @@
 import { defineModel, parentOwnership } from '@stacksjs/orm'
-import { schema } from '@stacksjs/validation'
+import { schema } from '@stacksjs/validation/runtime'
 
 /**
  * One entry in a Menu: either a link to a Page (`pageId`) or a raw `url` -
@@ -17,6 +17,8 @@ export default defineModel({
   ownership: parentOwnership('Menu', 'menu_id'),
 
   traits: {
+    // So a fresh seed fills its dashboard page (stacksjs/stacks#3000).
+    useSeeder: { count: 10 },
     useTimestamps: true,
     useApi: {
       middleware: ['auth'],

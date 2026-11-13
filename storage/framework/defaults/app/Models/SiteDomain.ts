@@ -1,5 +1,5 @@
 import { defineModel, siteOwnership } from '@stacksjs/orm'
-import { schema } from '@stacksjs/validation'
+import { schema } from '@stacksjs/validation/runtime'
 
 /**
  * A custom domain routed to a Site. Only rows with `verifiedAt` set resolve
@@ -74,5 +74,9 @@ export default defineModel({
       },
       factory: () => 'pending',
     },
+  },
+
+  dashboard: {
+    columns: ['domain', 'site', 'isPrimary', 'sslStatus', 'verifiedAt'],
   },
 })

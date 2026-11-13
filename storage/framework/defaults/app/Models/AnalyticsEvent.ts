@@ -1,5 +1,5 @@
 import { defineModel } from '@stacksjs/orm'
-import { schema } from '@stacksjs/validation'
+import { schema } from '@stacksjs/validation/runtime'
 
 export default defineModel({
   name: 'AnalyticsEvent',
@@ -67,9 +67,14 @@ export default defineModel({
 
     properties: {
       fillable: true,
+      type: 'text',
       validation: {
         rule: schema.string(),
       },
     },
+  },
+
+  dashboard: {
+    columns: ['name', 'category', 'path', 'value', 'createdAt'],
   },
 } as const)

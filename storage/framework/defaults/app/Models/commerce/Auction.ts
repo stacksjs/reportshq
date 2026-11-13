@@ -1,5 +1,5 @@
 import { defineModel } from '@stacksjs/orm'
-import { schema } from '@stacksjs/validation'
+import { schema } from '@stacksjs/validation/runtime'
 
 /**
  * An auction: a catalogue of lots that opens, takes bids, and closes.
@@ -75,6 +75,7 @@ export default defineModel({
     description: {
       order: 3,
       fillable: true,
+      type: 'text',
       validation: {
         rule: schema.string(),
       },
