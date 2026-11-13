@@ -357,10 +357,10 @@ one.
 - Only commit or push when asked. If on the default branch, branch first.
 
 ### Requirements
-- **Bun is pinned exactly at 1.3.14** in `deps.yml`, not floored. `^1.3.14` resolves through
-  pantry's `v1` symlink and can land on 1.4.x, which writes `lockfileVersion: 2` that 1.3.x cannot
-  parse. Nothing currently enforces this (see the missing lockfile-check script above), so do not
-  loosen the pin.
+- **Bun is pinned exactly at 1.4.4** in `deps.yml`, not floored: it is the version CI and the
+  production box run, and a range resolves through pantry's `v1` symlink, so it would move on its
+  own. Bun 1.3.x cannot install the current framework (it fails to resolve the tarball URL
+  dependencies of `@stacksjs/image`), so do not move the pin back.
 - SQLite >= 3.47.2. TypeScript throughout. PHP >= 8.2 for `packages/laravel` (its suites run on a
   bare `php`, with no composer install and no network).
 
