@@ -283,7 +283,7 @@ async function handleSignOut(): Promise<void> {
                 </label>
                 <div class="flex gap-3 items-center mt-3">
                   <button type="submit" :disabled="twoFaBusy()" :aria-busy="twoFaBusy()" class="px-4 py-2 font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60">{{ twoFaBusy() ? 'Confirming' : 'Confirm and enable' }}</button>
-                  <button type="button" @click="cancelTwoFaSetup" :disabled="twoFaBusy()" class="px-4 py-2 font-medium text-ink text-sm border border-line rounded-lg hover:border-accent disabled:opacity-60">Cancel</button>
+                  <button type="button" @click="cancelTwoFaSetup" :disabled="twoFaBusy()" :aria-busy="twoFaBusy()" class="px-4 py-2 font-medium text-ink text-sm border border-line rounded-lg hover:border-accent disabled:opacity-60">Cancel</button>
                 </div>
               </form>
             @endif

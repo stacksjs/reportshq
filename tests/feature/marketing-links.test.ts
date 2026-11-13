@@ -71,7 +71,9 @@ function linksIn(file: string): string[] {
   const found = new Set<string>()
 
   const patterns = [
-    /href="([^"{}]+)"/g,
+    // Not `:href`: that is a binding, an expression rather than a destination,
+    // and reading it as a path reports `twoFaSetup()` as a page that is missing.
+    /(?<![:\w-])href="([^"{}]+)"/g,
     // A redirect is a link the visitor never chose, which makes a dead one
     // worse rather than better: there is nothing to not-click.
     /location\.replace\(\s*['"]([^'"]+)['"]\s*\)/g,

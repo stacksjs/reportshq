@@ -27,8 +27,13 @@ const ROUTES_DIR = join(import.meta.dir, '../../routes')
  * function here would fail correct code and teach people to append a call that
  * does nothing. The claim being tested is "identity was considered", and the
  * behavioural tests carry the claim that it was considered correctly.
+ *
+ * `.middleware('auth')` on the route counts: it refuses a request with no
+ * session before the handler runs, which is the same claim made one step
+ * earlier. A route that hands off to an action by name has no body to read, so
+ * the middleware is the only place its gate can be seen from here.
  */
-const GATES = /\b(?:accessFor|canRead|canAdminister|isOwner|projectsFor|projectForIngestKey|currentUser|editableReport|shareByToken|verifyKey)\b/
+const GATES = /\b(?:accessFor|canRead|canAdminister|isOwner|projectsFor|projectForIngestKey|currentUser|requestUser|editableReport|shareByToken|verifyKey)\b|\.middleware\('auth'\)/
 
 /**
  * Routes that are deliberately open, each with the reason it is safe.
