@@ -1,0 +1,197 @@
+<script server>
+// The approve page for `buddy hq:connect reportshq` (routes/hq.ts).
+//
+// The CLI opens this URL with the code it was issued, a signed-in person
+// confirms, and the CLI collects a licence on its next poll and writes it to
+// the application's REPORTSHQ_LICENSE. Loading the page creates nothing: only
+// the button does.
+//
+// The confirmation code is deliberately NOT rendered here. The person types
+// what their own terminal shows, and the server checks it. A page that showed
+// it could be agreed with by somebody who was sent the link and has no
+// terminal at all.
+import { describeApproval as __describeApproval } from '~/app/Hq/service'
+import { param, sessionFrom } from '~/app/Support/session'
+
+useSeoMeta({
+  title: 'Connect an application - ReportsHQ',
+  // Auth-walled and single-use: nothing here is worth an index entry.
+  robots: 'noindex, nofollow',
+})
+
+const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
+const signedIn = session.user !== null
+
+const connectCode = param(typeof query !== 'undefined' ? query : undefined, 'code') ?? ''
+
+// Looked up only for a signed-in viewer. A pending code answers the
+// application's name. An unknown, expired or already approved one answers
+// nothing, and the page says the same thing for all three so it cannot be
+// used to test codes.
+let appName = ''
+let pending = false
+// True when this account already has a licence for an application of that
+// name: approving hands over that same licence and uses no allowance.
+let existing = false
+// Set when the account's plan covers no further application.
+let refusal = ''
+
+if (session.user && connectCode) {
+  try {
+    const approval = await __describeApproval(connectCode, session.user.id)
+    if (approval) {
+      appName = approval.app
+      pending = true
+      existing = approval.existing
+      refusal = approval.refusal ?? ''
+    }
+  }
+  catch {
+    pending = false
+  }
+}
+
+const approvable = signedIn && pending && refusal === ''
+</script>
+
+<script client>
+// The connect code is carried by a hidden input rather than closed over from
+// the server block, the same way reset.stx carries its token: a client block
+// that named a server value would have it serialised into the page as script
+// data on top of the markup that already holds it.
+const error = state('')
+const loading = state(false)
+const connected = state('')
+
+/** What the approve action answers with. */
+interface ApproveResponse { error?: string, project?: { name?: string } }
+
+async function approve(event: SubmitEvent): Promise<void> {
+  event.preventDefault()
+  if (loading())
+    return
+  const form = event.target
+  if (!(form instanceof HTMLFormElement))
+    return
+  const codeField = form.elements.namedItem('code')
+  const confirmField = form.elements.namedItem('confirm')
+  const code = codeField instanceof HTMLInputElement ? codeField.value : ''
+  const typed = confirmField instanceof HTMLInputElement ? confirmField.value.trim() : ''
+  if (!typed) {
+    error.set('Enter the confirmation code your terminal is showing.')
+    return
+  }
+
+  loading.set(true)
+  error.set('')
+  try {
+    const res = await fetch(`/api/cli/connect/${encodeURIComponent(code)}/approve`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ confirm: typed }),
+    })
+    const data = await res.json().catch(() => ({})) as ApproveResponse
+    if (res.status === 401) {
+      navigate('/login', { replace: true, reload: true })
+      return
+    }
+    if (!res.ok) {
+      error.set(data.error || 'Could not approve the connection.')
+      return
+    }
+    connected.set(data.project?.name || 'Your application')
+  }
+  catch {
+    error.set('Could not reach the server. Check your connection and try again.')
+  }
+  finally {
+    loading.set(false)
+  }
+}
+</script>
+
+<template>
+  <div class="min-h-[100dvh] text-ink bg-canvas">
+    <main class="grid place-items-center px-6 py-16 min-h-[100dvh]">
+      <div class="max-w-sm w-full">
+        <StxLink to="/" class="flex gap-2 items-center mb-8 no-underline">
+          <i class="h-5 w-5 text-accent i-hugeicons-chart-histogram"></i>
+          <span class="font-semibold text-ink tracking-tight">ReportsHQ</span>
+        </StxLink>
+
+        @if (!signedIn)
+          <h1 class="font-semibold text-2xl tracking-tight">Sign in to connect your application</h1>
+          <p class="mb-6 mt-1 text-muted text-sm">Your terminal is waiting for you to approve this connection. Sign in, then come back to this tab and reload it.</p>
+          <div class="grid gap-3">
+            <a href="/login" target="_blank" rel="noopener" class="px-4 py-2.5 font-medium no-underline text-accent-ink text-center text-sm bg-accent rounded-lg">Sign in</a>
+            <a href="/register" target="_blank" rel="noopener" class="px-4 py-2.5 font-medium no-underline text-center text-ink text-sm border border-line rounded-lg hover:border-accent">Create an account</a>
+          </div>
+        @endif
+
+        @if (signedIn && !pending)
+          <h1 class="font-semibold text-2xl tracking-tight">This link is no longer valid</h1>
+          <p class="mt-1 text-muted text-sm">A connection request lasts ten minutes and can be approved once. Run the connect command again to get a new one.</p>
+        @endif
+
+        @if (signedIn && pending && refusal)
+          <h1 class="font-semibold text-2xl tracking-tight">Your plan covers no more applications</h1>
+          <p class="mt-1 text-muted text-sm">A terminal asked for a licence for an application called <span class="font-medium text-ink">{{ appName }}</span>. {{ refusal }}</p>
+          <p class="mt-3 text-muted text-sm">Applications you have already licensed are not affected, and reports keep working with or without a licence.</p>
+          <StxLink to="/pricing" class="inline-flex items-center mt-6 px-4 py-2.5 font-medium no-underline text-accent-ink text-sm bg-accent rounded-lg">See plans</StxLink>
+        @endif
+
+        @if (approvable)
+          <div :hidden="!connected()" hidden role="status">
+            <h1 class="font-semibold text-2xl tracking-tight">Connected</h1>
+            <p class="mt-1 text-muted text-sm"><span class="font-medium text-ink">{{ connected() }}</span> has its licence. You can close this tab and return to your terminal.</p>
+          </div>
+
+          <form method="post" action="/api/cli/connect" @submit="approve" :hidden="!!connected()">
+            <h1 class="font-semibold text-2xl tracking-tight">License {{ appName }}?</h1>
+            <p class="mb-5 mt-1 text-muted text-sm">A terminal asked for a ReportsHQ licence for an application called <span class="font-medium text-ink">{{ appName }}</span>.</p>
+
+            @if (existing)
+              <p class="mb-5 px-4 py-3 text-muted text-sm bg-panel border border-line rounded-lg" role="note">You already have a licence for <span class="font-medium text-ink">{{ appName }}</span>. Approving sends that same licence to the terminal that asked, and uses none of your plan's allowance.</p>
+            @else
+              <p class="mb-5 px-4 py-3 text-muted text-sm bg-panel border border-line rounded-lg" role="note">Approving issues a new licence for <span class="font-medium text-ink">{{ appName }}</span>, counts it as one application on your plan, and sends it to the terminal that asked.</p>
+            @endif
+
+            <input type="hidden" name="code" value="{{ connectCode }}" />
+
+            <label class="block">
+              <span class="block mb-1 text-muted text-sm">Confirmation code from your terminal</span>
+              <input
+                id="connect-confirm"
+                name="confirm"
+                type="text"
+                required
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                maxlength="12"
+                placeholder="ABC-DEF"
+                class="px-3 py-2 w-full text-center text-ink text-sm tracking-[0.2em] uppercase bg-panel border border-line rounded-lg [font-family:var(--mono)]"
+                :aria-invalid="error() ? 'true' : 'false'"
+                :aria-describedby="error() ? 'connect-error' : 'connect-help'"
+              />
+            </label>
+
+            @if (error())
+              <p id="connect-error" class="mt-3 text-sm text-warn" role="alert">{{ error() }}</p>
+            @endif
+
+            <button
+              type="submit"
+              :disabled="loading()"
+              :aria-busy="loading()"
+              class="mt-4 px-4 py-2.5 w-full font-medium text-accent-ink text-sm bg-accent rounded-lg disabled:opacity-60"
+            >{{ loading() ? 'Connecting' : 'Approve connection' }}</button>
+
+            <p id="connect-help" class="mt-4 text-muted text-xs">The command you ran printed this code. If you did not just run a connect command yourself, or you were sent this link, close this page.</p>
+          </form>
+        @endif
+      </div>
+    </main>
+  </div>
+</template>

@@ -6,6 +6,8 @@
 // billing arrives with #17.
 import { getTwoFactorState } from '@stacksjs/auth'
 import { db as __db } from '@stacksjs/database'
+import { allowanceFor, planFor } from '~/app/Billing/limits'
+import { licensesOwnedBy as __licensesOwnedBy, tierOf as __tierOf } from '~/app/Hq/service'
 import { sessionFrom } from '~/app/Support/session'
 
 const session = await sessionFrom(typeof cookies !== 'undefined' ? cookies : undefined)
@@ -40,6 +42,16 @@ function joinedLabel(value: unknown): string {
 }
 
 const since = joinedLabel(row?.created_at)
+
+// The licences this account holds, one per installed application, and how
+// many its plan covers. Rendered on the server and never handed to the client
+// block: a licence is not a secret to its owner, but it has no business in
+// script data either. A read error shows an empty list, not an error page.
+const licenses = user
+  ? await __licensesOwnedBy(user.id).catch(() => [])
+  : []
+const plan = planFor(user ? await __tierOf(user.id).catch(() => null) : null)
+const applicationAllowance = allowanceFor(plan.tier, 'applications')
 
 // The one value the client block reads off the server: the initial 2FA state.
 // Declared explicitly rather than left to the implicit name-scrape bridge.
@@ -246,6 +258,30 @@ async function handleSignOut(): Promise<void> {
             @endif
           </div>
         </Card>
+
+        <div class="mt-6">
+          <Card padding="none" className="report-action-panel">
+            <div class="flex gap-4 items-baseline justify-between">
+              <h2 class="font-medium text-sm">Licences</h2>
+              <span class="text-muted text-sm">{{ licenses.length }} of {{ applicationAllowance }} on {{ plan.name }}</span>
+            </div>
+            <p class="mt-1 max-w-[60ch] text-muted text-sm">One licence per installed application. Reports work in full with or without one.</p>
+
+            @if (licenses.length)
+              <ul class="grid gap-3 mt-4">
+                @foreach (licenses as license)
+                  <li>
+                    <p class="text-ink text-sm">{{ license.application }}</p>
+                    <p class="mt-1 px-3 py-2 break-all text-ink text-sm bg-panel border border-line rounded-lg [font-family:var(--mono)]">{{ license.key }}</p>
+                  </li>
+                @endforeach
+              </ul>
+              <p class="mt-4 max-w-[60ch] text-muted text-sm">Set a licence as <span class="[font-family:var(--mono)]">REPORTSHQ_LICENSE</span> in every environment its application runs in.</p>
+            @else
+              <p class="mt-4 max-w-[60ch] text-muted text-sm">No licences yet. In a Stacks application, run <span class="[font-family:var(--mono)]">buddy hq:connect reportshq</span> and approve it here. The licence is written to that application's <span class="[font-family:var(--mono)]">.env</span>.</p>
+            @endif
+          </Card>
+        </div>
 
         <div class="mt-6">
           <Card padding="none" className="report-action-panel">

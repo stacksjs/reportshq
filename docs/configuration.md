@@ -79,4 +79,20 @@ Common Laravel environment settings include:
 | `REPORTSHQ_API` | Enable the JSON API |
 | `REPORTSHQ_API_PREFIX` | JSON API route prefix |
 
+## Getting a licence key
+
+A licence is issued to an account, one per installed application, and is listed on the account page at reportshq.org.
+
+In a Stacks application, the framework CLI fetches it:
+
+```bash
+buddy hq:connect reportshq
+```
+
+The command prints an approve link and a short confirmation code. Open the link, sign in, type the code and approve. The licence is then written to the application's `.env` as `REPORTSHQ_LICENSE`. It is never printed in the terminal.
+
+Running the command again for the same application, from any machine, returns the same licence. Set that one key in every environment the application runs in.
+
+A Laravel application copies its key from the account page into `REPORTSHQ_LICENSE`.
+
 The exact configuration surface is versioned with each package. Treat the installed package's typed config or published config file as the final source of truth.

@@ -50,6 +50,11 @@ const ALLOWED = new Map<string, string>([
   ['POST /verify-two-factor-login', 'Step two of a sign-in, so it cannot require a session either. Its gate is the pair it demands: a single-use challenge token minted by LoginAction only after the password was already checked, plus a TOTP code verified against that account. Neither alone opens a session, and a spent challenge sends the visitor back to /login.'],
   ['POST /forgot', 'Checks nothing and reveals nothing: answers the same either way, so an address cannot be probed. Rate limited.'],
   ['POST /reset', 'The emailed token is the credential. Single use and expiring.'],
+  // `buddy hq:connect`. A terminal has no session, and these two hand over
+  // nothing on their own: the licence only exists once a signed-in person has
+  // approved, on the third route, which is gated.
+  ['POST /connect', 'A CLI asking for a connect code. Creates a pending row that expires in ten minutes and grants nothing. Rate limited per address.'],
+  ['GET /connect/{code}', 'The code is the credential: 256 bits, stored only as a hash, single use. Answers the licence once, after a signed-in person approved it. Rate limited per address.'],
   ['POST /logout', 'Revokes whatever token the caller presents. Presenting someone else\'s is signing them out with a credential already held.'],
 ])
 

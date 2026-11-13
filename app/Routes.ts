@@ -34,4 +34,10 @@ export default {
   // since requiring a session to create one would be a short conversation. It
   // carries its own rate limits instead; see app/Support/signin-limits.ts.
   'auth': { path: 'auth', prefix: '/api/auth' },
+
+  // `buddy hq:connect reportshq`: a terminal asks for a licence and a signed-in
+  // person approves it. Not behind `auth` at the registry level, because the
+  // two routes a CLI calls have no session to present. The approve action
+  // carries `auth` itself; see routes/hq.ts.
+  'hq': { path: 'hq', prefix: '/api/cli' },
 } satisfies RouteRegistry

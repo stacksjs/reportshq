@@ -62,6 +62,12 @@ One installation: one codebase, one database, one licence key. A staging copy
 of the same application does not count, and neither does a second environment.
 Three products is three applications.
 
+The count is the number of licences an account has been issued, and it is
+checked at one moment only: when a new one is asked for. An account at its
+allowance is told so on the approve page and no licence is issued. Nothing that
+is already running is affected, and asking again for an application that has a
+licence always returns the same one.
+
 ## Self-hosting
 
 There is no other kind. The package runs on your servers either way, and a
