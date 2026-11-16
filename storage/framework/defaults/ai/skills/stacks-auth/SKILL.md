@@ -74,6 +74,67 @@ declaring `useAuth` can hold tokens - not only `User`.
 The `PersonalAccessToken` model maps the same table, so `owner.with('tokenable')`
 lists exactly what `createToken` minted. It deliberately generates no CRUD
 routes: minting and revoking both carry semantics a generic route does not.
+
+### API keys and machine credentials: use these tokens, never a key column
+
+Anything a machine presents to an app is one of these tokens: an "API key",
+a read key, a deploy or CI token, a key for an agent or a dashboard. Do not
+add a `*_key` / `*_token` column, generate a random string, or write a
+comparison function. That is rebuilding, worse, what is already here: the
+hand-rolled version stores the secret readable, has one key per row, and has
+no scopes, expiry, listing or revocation. An existing hand-rolled key in an
+app is something to migrate, not a pattern to copy.
+
+```ts
+import { createToken, findToken, revokeTokenById, tokens } from '@stacksjs/auth'
+
+// Mint. Name the scopes; never '*' for a machine. The default lifetime is
+// 60 MINUTES, so pass expiresAt, and skip the refresh token nobody will use.
+const { plainTextToken } = await createToken(user.id, 'release pipeline', ['issues:triage'], {
+  expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+  withRefreshToken: false,
+})                                             // show plainTextToken once; only its hash is stored
+
+const live = await findToken(presented)       // null when revoked, expired or predating a password change
+const allowed = !!live && (live.scopes.includes('*') || live.scopes.includes('issues:triage'))
+const mine = await tokens(user.id)            // every live token of the owner, sign-ins included
+await revokeTokenById(id)                     // after checking it is in the caller's own list
+```
+
+The default routes already exist: `GET /auth/tokens`, `POST /auth/token`,
+`DELETE /auth/tokens/{id}` (`Actions/Auth/ListTokensAction`,
+`CreateTokenAction`, `RevokeTokenAction`, in `defaults/routes/auth.ts`). Use
+them, or override the action at the same path under `app/` when the app needs
+its own rule, such as an allowlist of grantable scopes.
+
+Three things to get right, each of which is silent when wrong:
+
+- **A scoped token is still "a valid token".** `Auth.getUserFromToken`,
+  `Auth.validateToken`, `request.user()` and the default `auth` middleware
+  answer for any live token whatever its scopes. The moment an app issues a
+  token narrower than `*`, every place that treats a token as "signed in"
+  (routes, the middleware, a view reading the session cookie) must require
+  `*`, or a token minted to do one thing is its owner everywhere, in a cookie
+  as well as a header. Sign-ins carry `*` (`config.auth.defaultAbilities`), so
+  that is the test. Put it in ONE helper and call nothing else:
+
+  ```ts
+  export async function sessionUser(token: string) {
+    const live = await findToken(token)
+    if (!live || (live.subjectType ?? 'users') !== 'users' || !live.scopes.includes('*')) return null
+    return (await Auth.getUserFromToken(token)) ?? null
+  }
+  ```
+
+- **A token cannot grant more than it holds.** `CreateTokenAction` refuses a
+  caller's token that asks for scopes it lacks (`scopesBeyond`). An override
+  must keep that, and should not default missing scopes to `*`.
+- **The owner's table needs a numeric `id`.** `tokenable_id` is an integer and
+  the owner is looked up by `id` in the table `tokenable_type` names. A model
+  keyed by a string id cannot own tokens: issue the token to the user and
+  check that user's access to the record instead.
+
+A password change revokes the account's tokens, API tokens included.
 - `Auth.once(credentials: AuthCredentials): Promise<boolean>` - one-time auth without token
 - `Auth.requestUserTokenWithClient(credentials, clientId, clientSecret): Promise<{ token } | null>` authenticates both a legacy OAuth client and an end user password, then issues a user token. It is not the client credentials grant.
 - `Auth.requestToken(...)` is the deprecated compatibility alias for that same legacy exchange. New delegated integrations use the authorization-code provider.
@@ -480,6 +541,30 @@ overrides.
 
 - `register(credentials: NewUser): Promise<{ token: AuthToken }>`
 
+### Registration hardening
+
+`register()` refuses a display name that is not a name: no link or web address
+(`bit.ly/x`, `example.com`, `www.`, a scheme, `/`, `@`), no markup, no control
+characters, only letters, digits, spaces and `. , ' - ( )`, at most
+`DISPLAY_NAME_MAX_LENGTH` (80) characters. It answers 422 with a sentence for
+the person, and stores the name whitespace-tidied. The rule lives in
+`@stacksjs/auth/display-name` (`displayNameProblem`, `displayNameMessage`,
+`normalizeDisplayName`).
+
+Mail that greets someone reads the name through `greetingName(name)`: a first
+name, or `undefined` when the stored value would not pass registration. Use it
+in every mail of your own that goes to an address the recipient has not
+confirmed. `RegisterAction` already passes `user:registered` listeners the
+greeting name rather than the stored one.
+
+`POST /register` is limited three ways: the route's 3 a minute per client, and
+inside the action 20 an hour per client address and 5 an hour per email
+(`config.auth.registration.rateLimit: { perIp, perEmail }`, `false` to turn
+one off). It also carries the `honeypot` middleware (see `stacks-forms`).
+
+`buddy user:audit` lists accounts whose stored name would be refused today,
+with the reason and whether the address was ever verified. It only lists.
+
 ## User Helpers (user.ts)
 
 - `authUser(): Promise<UserModel | undefined>`
@@ -848,3 +933,23 @@ The credential is consumed before the callback, so it composes with
 `revokeAccountCredentials(claim.userId)`. That sweep also removes any pending
 password-reset links; changing a password must retire recovery credentials too.
 The existing `passwordResets(email)` flow supports email-addressed bcrypt tokens.
+
+## Enterprise relying-party identity
+
+Use `@stacksjs/auth/enterprise-oidc` for signed OIDC callbacks with PKCE, state,
+nonce, issuer, audience and JWKS verification. Use `@stacksjs/auth/enterprise-saml`
+for signed SAML requests and strict signed Response + Assertion verification.
+Keep each challenge in a native durable, browser-bound, one-use OAuth flow and
+consume it before accepting a callback. These helpers return provider subject
+identity only; they never assign roles or link a local account by email.
+
+HQ.support uses operator-approved issuer/endpoint configuration. The OIDC helper
+requires discovery endpoints on the issuer origin and client-secret-post support.
+SAML requires persistent NameIDs, RSA-SHA256 and SHA256 digests, exact audience and
+callback recipient, request correlation and bounded assertion lifetime. Provider
+configuration and private keys belong to the operator, never login input.
+
+Tests: `auth/tests/enterprise-oidc.test.ts` and `auth/tests/enterprise-saml.test.ts`.
+They exercise signed fixtures and refusals, not live identity-provider readiness.
+Deprovision workspace memberships and linked identities within that workspace;
+a tenant administrator must not revoke another workspace's native credentials.

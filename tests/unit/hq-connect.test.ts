@@ -9,7 +9,7 @@
 import type { LicenseGrant } from '@stacksjs/hq/service'
 import type { AppLicense, HqUser, LicenseStore } from '../../app/Hq/adapter'
 import { describe, expect, test } from 'bun:test'
-import { createHqService, createMemoryConnectCodeStore } from '@stacksjs/hq/service'
+import { confirmationCode, createHqService, createMemoryConnectCodeStore } from '@stacksjs/hq/service'
 import { hqServiceContract } from '@stacksjs/hq/testing'
 import { License } from '@reportshq/stacks'
 import { PLANS } from '../../app/Billing/limits'
@@ -59,7 +59,7 @@ function setup(options: { licenses?: AppLicense[], tiers?: Record<number, string
   const start = async (app: string) => (await call('/api/cli/connect', { method: 'POST', body: { app } }))!.body as { code: string, approveUrl: string }
   const connect = async (app: string, user: HqUser): Promise<LicenseGrant> => {
     const { code } = await start(app)
-    await service.approveConnect(code, user)
+    await service.approveConnect(code, user, await confirmationCode(code))
     return (await call(`/api/cli/connect/${code}`))!.body as unknown as LicenseGrant
   }
 
@@ -139,7 +139,7 @@ describe('connecting an application', () => {
     const { start, service } = setup()
     for (const id of [0, -1, Number.NaN, 'nobody']) {
       const { code } = await start('cursio')
-      await expect(service.approveConnect(code, { id })).rejects.toThrow(TypeError)
+      await expect(service.approveConnect(code, { id }, await confirmationCode(code))).rejects.toThrow(TypeError)
     }
   })
 })
@@ -150,7 +150,7 @@ describe('the plan\'s application allowance', () => {
     await connect('first', ALICE)
 
     const { code } = await start('second')
-    const refused = await service.approveConnect(code, ALICE).catch(error => error)
+    const refused = await service.approveConnect(code, ALICE, await confirmationCode(code)).catch(error => error)
     expect(refused).toBeInstanceOf(ConnectRefusedError)
     expect(refused.reason).toBe('application_limit')
     expect(refused.message).toBe('Free covers 1 application and this account has 1. Hobby covers 3.')
@@ -163,11 +163,11 @@ describe('the plan\'s application allowance', () => {
     await connect('first', ALICE)
 
     const { code } = await start('second')
-    await service.approveConnect(code, ALICE).catch(() => {})
+    await service.approveConnect(code, ALICE, await confirmationCode(code)).catch(() => {})
     expect((await call(`/api/cli/connect/${code}`))!.body).toEqual({ status: 'pending' })
 
     tiers[1] = 'hobby'
-    expect((await service.approveConnect(code, ALICE)).ok).toBe(true)
+    expect((await service.approveConnect(code, ALICE, await confirmationCode(code))).ok).toBe(true)
     expect((await call(`/api/cli/connect/${code}`))!.body.status).toBe('approved')
   })
 
@@ -189,7 +189,7 @@ describe('the plan\'s application allowance', () => {
       for (let i = 0; i < plan.applications; i++)
         await connect(`app-${i}`, ALICE)
       const { code } = await start('one-too-many')
-      await expect(service.approveConnect(code, ALICE)).rejects.toThrow(ConnectRefusedError)
+      await expect(service.approveConnect(code, ALICE, await confirmationCode(code))).rejects.toThrow(ConnectRefusedError)
       expect(licenses.rows).toHaveLength(plan.applications)
     }
   })

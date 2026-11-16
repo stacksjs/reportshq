@@ -19,8 +19,13 @@ const page = read('resources/views/cli/connect.stx')
 const adapter = read('app/Hq/adapter.ts')
 
 describe('the confirmation code', () => {
-  test('is given to the CLI when it starts a connect', () => {
-    expect(routes).toContain('confirmCode: await confirmationCode(answer.code)')
+  test('is given to the CLI when it starts a connect, by the package and not by this route', () => {
+    // `startConnect` answers `confirmCode` itself. The route hands its
+    // response back untouched: a second place that computes the code is a
+    // second place it could drift.
+    expect(routes).toContain('return hq().startConnect(hqRequest(request, await body(request)))')
+    expect(routes).not.toContain('confirmationCode')
+    expect(routes).not.toContain('confirmationMatches')
   })
 
   test('is not in the approve link', () => {
@@ -29,7 +34,9 @@ describe('the confirmation code', () => {
 
   test('is checked before anything is issued, after the session, the Origin and the attempt limit', () => {
     const approve = routes.slice(routes.indexOf('route.post(\'/connect/{code}/approve\''))
-    const order = ['sameOrigin(request)', 'requestUser(request)', 'checkConnectLimit(\'approve\'', 'confirmationMatches(code', 'approveConnect(code']
+    // The package refuses inside `approveConnect` unless it is handed what the
+    // person typed, so passing it is the check.
+    const order = ['sameOrigin(request)', 'requestUser(request)', 'checkConnectLimit(\'approve\'', 'approveConnect(code, { id: user.id }, (await body(request)).confirm)', 'confirmation_mismatch']
     const positions = order.map(needle => approve.indexOf(needle))
     expect(positions.every(position => position > 0)).toBe(true)
     expect([...positions].sort((a, b) => a - b)).toEqual(positions)

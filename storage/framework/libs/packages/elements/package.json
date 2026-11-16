@@ -30,10 +30,130 @@
       "import": "./dist/bundle.js",
       "default": "./dist/bundle.js"
     },
-    "./*": {
-      "types": "./dist/*.d.ts",
-      "import": "./dist/*.js",
-      "default": "./dist/*.js"
+    "./bundle.css": "./dist/bundle.css",
+    "./index": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./index.js": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./ssr": {
+      "types": "./dist/ssr.d.ts",
+      "import": "./dist/ssr.js",
+      "default": "./dist/ssr.js"
+    },
+    "./ssr.js": {
+      "types": "./dist/ssr.d.ts",
+      "import": "./dist/ssr.js",
+      "default": "./dist/ssr.js"
+    },
+    "./stacks-bar-chart.css": "./dist/stacks-bar-chart.css",
+    "./stacks-bar-chart": {
+      "types": "./dist/stacks-bar-chart.d.ts",
+      "import": "./dist/stacks-bar-chart.js",
+      "default": "./dist/stacks-bar-chart.js"
+    },
+    "./stacks-bar-chart.js": {
+      "types": "./dist/stacks-bar-chart.d.ts",
+      "import": "./dist/stacks-bar-chart.js",
+      "default": "./dist/stacks-bar-chart.js"
+    },
+    "./stacks-big-number": {
+      "types": "./dist/stacks-big-number.d.ts",
+      "import": "./dist/stacks-big-number.js",
+      "default": "./dist/stacks-big-number.js"
+    },
+    "./stacks-big-number.js": {
+      "types": "./dist/stacks-big-number.d.ts",
+      "import": "./dist/stacks-big-number.js",
+      "default": "./dist/stacks-big-number.js"
+    },
+    "./stacks-donut-chart.css": "./dist/stacks-donut-chart.css",
+    "./stacks-donut-chart": {
+      "types": "./dist/stacks-donut-chart.d.ts",
+      "import": "./dist/stacks-donut-chart.js",
+      "default": "./dist/stacks-donut-chart.js"
+    },
+    "./stacks-donut-chart.js": {
+      "types": "./dist/stacks-donut-chart.d.ts",
+      "import": "./dist/stacks-donut-chart.js",
+      "default": "./dist/stacks-donut-chart.js"
+    },
+    "./stacks-funnel-chart": {
+      "types": "./dist/stacks-funnel-chart.d.ts",
+      "import": "./dist/stacks-funnel-chart.js",
+      "default": "./dist/stacks-funnel-chart.js"
+    },
+    "./stacks-funnel-chart.js": {
+      "types": "./dist/stacks-funnel-chart.d.ts",
+      "import": "./dist/stacks-funnel-chart.js",
+      "default": "./dist/stacks-funnel-chart.js"
+    },
+    "./stacks-heatmap-chart.css": "./dist/stacks-heatmap-chart.css",
+    "./stacks-heatmap-chart": {
+      "types": "./dist/stacks-heatmap-chart.d.ts",
+      "import": "./dist/stacks-heatmap-chart.js",
+      "default": "./dist/stacks-heatmap-chart.js"
+    },
+    "./stacks-heatmap-chart.js": {
+      "types": "./dist/stacks-heatmap-chart.d.ts",
+      "import": "./dist/stacks-heatmap-chart.js",
+      "default": "./dist/stacks-heatmap-chart.js"
+    },
+    "./stacks-line-chart.css": "./dist/stacks-line-chart.css",
+    "./stacks-line-chart": {
+      "types": "./dist/stacks-line-chart.d.ts",
+      "import": "./dist/stacks-line-chart.js",
+      "default": "./dist/stacks-line-chart.js"
+    },
+    "./stacks-line-chart.js": {
+      "types": "./dist/stacks-line-chart.d.ts",
+      "import": "./dist/stacks-line-chart.js",
+      "default": "./dist/stacks-line-chart.js"
+    },
+    "./stacks-table-chart": {
+      "types": "./dist/stacks-table-chart.d.ts",
+      "import": "./dist/stacks-table-chart.js",
+      "default": "./dist/stacks-table-chart.js"
+    },
+    "./stacks-table-chart.js": {
+      "types": "./dist/stacks-table-chart.d.ts",
+      "import": "./dist/stacks-table-chart.js",
+      "default": "./dist/stacks-table-chart.js"
+    },
+    "./stacks-text-block": {
+      "types": "./dist/stacks-text-block.d.ts",
+      "import": "./dist/stacks-text-block.js",
+      "default": "./dist/stacks-text-block.js"
+    },
+    "./stacks-text-block.js": {
+      "types": "./dist/stacks-text-block.d.ts",
+      "import": "./dist/stacks-text-block.js",
+      "default": "./dist/stacks-text-block.js"
+    },
+    "./stacks-wordmark": {
+      "types": "./dist/stacks-wordmark.d.ts",
+      "import": "./dist/stacks-wordmark.js",
+      "default": "./dist/stacks-wordmark.js"
+    },
+    "./stacks-wordmark.js": {
+      "types": "./dist/stacks-wordmark.d.ts",
+      "import": "./dist/stacks-wordmark.js",
+      "default": "./dist/stacks-wordmark.js"
+    },
+    "./bundle": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/bundle.js",
+      "default": "./dist/bundle.js"
+    },
+    "./bundle.js": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/bundle.js",
+      "default": "./dist/bundle.js"
     },
     "./style.css": "./dist/bundle.css",
     "./custom-elements.json": "./dist/custom-elements.json"

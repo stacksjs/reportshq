@@ -13,7 +13,6 @@
 
 import type { EnhancedRequest } from '@stacksjs/bun-router'
 import type { HqRequest } from '@stacksjs/hq/service'
-import { confirmationCode, confirmationMatches } from '@stacksjs/hq/service'
 import { route } from '@stacksjs/router'
 import { ConnectRefusedError } from '../app/Hq/adapter'
 import { hq } from '../app/Hq/service'
@@ -64,15 +63,11 @@ route.post('/connect', async (request: EnhancedRequest) => {
   if (!limit.ok)
     return tooMany(limit.retryAfter)
 
-  const started = await hq().startConnect(hqRequest(request, await body(request)))
-  if (started.status !== 201)
-    return started
-
-  // `confirmCode` goes ONLY to the caller that asked for the code, never into
-  // the approve URL. The CLI prints it, and the approve action below refuses
-  // until the person has typed it.
-  const answer = await started.json() as { code: string, approveUrl: string }
-  return json({ ...answer, confirmCode: await confirmationCode(answer.code) }, 201)
+  // The package answers `confirmCode` beside the code and the approve URL. It
+  // goes ONLY to the caller that asked for the code, never into the approve
+  // URL: the CLI prints it, and approving below is refused until the person
+  // has typed it.
+  return hq().startConnect(hqRequest(request, await body(request)))
 }).skipCsrf() // called by a CLI: no browser, no cookie, nothing to forge
 
 route.get('/connect/{code}', async (request: EnhancedRequest) => {
@@ -87,8 +82,9 @@ route.get('/connect/{code}', async (request: EnhancedRequest) => {
 // a forged cross-site POST would want.
 //
 // It also needs the confirmation code from the terminal that started the
-// connect. Enforced here and not only in the page, so there is no request
-// that approves without it, and wrong guesses are limited per person.
+// connect. The package checks it inside `approveConnect`, so there is no
+// request that approves without it, and wrong guesses are limited per person
+// here, before it is asked.
 route.post('/connect/{code}/approve', async (request: EnhancedRequest) => {
   if (!sameOrigin(request))
     return json({ error: 'forbidden' }, 403)
@@ -101,16 +97,16 @@ route.post('/connect/{code}/approve', async (request: EnhancedRequest) => {
     return tooMany(limit.retryAfter, 'Too many attempts. Wait a minute and try again.')
 
   const code = String((request as { params?: Record<string, string> }).params?.code ?? '')
-  if (!await confirmationMatches(code, (await body(request)).confirm)) {
-    return json({
-      error: 'That code does not match. Enter the confirmation code your terminal is showing.',
-      reason: 'confirmation_mismatch',
-    }, 422)
-  }
 
   try {
-    const result = await hq().approveConnect(code, { id: user.id })
+    const result = await hq().approveConnect(code, { id: user.id }, (await body(request)).confirm)
     if (!result.ok) {
+      if (result.reason === 'confirmation_mismatch') {
+        return json({
+          error: 'That code does not match. Enter the confirmation code your terminal is showing.',
+          reason: 'confirmation_mismatch',
+        }, 422)
+      }
       return json({
         error: result.reason === 'already_approved'
           ? 'This connection was already approved.'
