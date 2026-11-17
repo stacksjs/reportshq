@@ -12,6 +12,12 @@ const signedIn = session.user !== null
 </script>
 
 <script client>
+import { connectReturn } from '../data/connect-return'
+
+// Read for `next`, which is honoured only when it is this site's connect
+// approve page; `connectReturn` explains why nothing else is followed.
+const route = useRoute()
+
 // Submitting the form, as stx client code rather than the DOM-walking script
 // this used to be (stx-standards rule 8).
 //
@@ -115,7 +121,7 @@ async function handleSubmit(event: SubmitEvent): Promise<void> {
     })
 
     if (res.ok) {
-      navigate('/reports', { replace: true })
+      navigate(connectReturn(route.query.next) || '/reports', { replace: true })
       return
     }
 
@@ -159,7 +165,7 @@ async function handleTwoFactor(event: SubmitEvent): Promise<void> {
     })
 
     if (res.ok) {
-      navigate('/reports', { replace: true })
+      navigate(connectReturn(route.query.next) || '/reports', { replace: true })
       return
     }
 
