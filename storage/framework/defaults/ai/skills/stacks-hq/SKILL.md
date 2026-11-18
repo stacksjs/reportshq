@@ -166,6 +166,37 @@ without failing the others.
 `buddy hq:status` prints used, limit, period and state
 for every connected service, with the upgrade link from 80% of an allowance.
 
+## StatusHQ checks an app's routes
+
+Connecting StatusHQ sends it the app's routes, and it checks them as one
+monitor. `buddy hq:connect statushq` syncs once connected, `buddy deploy`
+syncs again after a production release when `STATUSHQ_KEY` is set, and
+`buddy hq:sync` does it by hand (`--dry-run` lists every check and every route
+left out, with the reason, and sends nothing).
+
+The checks come from what the router knows (`@stacksjs/hq/route-manifest`), and
+none can change data:
+
+| Route | What is asked | Passes on |
+|---|---|---|
+| A page (`resources/views`) | `GET` | 2xx, 3xx |
+| `GET`, no path parameters | `GET` | 2xx, 3xx, 401, 403 |
+| Behind `auth`, `can`, `role`, ... | the request with no credentials | 401, 403, 3xx (419 on a write) |
+| A write whose action has a required validation | an empty JSON body | 422, 400, 419, 403, 429 |
+
+Left out: a path with parameters, a write with no validation or one an empty
+body would pass, a webhook, a `/__` framework route, and paths such as
+`logout`, `callback`, `export` and `stream`. A route says otherwise itself:
+
+```ts
+route.get('/reports/rebuild', 'Actions/RebuildAction').monitor(false)
+route.get('/posts/{id}', 'Actions/PostShowAction').monitor({ path: '/posts/1' })
+route.get('/beta', 'Actions/BetaAction').monitor({ expect: [404] })
+```
+
+`expect` never turns a write into a check that may succeed: StatusHQ refuses
+one, whatever sent it.
+
 ReportsHQ is the odd one out: it runs inside the app against the app's own
 database, so it has no ingest or read key and meters nothing. Its entry is
 `services.reportshq` with a `license` from `REPORTSHQ_LICENSE`, which
@@ -177,6 +208,30 @@ A licence-only service answers a `LicenseGrant` (`{ project, licenseKey,
 dashboardUrl }`) from `provision` and leaves `authenticateReadKey` and `usage`
 off its adapter. `createHqService` then mounts the two connect routes and no
 usage route. `isLicenseGrant` tells the two kinds of approved answer apart.
+
+CommsHQ gives an app a send key (`COMMSHQ_KEY`) and a read key
+(`COMMSHQ_READ_KEY`). With the key set, the app's mail goes out through
+CommsHQ in production and staging without naming a mailer: the `commshq`
+driver in `@stacksjs/email` posts to `/api/v1/send`. An app that sets
+`MAIL_MAILER` keeps what it set, and a key in a developer's `.env` sends
+nothing from a local run.
+
+After the connect, and again on every `buddy deploy`, the framework sets up
+the app's sending domain (`buddy/src/commshq-domain.ts`): it registers the
+domain of `MAIL_FROM_ADDRESS`, else of `APP_URL`, with CommsHQ, publishes the
+ownership and DKIM records CommsHQ answers through the project's own DNS
+provider, and asks CommsHQ to verify them. Publishing is additive: a record is
+created when it is missing, and nothing else in the zone is changed or removed,
+the app's SPF record included. Mail sent this way is authenticated by its DKIM
+signature, made with the app domain's own key, so the app's SPF plays no part.
+Until the domain verifies, CommsHQ sends from an address of its own under the
+app's name, with replies going to the app.
+
+A service that sends on behalf of other domains signs each message itself:
+`mail.send({ dkim: { domain, selector, privateKey }, envelopeFrom })`. The SMTP
+driver signs the bytes it sends (`signDkim` in `@stacksjs/email`) and uses
+`envelopeFrom` as the envelope sender, so the mail server only relays and needs
+no key for the domain.
 
 The dashboard's Logs and Errors sections read LogHQ and BugHQ when
 `config/dashboard.ts` sets `providers.logs` or `providers.errors` to

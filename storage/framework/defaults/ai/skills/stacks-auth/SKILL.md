@@ -129,12 +129,47 @@ Three things to get right, each of which is silent when wrong:
 - **A token cannot grant more than it holds.** `CreateTokenAction` refuses a
   caller's token that asks for scopes it lacks (`scopesBeyond`). An override
   must keep that, and should not default missing scopes to `*`.
-- **The owner's table needs a numeric `id`.** `tokenable_id` is an integer and
-  the owner is looked up by `id` in the table `tokenable_type` names. A model
-  keyed by a string id cannot own tokens: issue the token to the user and
-  check that user's access to the record instead.
+- **Pick the owner by who the credential acts for.** A token a person holds
+  to act as themselves (a CLI login, an "API token" on their account) is owned
+  by the user, and a password change rightly ends it: `findToken` refuses any
+  user token issued before the owner's last password change. A credential
+  that acts for a THING and sits unattended in another system (a project's
+  read key in a dashboard's server, an upload token in a CI secret) must not
+  be user-owned, or it stops the day its creator changes their password or
+  leaves. Give it a non-user owner:
 
-A password change revokes the account's tokens, API tokens included.
+  ```ts
+  // The owner is any table with a numeric id. `tokenable_id` is an integer, so
+  // when the thing itself has a string id, add a one-to-one model with an
+  // integer id (a "principal") and let that row own the tokens.
+  const { plainTextToken } = await createToken(principal.id, 'Read key', ['project:read'], {
+    tokenableType: 'project_principals',
+    expiresAt,
+    withRefreshToken: false,
+  })
+
+  const live = await findToken(presented)
+  const isProjectKey = live?.subjectType === 'project_principals' && live.scopes.includes('project:read')
+  const mine = await tokens(principal.id, 'project_principals')
+  ```
+
+  The framework resolves only `users` tokens to a user, so a token with
+  another owner can never pass `Auth.getUserFromToken` or the `auth`
+  middleware: it is nobody's session, with no sweep needed. Revoke its tokens
+  when the thing is deleted (`revokeTokenById` for each of `tokens(id, type)`),
+  since nothing cascades from your table into the token table. A non-user
+  token is not stamped as used: `updatedAt` moves only when a user token is
+  resolved, so do not show a "last used" for one.
+
+- **Migrating an existing plain-text key.** The stored value is the SHA-256 of
+  the bearer (hex). Writing that digest as a token row makes the same key a
+  live framework token, so whatever holds it keeps working with nothing
+  reissued. Postgres can do it in the migration
+  (`encode(sha256(convert_to(old_key, 'UTF8')), 'hex')`), SQLite cannot and
+  needs a one-off script before the column is dropped. Stamps are written as
+  `sqlDateTime` writes them: the ISO form without its trailing `Z`.
+
+A password change revokes the account's own tokens, API tokens included.
 - `Auth.once(credentials: AuthCredentials): Promise<boolean>` - one-time auth without token
 - `Auth.requestUserTokenWithClient(credentials, clientId, clientSecret): Promise<{ token } | null>` authenticates both a legacy OAuth client and an end user password, then issues a user token. It is not the client credentials grant.
 - `Auth.requestToken(...)` is the deprecated compatibility alias for that same legacy exchange. New delegated integrations use the authorization-code provider.
@@ -324,6 +359,17 @@ request identity, token or authorization decision. Native `AuthorizationResponse
 objects can cross bundle copies; arbitrary objects, forged prototypes and
 accessor fields are rejected. A conflicting shared-state version/shape refuses
 module initialization. This does not synchronize different processes or Workers.
+
+### The user a gate receives: `GateUser`
+Every gate callback, policy method, `Gate.*` check and RBAC helper takes
+`GateUser | null`. That is the User row (`AuthUser`, what `User.find` returns,
+carried by the router's request and passed by `request.can()`) or the
+`AuthenticatedUser` that `request.user()` gives an action typed with
+`RequestInstance` from `@stacksjs/types`. They are the same object; pass either
+with no cast. Annotate a callback with `GateUser | null` from `@stacksjs/auth`,
+or leave it unannotated and let `defineGates` infer it. Not the ORM's
+`UserModel`: no User row satisfies that hand-written interface
+(stacksjs/stacks#3314).
 
 ### Gate Functions
 - `define<T>(ability: string, callback: GateCallback<T>): void`
@@ -567,7 +613,7 @@ with the reason and whether the address was ever verified. It only lists.
 
 ## User Helpers (user.ts)
 
-- `authUser(): Promise<UserModel | undefined>`
+- `authUser(): Promise<AuthUser | undefined>` - `AuthUser` is the User row `User.find` returns
 - `check(): Promise<boolean>`
 - `id(): Promise<number | undefined>`
 - `email(): Promise<string | undefined>`
