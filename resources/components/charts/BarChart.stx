@@ -25,12 +25,14 @@ interface BarChartProps {
   height?: number
 }
 
-// `as`: stx types withDefaults as returning the props unchanged, so a defaulted
-// prop still reads as possibly undefined (stacksjs/stx#2208). It is never
-// undefined here; the cast says which ones the defaults fill.
-const { result, title, height } = withDefaults(defineProps<BarChartProps>(), { height: 260 }) as BarChartProps & { height: number }
+// The default is a const so the fallback below can reuse it. stx types
+// withDefaults as returning the props unchanged, so the prop still reads as
+// possibly undefined (stacksjs/stx#2208); `??` narrows it in plain JavaScript,
+// which the component-library build needs (it rejects an `as` cast here).
+const DEFAULT_HEIGHT = 260
+const { result, title, height } = withDefaults(defineProps<BarChartProps>(), { height: DEFAULT_HEIGHT })
 
-const box = { ...DEFAULT_BOX, height }
+const box = { ...DEFAULT_BOX, height: height ?? DEFAULT_HEIGHT }
 const plot = plotArea(result, box)
 const gridlines = ticks(result, plot)
 const xLabels = timeLabels(result, plot, iso => shortDate(iso, result.grain))

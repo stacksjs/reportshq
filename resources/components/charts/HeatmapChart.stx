@@ -34,15 +34,15 @@ interface HeatmapProps {
   rowLabels?: string[]
 }
 
-// `as`: stx types withDefaults as returning the props unchanged, so a defaulted
-// prop still reads as possibly undefined (stacksjs/stx#2208). It is never
-// undefined here; the cast says which ones the defaults fill.
-const { result, title, rowLabels } = withDefaults(defineProps<HeatmapProps>(), { rowLabels: [] }) as HeatmapProps & { rowLabels: NonNullable<HeatmapProps['rowLabels']> }
+// stx types withDefaults as returning the props unchanged, so rowLabels still
+// reads as possibly undefined (stacksjs/stx#2208); `?.` covers it in plain
+// JavaScript, which the component-library build needs.
+const { result, title, rowLabels } = withDefaults(defineProps<HeatmapProps>(), { rowLabels: [] })
 
 const max = Math.max(1, ...result.series.flatMap((series: any) => series.points.map((point: any) => point.value)))
 
 const rows = result.series.map((series: any, index: number) => ({
-  label: rowLabels[index] ?? (series.key === 'total' ? 'All events' : series.key),
+  label: rowLabels?.[index] ?? (series.key === 'total' ? 'All events' : series.key),
   cells: series.points.map((point: any) => ({
     // Alpha rather than a stepped ramp: one hue, continuous magnitude, and a
     // zero cell stays visibly empty rather than becoming the lightest step.
