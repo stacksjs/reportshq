@@ -35,9 +35,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: node-modules-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            node-modules-
+          # Exact key only. A prefix fallback restored an older tree, `bun install`
+          # left its stale nested @stacksjs copies in place (it does not prune), and
+          # the first job saved that under the new lock's key, so the build got an
+          # exact hit on a tree the lock does not describe. v2 skips that entry.
+          key: node-modules-v2-${{ hashFiles('**/bun.lock') }}
 
       - name: Install Dependencies
         run: bun install
@@ -66,9 +68,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: node-modules-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            node-modules-
+          # Exact key only. A prefix fallback restored an older tree, `bun install`
+          # left its stale nested @stacksjs copies in place (it does not prune), and
+          # the first job saved that under the new lock's key, so the build got an
+          # exact hit on a tree the lock does not describe. v2 skips that entry.
+          key: node-modules-v2-${{ hashFiles('**/bun.lock') }}
 
       - name: Install dependencies
         run: bun install
@@ -134,9 +138,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: node-modules-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            node-modules-
+          # Exact key only. A prefix fallback restored an older tree, `bun install`
+          # left its stale nested @stacksjs copies in place (it does not prune), and
+          # the first job saved that under the new lock's key, so the build got an
+          # exact hit on a tree the lock does not describe. v2 skips that entry.
+          key: node-modules-v2-${{ hashFiles('**/bun.lock') }}
 
       - name: Install Dependencies
         run: bun install
@@ -215,9 +221,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: node-modules-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            node-modules-
+          # Exact key only. A prefix fallback restored an older tree, `bun install`
+          # left its stale nested @stacksjs copies in place (it does not prune), and
+          # the first job saved that under the new lock's key, so the build got an
+          # exact hit on a tree the lock does not describe. v2 skips that entry.
+          key: node-modules-v2-${{ hashFiles('**/bun.lock') }}
 
       - name: Install Dependencies
         run: bun install
