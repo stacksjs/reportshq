@@ -27,9 +27,15 @@ interface DonutChartProps {
   size?: number
 }
 
-const { result, title, size } = withDefaults(defineProps<DonutChartProps>(), { size: 220 })
+// The default is a const so the fallback below can reuse it. stx types
+// withDefaults as returning the props unchanged, so the prop still reads as
+// possibly undefined (stacksjs/stx#2208); `??` narrows it in plain JavaScript,
+// which the component-library build needs (it rejects an `as` cast here).
+const DEFAULT_SIZE = 220
+const { result, title, size } = withDefaults(defineProps<DonutChartProps>(), { size: DEFAULT_SIZE })
+const side = size ?? DEFAULT_SIZE
 
-const radius = size / 2 - 6
+const radius = side / 2 - 6
 const slices = donut(result, radius, Math.max(18, radius * 0.32)).map((slice: any) => ({
   ...slice,
   display: compact(slice.value),
@@ -57,7 +63,7 @@ const emptyMessage = 'No data in this range'
     @else
       <div class="flex-1 min-h-0">
     <div class="flex items-center justify-center h-full">
-      <svg viewBox="-{{ size / 2 }} -{{ size / 2 }} {{ size }} {{ size }}" class="max-h-full" width="{{ size }}" height="{{ size }}" role="img" aria-label="{{ title ?? 'Share of total' }}">
+      <svg viewBox="-{{ side / 2 }} -{{ side / 2 }} {{ side }} {{ side }}" class="max-h-full" width="{{ side }}" height="{{ side }}" role="img" aria-label="{{ title ?? 'Share of total' }}">
         @foreach (slices as slice)
           <path d="{{ slice.path }}" fill="{{ slice.color }}" class="chart-slice">
             <title>{{ slice.key }}: {{ slice.display }} ({{ slice.percentLabel }})</title>

@@ -8,13 +8,17 @@ interface WordmarkProps {
   markOnly?: boolean
 }
 
+// stx types withDefaults as returning the props unchanged, so size still reads
+// as possibly undefined (stacksjs/stx#2208); `??` narrows it in plain
+// JavaScript, which the component-library build needs.
 const { size, markOnly } = withDefaults(
   defineProps<WordmarkProps>(),
   { size: 'md', markOnly: false },
 )
+const sizeKey = size ?? 'md'
 
-const markSize = { sm: 'h-4 w-4', md: 'h-5 w-5', lg: 'h-7 w-7' }[size]
-const textSize = { sm: 'text-sm', md: 'text-base', lg: 'text-xl' }[size]
+const markSize = { sm: 'h-4 w-4', md: 'h-5 w-5', lg: 'h-7 w-7' }[sizeKey]
+const textSize = { sm: 'text-sm', md: 'text-base', lg: 'text-xl' }[sizeKey]
 </script>
 
 <template>

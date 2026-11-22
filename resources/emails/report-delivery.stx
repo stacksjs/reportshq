@@ -45,7 +45,7 @@ const year = props.year || new Date().getFullYear()
                    is blocked by default in most clients, and a report that
                    arrives as a grey box with a broken-image icon is worse than
                    one that arrives as four numbers somebody can read. --}}
-              {{{ headlines }}}
+              {!! headlines !!}
 
               <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 0 8px;">
                 <tr>

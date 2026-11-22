@@ -373,15 +373,20 @@ const siteDescription = 'Reports that run inside your own Stacks or Laravel appl
       // getElementById here would stop the validator reporting it everywhere
       // else in the app.
       ;(function () {
+        // Plain JavaScript (this block ships as written), so the element types
+        // are narrowed with instanceof rather than annotated, and const keeps
+        // that narrowing inside the handlers below.
         // stx-strict-ignore-next-line document.getElementById()
-        var form = document.getElementById('subscribe-form')
+        const form = document.getElementById('subscribe-form')
         // stx-strict-ignore-next-line document.getElementById()
-        var input = document.getElementById('subscribe-email')
+        const input = document.getElementById('subscribe-email')
         // stx-strict-ignore-next-line document.getElementById()
-        var note = document.getElementById('form-note')
-        if (!form || !input || !note) return
+        const note = document.getElementById('form-note')
+        if (!(form instanceof HTMLFormElement) || !(input instanceof HTMLInputElement) || !note) return
 
-        function setNote(message, state) {
+        // An arrow, not a function declaration: a hoisted declaration does not
+        // see the null check above.
+        const setNote = (message = '', state = '') => {
           note.textContent = message
           note.setAttribute('data-state', state)
         }
