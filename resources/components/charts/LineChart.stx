@@ -38,10 +38,13 @@ interface LineChartProps {
   height?: number
 }
 
+// `as`: stx types withDefaults as returning the props unchanged, so a defaulted
+// prop still reads as possibly undefined (stacksjs/stx#2208). It is never
+// undefined here; the cast says which ones the defaults fill.
 const { result, title, variant, height } = withDefaults(
   defineProps<LineChartProps>(),
   { variant: 'line', height: 260 },
-)
+) as LineChartProps & Required<Pick<LineChartProps, 'variant' | 'height'>>
 
 const box = { ...DEFAULT_BOX, height }
 const plot = plotArea(result, box)

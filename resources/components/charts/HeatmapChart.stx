@@ -34,7 +34,10 @@ interface HeatmapProps {
   rowLabels?: string[]
 }
 
-const { result, title, rowLabels } = withDefaults(defineProps<HeatmapProps>(), { rowLabels: [] })
+// `as`: stx types withDefaults as returning the props unchanged, so a defaulted
+// prop still reads as possibly undefined (stacksjs/stx#2208). It is never
+// undefined here; the cast says which ones the defaults fill.
+const { result, title, rowLabels } = withDefaults(defineProps<HeatmapProps>(), { rowLabels: [] }) as HeatmapProps & { rowLabels: NonNullable<HeatmapProps['rowLabels']> }
 
 const max = Math.max(1, ...result.series.flatMap((series: any) => series.points.map((point: any) => point.value)))
 

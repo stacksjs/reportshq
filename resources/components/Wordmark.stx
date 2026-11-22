@@ -8,10 +8,13 @@ interface WordmarkProps {
   markOnly?: boolean
 }
 
+// `as`: stx types withDefaults as returning the props unchanged, so a defaulted
+// prop still reads as possibly undefined (stacksjs/stx#2208). It is never
+// undefined here; the cast says which ones the defaults fill.
 const { size, markOnly } = withDefaults(
   defineProps<WordmarkProps>(),
   { size: 'md', markOnly: false },
-)
+) as Required<WordmarkProps>
 
 const markSize = { sm: 'h-4 w-4', md: 'h-5 w-5', lg: 'h-7 w-7' }[size]
 const textSize = { sm: 'text-sm', md: 'text-base', lg: 'text-xl' }[size]

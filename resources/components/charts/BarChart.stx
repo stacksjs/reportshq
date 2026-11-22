@@ -25,7 +25,10 @@ interface BarChartProps {
   height?: number
 }
 
-const { result, title, height } = withDefaults(defineProps<BarChartProps>(), { height: 260 })
+// `as`: stx types withDefaults as returning the props unchanged, so a defaulted
+// prop still reads as possibly undefined (stacksjs/stx#2208). It is never
+// undefined here; the cast says which ones the defaults fill.
+const { result, title, height } = withDefaults(defineProps<BarChartProps>(), { height: 260 }) as BarChartProps & { height: number }
 
 const box = { ...DEFAULT_BOX, height }
 const plot = plotArea(result, box)

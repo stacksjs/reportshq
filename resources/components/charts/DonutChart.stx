@@ -27,7 +27,10 @@ interface DonutChartProps {
   size?: number
 }
 
-const { result, title, size } = withDefaults(defineProps<DonutChartProps>(), { size: 220 })
+// `as`: stx types withDefaults as returning the props unchanged, so a defaulted
+// prop still reads as possibly undefined (stacksjs/stx#2208). It is never
+// undefined here; the cast says which ones the defaults fill.
+const { result, title, size } = withDefaults(defineProps<DonutChartProps>(), { size: 220 }) as DonutChartProps & { size: number }
 
 const radius = size / 2 - 6
 const slices = donut(result, radius, Math.max(18, radius * 0.32)).map((slice: any) => ({

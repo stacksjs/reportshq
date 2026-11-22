@@ -89,6 +89,30 @@ jobs:
       - name: Typecheck
         run: bun buddy test:types
 
+      # `test:types` above is tsc, which never opens a .stx file, so without
+      # this nothing checks the script blocks or the {{ }} expressions that
+      # make up most of this app. It had never run here; the first run found
+      # 54 errors, all fixed before this step was added.
+      #
+      # --lib is required: the checker does not read tsconfig's include, so
+      # the ambient names partials and route params arrive as are declared in
+      # types/render-context.d.ts and passed here.
+      #
+      # Warnings fail too. The only one this emits is "values reach this block
+      # on the implicit bridge and are untyped", which is how a server value
+      # reaches client code unchecked. `stx typecheck` exits 0 on warnings and
+      # has no --fail-on-warning, hence the grep; errors it exits non-zero for,
+      # which `set -o pipefail` carries through the tee. Same shape as bughq's
+      # and loghq's.
+      - name: Typecheck .stx
+        run: |
+          set -o pipefail
+          bunx --bun stx typecheck 'resources/**/*.stx' --lib types/render-context.d.ts | tee /tmp/stx-typecheck.log
+          if ! grep -qE '0 error\(s\), 0 warning\(s\)' /tmp/stx-typecheck.log; then
+            echo "::error::stx typecheck is not clean, see the log above"
+            exit 1
+          fi
+
   test:
     runs-on: ${{ matrix.os }}
 
