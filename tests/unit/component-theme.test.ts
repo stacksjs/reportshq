@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import theme from '../../config/crosswind'
+import theme from '../../config/css'
 // STX exposes its selected CSS engine through these installed files.
 import { loadCssEngine } from '../../node_modules/@stacksjs/stx/dist/dev-server/ts-css.js'
 import { SEMANTIC_TOKENS, SHAPE_TOKENS } from '../../node_modules/@stacksjs/stx/dist/theme-tokens.js'

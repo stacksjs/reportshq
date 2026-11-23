@@ -72,7 +72,7 @@ Tokens live in `public/tokens.css`, linked once from `config/ui.ts`. They are
 **not** in the Crosswind `preflights` key, which reads like the obvious home for
 them and is never emitted on the stx serve path.
 
-`config/crosswind.ts` maps semantic utilities onto those custom properties, which
+`config/css.ts` maps semantic utilities onto those custom properties, which
 is what buys `bg-panel` and `text-subtle` instead of inline `style="color:
 var(--…)"`. Because the properties swap under `[data-theme]` and
 `prefers-color-scheme`, dark mode needs no `dark:` variant on individual classes.

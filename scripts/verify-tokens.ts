@@ -8,7 +8,7 @@
  *      to the property's initial value, so `text-subtle` quietly becomes black.
  *   2. A utility that never survives the serve path. Crosswind's config is
  *      rebuilt by the stx dev server, and not every key written in
- *      config/crosswind.ts is read by it, so a semantic colour can be
+ *      config/css.ts is read by it, so a semantic colour can be
  *      configured and still emit no rule at all.
  *
  * Both look like "slightly wrong colours" in a screenshot and like nothing in a
@@ -16,7 +16,7 @@
  * declared for BOTH themes, and every contrast ratio quoted in the token
  * reference is the ratio those hex values actually produce.
  *
- * Both halves now live in config/crosswind.ts -- the TOKENS preflight declares
+ * Both halves now live in config/css.ts -- the TOKENS preflight declares
  * the custom properties, theme.extend maps utilities onto them -- so this reads
  * the TOKENS block out of that file rather than public/tokens.css, which was
  * deleted when the declarations moved into `preflights`.
@@ -24,7 +24,7 @@
  * Run: bun scripts/verify-tokens.ts
  */
 
-const CROSSWIND = new URL('../config/crosswind.ts', import.meta.url).pathname
+const CROSSWIND = new URL('../config/css.ts', import.meta.url).pathname
 const REFERENCE = new URL('../resources/views/design-tokens.stx', import.meta.url).pathname
 
 const failures: string[] = []
@@ -44,11 +44,11 @@ const crosswindTs = await Bun.file(CROSSWIND).text()
 const tokensCss = (() => {
   const open = crosswindTs.indexOf('const TOKENS = `')
   if (open < 0)
-    throw new Error('config/crosswind.ts no longer declares `const TOKENS = `; did the tokens move again?')
+    throw new Error('config/css.ts no longer declares `const TOKENS = `; did the tokens move again?')
   const start = crosswindTs.indexOf('`', open) + 1
   const end = crosswindTs.indexOf('\n`', start)
   if (end < 0)
-    throw new Error('the TOKENS template literal in config/crosswind.ts is not closed')
+    throw new Error('the TOKENS template literal in config/css.ts is not closed')
   return crosswindTs.slice(start, end).replace(/\\`/g, '`')
 })()
 const referenceStx = await Bun.file(REFERENCE).text()
@@ -59,7 +59,7 @@ const referenced = [...crosswindTs.matchAll(/var\((--[\w-]+)\)/g)].map(match => 
 const unique = [...new Set(referenced)]
 
 if (unique.length < 10)
-  fail(`only found ${unique.length} tokens referenced in config/crosswind.ts, expected the full palette. Did the file move?`)
+  fail(`only found ${unique.length} tokens referenced in config/css.ts, expected the full palette. Did the file move?`)
 
 /**
  * Tokens that are the same in every theme, and are therefore declared once on

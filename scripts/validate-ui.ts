@@ -38,14 +38,14 @@ const markupFiles = files.filter(file => /\.(?:stx|html)$/.test(file))
 /*
  * The two app-wide checks at the bottom read resources/ PLUS the CSS config.
  * Resources alone stopped being enough once page <style> blocks moved into
- * config/crosswind.ts under stx-standards rule 3: the focus and breakpoint
+ * config/css.ts under stx-standards rule 3: the focus and breakpoint
  * treatments are still declared, in the one <style data-crosswind> tag the
  * router preserves, and a resources-only corpus cannot see them. statushq hit
  * exactly that -- CI red on main and deploy-prod skipped for two commits.
  * Missing the config throws rather than reading empty, because a check with
  * nothing to search always passes.
  */
-const cssConfig = resolve(root, 'config/crosswind.ts')
+const cssConfig = resolve(root, 'config/css.ts')
 if (!existsSync(cssConfig))
   throw new Error(`validate-ui: expected the CSS config at ${relative(root, cssConfig)}`)
 

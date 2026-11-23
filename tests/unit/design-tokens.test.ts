@@ -5,7 +5,7 @@
  * They lived in public/tokens.css, linked from config/ui.ts, on a stated
  * justification that turned out to be false:
  *
- *   "It is deliberately NOT in config/crosswind.ts `preflights` [...] on the
+ *   "It is deliberately NOT in config/css.ts `preflights` [...] on the
  *    stx serve path `preflights` is spread into the generator config and then
  *    never emitted, so a token placed there reaches no page at all. Verified
  *    in loghq the hard way; inherited here rather than rediscovered."
@@ -25,7 +25,7 @@
 import { describe, expect, test } from 'bun:test'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import theme from '../../config/crosswind'
+import theme from '../../config/css'
 // The installed STX package does not export these subpaths by bare specifier.
 import { loadCssEngine } from '../../node_modules/@stacksjs/stx/dist/dev-server/ts-css.js'
 import { mergeCssConfig } from '../../node_modules/@stacksjs/stx/dist/ts-css-config.js'

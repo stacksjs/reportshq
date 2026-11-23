@@ -29,7 +29,7 @@
  *     <!DOCTYPE> and <head>, served outside the router entirely.
  *
  * index.stx and pricing.stx no longer have a block to place: both moved into
- * config/crosswind.ts PAGE_CSS under stx-standards rule 3, which is a stronger
+ * config/css.ts PAGE_CSS under stx-standards rule 3, which is a stronger
  * version of what this file enforces -- CSS in the one <style data-crosswind>
  * tag the router preserves cannot be outside the container or left behind. The
  * second test below is what pricing.stx's move makes unfalsifiable rather than
