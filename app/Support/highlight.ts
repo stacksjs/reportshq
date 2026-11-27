@@ -36,5 +36,23 @@ export async function highlightCode(code: string, language: CodeLanguage): Promi
   if (start === -1 || end === -1)
     return escapeHtml(code)
 
-  return html.slice(start + '<code>'.length, end)
+  const inner = html.slice(start + '<code>'.length, end)
+  return language === 'bash' ? repairShellComments(inner) : inner
+}
+
+/**
+ * ts-syntax-highlighter 0.2.20's bash grammar reads `//` as a line comment, so
+ * every URL in a shell snippet (`curl https://...`) turned comment-grey from the
+ * `//` to the end of the line. Shell comments only ever start with `#`, so a
+ * comment token that starts with `//` is always this bug: it is unwrapped, and
+ * a real `# comment` it swallowed later on the line is wrapped again on its own.
+ * The text is untouched either way; only the span around it moves.
+ */
+export function repairShellComments(html: string): string {
+  return html.replace(/<span class="tok-comment">(\/\/[^<]*)<\/span>/g, (_match, text: string) => {
+    const hash = text.search(/\s#/)
+    if (hash === -1)
+      return text
+    return `${text.slice(0, hash + 1)}<span class="tok-comment">${text.slice(hash + 1)}</span>`
+  })
 }
