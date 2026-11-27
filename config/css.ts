@@ -1,4 +1,5 @@
 import type { CrosswindConfig, Theme } from '@cwcss/crosswind'
+import { SYNTAX_DARK, SYNTAX_LIGHT, syntaxTokenRules, syntaxVariables } from '@stacksjs/components'
 
 /**
  * Crosswind (utility CSS) config.
@@ -387,8 +388,32 @@ stacks-funnel-chart svg { width: 100%; height: 100%; display: block; }
 }
 `
 
+/**
+ * Syntax highlighting (app/Support/highlight.ts). The highlighter writes a class
+ * on each token and no colour; these rules colour them from the
+ * `--stx-syntax-*` properties, which are stx's own GitHub light and dark pair,
+ * set in the same four places TOKENS sets the theme so the homepage snippets
+ * follow the toggle on their bg-panel surface.
+ *
+ * Light-theme comments are the one change: stx's #6e7781 is 4.4:1 on off-white
+ * surfaces, under the 4.5:1 minimum, so they take GitHub's darker #57606a.
+ */
+const SYNTAX_LIGHT_AA: Readonly<Record<string, string>> = { ...SYNTAX_LIGHT, comment: '#57606a' }
+
+function syntax(palette: Readonly<Record<string, string>>): string {
+  return syntaxVariables(palette, '').replace(/\n/g, ' ')
+}
+
+const SYNTAX = [
+  `:root { ${syntax(SYNTAX_LIGHT_AA)} }`,
+  `@media (prefers-color-scheme: dark) { :root { ${syntax(SYNTAX_DARK)} } }`,
+  `:root[data-theme='dark'] { ${syntax(SYNTAX_DARK)} }`,
+  `:root[data-theme='light'] { ${syntax(SYNTAX_LIGHT_AA)} }`,
+  syntaxTokenRules(),
+].join('\n')
+
 export default {
-  preflights: [{ getCSS: () => TOKENS }, { getCSS: () => PAGE_CSS }],
+  preflights: [{ getCSS: () => TOKENS }, { getCSS: () => SYNTAX }, { getCSS: () => PAGE_CSS }],
   shortcuts: {
     // Account action panels keep the page surface and existing 20px inset.
     // Do not clip keyboard focus rings on links or buttons inside a Card.

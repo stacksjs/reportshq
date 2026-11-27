@@ -132,6 +132,18 @@ php artisan vendor:publish --tag=reportshq-config
     ],
 ],`
 
+// Coloured on the server (app/Support/highlight.ts), so the page ships no
+// highlighter. Each snippet is the install command, a blank line, then the
+// config file, so the command is highlighted as shell and the rest in its own
+// language.
+const { highlightCode } = await import('../../app/Support/highlight')
+async function highlightSetup(snippet: string, language: 'typescript' | 'php'): Promise<string> {
+  const split = snippet.indexOf('\n\n')
+  return `${await highlightCode(snippet.slice(0, split), 'bash')}\n\n${await highlightCode(snippet.slice(split + 2), language)}`
+}
+const stacksSnippetHtml = await highlightSetup(stacksSnippet, 'typescript')
+const laravelSnippetHtml = await highlightSetup(laravelSnippet, 'php')
+
 const steps = [
   {
     title: 'Install it into the application',
@@ -305,11 +317,11 @@ const docLinks = [
         <div class="grid gap-4 lg:grid-cols-2 mt-12">
           <div class="min-w-0">
             <h3 class="mb-2 font-medium text-ink text-sm">In a Stacks app</h3>
-            <pre class="overflow-x-auto p-4 font-mono leading-relaxed text-ink text-xs bg-panel border border-line rounded-xl">{{ stacksSnippet }}</pre>
+            <pre class="overflow-x-auto p-4 font-mono leading-relaxed text-ink text-xs bg-panel border border-line rounded-xl">{!! stacksSnippetHtml !!}</pre>
           </div>
           <div class="min-w-0">
             <h3 class="mb-2 font-medium text-ink text-sm">In a Laravel app</h3>
-            <pre class="overflow-x-auto p-4 font-mono leading-relaxed text-ink text-xs bg-panel border border-line rounded-xl">{{ laravelSnippet }}</pre>
+            <pre class="overflow-x-auto p-4 font-mono leading-relaxed text-ink text-xs bg-panel border border-line rounded-xl">{!! laravelSnippetHtml !!}</pre>
           </div>
         </div>
       </section>
